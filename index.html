@@ -9,126 +9,217 @@
 <meta name="apple-mobile-web-app-title" content="Milow Tagebuch">
 <title>Milow Tagebuch</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --c1:#2d6a4f;--c2:#40916c;--c3:#74c69d;--c4:#d8f3dc;
-    --bg:#ffffff;--bg2:#f5f5f0;--text:#1a1a1a;--sub:#666;
-    --border:#e0e0d8;--radius:12px;--radius-sm:8px;
-  }
-  @media(prefers-color-scheme:dark){
-    :root{--bg:#1a1a1a;--bg2:#252520;--text:#f0f0ec;--sub:#999;--border:#333;--c4:#1a3d2b}
-  }
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent}
-  .app{max-width:480px;margin:0 auto;padding:1rem;padding-bottom:2rem}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --c1:#2d6a4f;--c2:#40916c;--c3:#74c69d;--c4:#d8f3dc;
+  --bg:#ffffff;--bg2:#f5f5f0;--text:#1a1a1a;--sub:#666;
+  --border:#e0e0d8;--radius:12px;--radius-sm:8px;
+  --warn:#fff3cd;--warn-text:#664d03;
+  --danger:#fee2e2;--danger-text:#7f1d1d;
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#1a1a1a;--bg2:#252520;--text:#f0f0ec;--sub:#999;--border:#333;--c4:#1a3d2b;
+  --warn:#332b00;--warn-text:#ffd97d;--danger:#3d1a1a;--danger-text:#fca5a5}
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent}
+.app{max-width:520px;margin:0 auto;padding:1rem;padding-bottom:4rem}
 
-  /* Login */
-  .login-screen{text-align:center;padding:3rem 1.5rem;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .login-screen .icon{font-size:64px;margin-bottom:1.5rem}
-  .login-screen h1{font-size:24px;font-weight:600;margin-bottom:.5rem}
-  .login-screen p{font-size:15px;color:var(--sub);margin-bottom:2rem;line-height:1.6}
-  .google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:280px;padding:14px 20px;font-size:15px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;transition:background .15s}
-  .google-btn:active{background:var(--bg2)}
+/* Login */
+.login-screen{text-align:center;padding:3rem 1.5rem;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.login-screen .icon{font-size:64px;margin-bottom:1.5rem}
+.login-screen h1{font-size:24px;font-weight:600;margin-bottom:.5rem}
+.login-screen p{font-size:15px;color:var(--sub);margin-bottom:2rem;line-height:1.6}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:280px;padding:14px 20px;font-size:15px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;transition:background .15s}
+.google-btn:active{background:var(--bg2)}
 
-  /* User bar */
-  .user-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);margin-bottom:1.25rem;font-size:13px}
-  .user-bar span{color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
-  .user-bar button{font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--sub);cursor:pointer;flex-shrink:0}
+/* User bar */
+.user-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);margin-bottom:1rem;font-size:13px}
+.user-bar span{color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.user-bar button{font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--sub);cursor:pointer;flex-shrink:0}
 
-  /* Tabs */
-  .tab-bar{display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1.5rem;background:var(--bg2)}
-  .tab{flex:1;padding:11px 6px;font-size:13px;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--sub);transition:all .2s;font-family:inherit}
-  .tab.active{background:var(--bg);color:var(--text);font-weight:500}
+/* Mode switcher */
+.mode-bar{display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem;background:var(--bg2)}
+.mode-btn{flex:1;padding:10px 6px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--sub);transition:all .2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}
+.mode-btn.active{background:var(--c2);color:#fff}
 
-  /* Sections */
-  .section{display:none}.section.active{display:block}
-  .section-title{font-size:17px;font-weight:600;margin-bottom:1.25rem}
+/* Nav tabs – scrollable */
+.tab-bar{display:flex;overflow-x:auto;gap:4px;margin-bottom:1.25rem;padding-bottom:2px;scrollbar-width:none}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:9px 13px;font-size:12.5px;text-align:center;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);transition:all .2s;font-family:inherit;white-space:nowrap}
+.tab.active{background:var(--c2);color:#fff;border-color:var(--c2);font-weight:500}
 
-  /* Fields */
-  .field{margin-bottom:1.25rem}
-  label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:500;letter-spacing:.03em;text-transform:uppercase}
-  input[type=text],input[type=date],textarea{width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none;appearance:none;transition:border .15s}
-  input:focus,textarea:focus{outline:none;border-color:var(--c2)}
-  textarea{resize:vertical;min-height:80px;line-height:1.5}
-  .date-row{display:flex;align-items:center;gap:8px}
-  .date-row input{flex:1}
-  .btn-today{padding:10px 14px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0}
-  .btn-today:active{background:var(--border)}
+/* Sections */
+.section{display:none}.section.active{display:block}
+.section-title{font-size:17px;font-weight:600;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
 
-  /* Toggle buttons */
-  .toggle-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-  .toggle-grid.three{grid-template-columns:1fr 1fr 1fr}
-  .tog-btn{padding:11px 8px;font-size:14px;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:var(--bg);color:var(--text);transition:all .15s;user-select:none;font-family:inherit}
-  .tog-btn.sel{background:var(--c4);border-color:var(--c2);color:#1a4731;font-weight:500}
-  .tog-btn:active{transform:scale(.97)}
-  @media(prefers-color-scheme:dark){.tog-btn.sel{color:#74c69d}}
+/* Fields */
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:500;letter-spacing:.03em;text-transform:uppercase}
+input[type=text],input[type=date],select,textarea{width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none;appearance:none;transition:border .15s}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--c2)}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+.date-row{display:flex;align-items:center;gap:8px}
+.date-row input{flex:1}
+.btn-today{padding:10px 14px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0}
+.btn-today:active{background:var(--border)}
 
-  /* Prev hint */
-  .prev-hint{font-size:13px;color:var(--sub);margin-top:6px;padding:9px 12px;background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;display:none;align-items:center;gap:8px;line-height:1.4}
-  .prev-hint b{color:var(--c2)}
+/* Toggle buttons */
+.toggle-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.toggle-grid.three{grid-template-columns:1fr 1fr 1fr}
+.toggle-grid.four{grid-template-columns:1fr 1fr 1fr 1fr}
+.tog-btn{padding:10px 8px;font-size:13px;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:var(--bg);color:var(--text);transition:all .15s;user-select:none;font-family:inherit;line-height:1.3}
+.tog-btn.sel{background:var(--c4);border-color:var(--c2);color:#1a4731;font-weight:500}
+.tog-btn:active{transform:scale(.97)}
+@media(prefers-color-scheme:dark){.tog-btn.sel{color:#74c69d}}
 
-  /* Submit button */
-  .submit-btn{width:100%;padding:15px;font-size:16px;font-weight:600;border:none;border-radius:var(--radius);background:var(--c2);color:#fff;cursor:pointer;margin-top:.5rem;font-family:inherit;transition:background .15s}
-  .submit-btn:active{background:var(--c1)}
-  .submit-btn:disabled{background:var(--border);color:var(--sub);cursor:default}
+/* Prev hint */
+.prev-hint{font-size:13px;color:var(--sub);margin-top:6px;padding:9px 12px;background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;display:none;align-items:center;gap:8px;line-height:1.4}
+.prev-hint b{color:var(--c2)}
 
-  /* Status */
-  .status{padding:12px 14px;border-radius:var(--radius-sm);font-size:14px;margin-top:.75rem;display:none;line-height:1.5}
-  .status.ok{background:#d8f3dc;color:#1a4731;display:block}
-  .status.err{background:#fee2e2;color:#7f1d1d;display:block}
-  .status.loading{background:var(--bg2);color:var(--sub);display:block}
-  @media(prefers-color-scheme:dark){
-    .status.ok{background:#1a3d2b;color:#74c69d}
-    .status.err{background:#3d1a1a;color:#fca5a5}
-  }
+/* Submit button */
+.submit-btn{width:100%;padding:15px;font-size:16px;font-weight:600;border:none;border-radius:var(--radius);background:var(--c2);color:#fff;cursor:pointer;margin-top:.5rem;font-family:inherit;transition:background .15s}
+.submit-btn:active{background:var(--c1)}
+.submit-btn:disabled{background:var(--border);color:var(--sub);cursor:default}
+.submit-btn.secondary{background:transparent;border:1px solid var(--c2);color:var(--c2);margin-top:.5rem}
+.submit-btn.secondary:active{background:var(--c4)}
 
-  /* Settings box */
-  .settings-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
-  .settings-box h3{font-size:14px;font-weight:600;margin-bottom:.5rem}
-  .settings-box p{font-size:13px;color:var(--sub);line-height:1.6;margin-bottom:1rem}
-  .settings-box .field{margin-bottom:.75rem}
-  .settings-box .field:last-child{margin-bottom:0}
+/* Status */
+.status{padding:12px 14px;border-radius:var(--radius-sm);font-size:14px;margin-top:.75rem;display:none;line-height:1.5}
+.status.ok{background:#d8f3dc;color:#1a4731;display:block}
+.status.err{background:var(--danger);color:var(--danger-text);display:block}
+.status.loading{background:var(--bg2);color:var(--sub);display:block}
+@media(prefers-color-scheme:dark){.status.ok{background:#1a3d2b;color:#74c69d}}
 
-  /* Install hint */
-  .install-hint{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;font-size:13px;color:var(--sub);line-height:1.7}
-  .install-hint b{color:var(--text)}
+/* Settings */
+.settings-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
+.settings-box h3{font-size:14px;font-weight:600;margin-bottom:.5rem}
+.settings-box p{font-size:13px;color:var(--sub);line-height:1.6;margin-bottom:1rem}
+.settings-box .field{margin-bottom:.75rem}
+.settings-box .field:last-child{margin-bottom:0}
+.install-hint{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;font-size:13px;color:var(--sub);line-height:1.7}
+.install-hint b{color:var(--text)}
+
+/* ====== VIEW MODE ====== */
+.view-loading{text-align:center;padding:3rem 1rem;color:var(--sub);font-size:14px}
+.view-loading .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--c2);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.view-empty{text-align:center;padding:2.5rem 1rem;color:var(--sub);font-size:14px}
+.view-empty .icon{font-size:40px;margin-bottom:.75rem}
+
+/* Summary cards */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem}
+.summary-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center}
+.summary-card .num{font-size:28px;font-weight:700;color:var(--c2);line-height:1}
+.summary-card .lbl{font-size:11px;color:var(--sub);margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+
+/* Entry cards */
+.entry-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.entry-card .ec-date{font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:500}
+.entry-card .ec-row{display:flex;gap:8px;margin-bottom:5px;font-size:14px;line-height:1.4}
+.entry-card .ec-row:last-child{margin-bottom:0}
+.entry-card .ec-key{color:var(--sub);min-width:100px;flex-shrink:0;font-size:12px;padding-top:1px}
+.entry-card .ec-val{color:var(--text);word-break:break-word}
+.entry-card .ec-val.badge{display:inline-block;background:var(--c4);color:#1a4731;border-radius:4px;padding:1px 7px;font-size:12px}
+@media(prefers-color-scheme:dark){.entry-card .ec-val.badge{background:#1a3d2b;color:#74c69d}}
+.entry-card .ec-val.badge-red{background:var(--danger);color:var(--danger-text)}
+.entry-card .ec-val.badge-warn{background:var(--warn);color:var(--warn-text)}
+
+/* Symptom severity dots */
+.severity{display:inline-flex;gap:3px;vertical-align:middle}
+.severity span{width:10px;height:10px;border-radius:50%;background:var(--border)}
+.severity span.on{background:var(--c2)}
+.severity span.high{background:#f59e0b}
+.severity span.vhigh{background:#ef4444}
+
+/* Table view for static data */
+.data-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:1rem}
+.data-table th{background:var(--bg2);color:var(--sub);font-weight:500;text-transform:uppercase;font-size:11px;letter-spacing:.04em;padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)}
+.data-table td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--bg2)}
+
+/* Allergen badges */
+.badge-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:.5rem}
+.badge-item{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.badge-ok{background:#d8f3dc;color:#1a4731}
+.badge-warn{background:var(--warn);color:var(--warn-text)}
+.badge-bad{background:var(--danger);color:var(--danger-text)}
+@media(prefers-color-scheme:dark){
+  .badge-ok{background:#1a3d2b;color:#74c69d}
+}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:8px;margin-bottom:1rem;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-chip{flex-shrink:0;padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:var(--bg);color:var(--sub);font-family:inherit;transition:all .15s}
+.filter-chip.active{background:var(--c2);color:#fff;border-color:var(--c2)}
+
+/* Section divider */
+.divider{display:flex;align-items:center;gap:10px;margin:1.25rem 0}
+.divider span{font-size:12px;color:var(--sub);white-space:nowrap;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* Refresh btn */
+.refresh-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);cursor:pointer;font-family:inherit;margin-bottom:1rem}
+.refresh-btn:active{background:var(--border)}
 </style>
 </head>
 <body>
-
 <div class="app">
 
-  <!-- Login Screen -->
-  <div id="login-screen" class="login-screen">
-    <div class="icon">🐕</div>
-    <h1>Milow Tagebuch</h1>
-    <p>Melde dich mit deinem Google-Konto an,<br>um direkt in deine Tabelle zu schreiben.</p>
-    <button class="google-btn" onclick="signIn()">
-      <svg width="18" height="18" viewBox="0 0 48 48">
-        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-      </svg>
-      Mit Google anmelden
+<!-- Login Screen -->
+<div id="login-screen" class="login-screen">
+  <div class="icon">🐕</div>
+  <h1>Milow Tagebuch</h1>
+  <p>Melde dich mit deinem Google-Konto an,<br>um direkt in deine Tabelle zu schreiben.</p>
+  <button class="google-btn" onclick="signIn()">
+    <svg width="18" height="18" viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
+    Mit Google anmelden
+  </button>
+</div>
+
+<!-- Main Screen -->
+<div id="main-screen" style="display:none">
+  <div class="user-bar">
+    <span id="user-email">–</span>
+    <button onclick="signOut()">Abmelden</button>
+  </div>
+
+  <!-- Mode switcher: Eingabe / Ansicht -->
+  <div class="mode-bar">
+    <button class="mode-btn active" id="mode-eingabe" onclick="switchMode('eingabe')">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 13l2-2 8-8 2 2-8 8-2 0 0-2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      Eingabe
+    </button>
+    <button class="mode-btn" id="mode-ansicht" onclick="switchMode('ansicht')">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 8C3 4.5 5.5 3 8 3s5 1.5 6.5 5c-1.5 3.5-4 5-6.5 5s-5-1.5-6.5-5z" stroke="currentColor" stroke-width="1.3"/></svg>
+      Ansicht
     </button>
   </div>
 
-  <!-- Main Screen -->
-  <div id="main-screen" style="display:none">
-    <div class="user-bar">
-      <span id="user-email">–</span>
-      <button onclick="signOut()">Abmelden</button>
+  <!-- ========== EINGABE MODE ========== -->
+  <div id="mode-eingabe-panel">
+    <div class="tab-bar" id="eingabe-tabs">
+      <button class="tab active" onclick="switchTab('umwelt')">🌿 Umwelt</button>
+      <button class="tab" onclick="switchTab('symptom')">🔍 Symptome</button>
+      <button class="tab" onclick="switchTab('futter')">🥩 Futter</button>
+      <button class="tab" onclick="switchTab('ausschluss')">📋 Ausschluss</button>
+      <button class="tab" onclick="switchTab('allergen')">⚠️ Allergene</button>
+      <button class="tab" onclick="switchTab('tierarzt')">🏥 Tierarzt</button>
+      <button class="tab" onclick="switchTab('medikamente')">💊 Medikamente</button>
+      <button class="tab" onclick="switchTab('einst')">⚙️</button>
     </div>
 
-    <div class="tab-bar">
-      <button class="tab active" onclick="switchTab('umwelt')">Umwelt</button>
-      <button class="tab" onclick="switchTab('fuetterung')">Fütterung</button>
-      <button class="tab" onclick="switchTab('einst')">Einstellungen</button>
-    </div>
-
-    <!-- Umwelttagebuch -->
+    <!-- 1. UMWELTTAGEBUCH -->
     <div id="tab-umwelt" class="section active">
-      <p class="section-title">Umwelttagebuch</p>
+      <p class="section-title">🌿 Umwelttagebuch</p>
       <div class="field">
         <label>Datum</label>
         <div class="date-row">
@@ -146,7 +237,7 @@
       </div>
       <div class="field">
         <label>Raumklima</label>
-        <input type="text" id="u-raumklima" placeholder="z.B. 20,0°C 50% Luftfeuchtigkeit">
+        <input type="text" id="u-raumklima" placeholder="z.B. 20°C, 50% Luftfeuchtigkeit">
       </div>
       <div class="field">
         <label>Bett</label>
@@ -172,9 +263,67 @@
       <div class="status" id="status-u"></div>
     </div>
 
-    <!-- Fütterungstagebuch -->
-    <div id="tab-fuetterung" class="section">
-      <p class="section-title">Fütterungstagebuch</p>
+    <!-- 2. SYMPTOMTAGEBUCH -->
+    <div id="tab-symptom" class="section">
+      <p class="section-title">🔍 Symptomtagebuch</p>
+      <div class="field">
+        <label>Datum</label>
+        <div class="date-row">
+          <input type="date" id="s-datum">
+          <button class="btn-today" onclick="setToday('s-datum')">Heute</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Symptom-Kategorie</label>
+        <div class="toggle-grid three" id="sym-kat-grid">
+          <div class="tog-btn" onclick="toggleSymKat(this)">Juckreiz</div>
+          <div class="tog-btn" onclick="toggleSymKat(this)">Ohrentzündung</div>
+          <div class="tog-btn" onclick="toggleSymKat(this)">Hautrötung</div>
+          <div class="tog-btn" onclick="toggleSymKat(this)">Pfoten lecken</div>
+          <div class="tog-btn" onclick="toggleSymKat(this)">Durchfall</div>
+          <div class="tog-btn" onclick="toggleSymKat(this)">Erbrechen</div>
+          <div class="tog-btn" onclick="toggleSymKat(this)">Schütteln</div>
+          <div class="tog-btn" onclick="toggleSymKat(this)">Sonstiges</div>
+        </div>
+        <input type="text" id="s-kat-extra" placeholder="Eigene Kategorie..." style="margin-top:8px">
+      </div>
+      <div class="field">
+        <label>Beschreibung</label>
+        <textarea id="s-beschreibung" placeholder="Genauere Beschreibung des Symptoms..."></textarea>
+      </div>
+      <div class="field">
+        <label>Schweregrad (1–5)</label>
+        <div class="toggle-grid four" style="grid-template-columns:repeat(5,1fr)">
+          <div class="tog-btn" onclick="toggleSchwere(this)" data-val="1">1</div>
+          <div class="tog-btn" onclick="toggleSchwere(this)" data-val="2">2</div>
+          <div class="tog-btn" onclick="toggleSchwere(this)" data-val="3">3</div>
+          <div class="tog-btn" onclick="toggleSchwere(this)" data-val="4">4</div>
+          <div class="tog-btn" onclick="toggleSchwere(this)" data-val="5">5</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Betroffene Körperstelle</label>
+        <div class="toggle-grid three">
+          <div class="tog-btn" onclick="toggleKoerper(this)">Ohren</div>
+          <div class="tog-btn" onclick="toggleKoerper(this)">Pfoten</div>
+          <div class="tog-btn" onclick="toggleKoerper(this)">Bauch</div>
+          <div class="tog-btn" onclick="toggleKoerper(this)">Rücken</div>
+          <div class="tog-btn" onclick="toggleKoerper(this)">Beine</div>
+          <div class="tog-btn" onclick="toggleKoerper(this)">Gesicht</div>
+        </div>
+        <input type="text" id="s-koerper-extra" placeholder="Weitere Stellen..." style="margin-top:8px">
+      </div>
+      <div class="field">
+        <label>Notizen</label>
+        <textarea id="s-notizen" placeholder="Freitext..."></textarea>
+      </div>
+      <button class="submit-btn" id="btn-s" onclick="submitSymptom()">Eintrag speichern</button>
+      <div class="status" id="status-s"></div>
+    </div>
+
+    <!-- 3. FUTTERTAGEBUCH -->
+    <div id="tab-futter" class="section">
+      <p class="section-title">🥩 Futtertagebuch</p>
       <div class="field">
         <label>Datum</label>
         <div class="date-row">
@@ -183,7 +332,7 @@
         </div>
       </div>
       <div class="field">
-        <label>Fütterung / Mahlzeit</label>
+        <label>Futter / Mahlzeit</label>
         <textarea id="f-futter" placeholder="z.B. Rindermuskelfleisch 300g, Leber 50g, Karotte..."></textarea>
         <div id="prev-hint" class="prev-hint" onclick="usePrev()">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5V8l2.5 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -191,37 +340,253 @@
         </div>
       </div>
       <div class="field">
-        <label>Symptome / Auffälligkeiten</label>
+        <label>Erste Gabe</label>
         <div class="toggle-grid">
-          <div class="tog-btn" onclick="toggleSym(this)">Juckreiz</div>
-          <div class="tog-btn" onclick="toggleSym(this)">Pfoten lecken</div>
-          <div class="tog-btn" onclick="toggleSym(this)">Ohren kratzen</div>
-          <div class="tog-btn" onclick="toggleSym(this)">Rötungen</div>
-          <div class="tog-btn" onclick="toggleSym(this)">Durchfall</div>
-          <div class="tog-btn" onclick="toggleSym(this)">Erbrechen</div>
-          <div class="tog-btn" onclick="toggleSym(this)">Keine</div>
-          <div class="tog-btn" onclick="toggleSym(this)">Sonstige</div>
+          <div class="tog-btn" id="erstegabe-nein" onclick="toggleErsteGabe('nein')">Nein</div>
+          <div class="tog-btn" id="erstegabe-ja" onclick="toggleErsteGabe('ja')">Ja – neu eingeführt</div>
         </div>
-        <textarea id="f-symptome-extra" placeholder="Weitere Notizen..." style="margin-top:8px"></textarea>
       </div>
-      <button class="submit-btn" id="btn-f" onclick="submitFuetterung()">Eintrag speichern</button>
+      <div class="field">
+        <label>Zwei Wochen Fütterung abgeschlossen</label>
+        <div class="toggle-grid">
+          <div class="tog-btn" id="zweiwo-nein" onclick="toggleZweiWo('nein')">Nein</div>
+          <div class="tog-btn" id="zweiwo-ja" onclick="toggleZweiWo('ja')">Ja</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Provokation</label>
+        <div class="toggle-grid">
+          <div class="tog-btn" id="prov-nein" onclick="toggleProv('nein')">Nein</div>
+          <div class="tog-btn" id="prov-ja" onclick="toggleProv('ja')">Ja</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Beschreibung / Reaktion</label>
+        <textarea id="f-beschreibung" placeholder="z.B. Reaktion beobachtet..."></textarea>
+      </div>
+      <div class="field">
+        <label>Notizen</label>
+        <textarea id="f-notizen" placeholder="Freitext..."></textarea>
+      </div>
+      <button class="submit-btn" id="btn-f" onclick="submitFutter()">Eintrag speichern</button>
       <div class="status" id="status-f"></div>
     </div>
 
-    <!-- Einstellungen -->
+    <!-- 4. AUSSCHLUSSDIÄT -->
+    <div id="tab-ausschluss" class="section">
+      <p class="section-title">📋 Ausschlussdiät – Zutat</p>
+      <div class="field">
+        <label>Zutat</label>
+        <input type="text" id="a-zutat" placeholder="z.B. Rind, Karotte, Reis...">
+      </div>
+      <div class="field">
+        <label>Verdacht</label>
+        <div class="toggle-grid">
+          <div class="tog-btn" id="averd-nein" onclick="toggleAVerd('nein')">Kein Verdacht</div>
+          <div class="tog-btn" id="averd-ja" onclick="toggleAVerd('ja')">Verdächtig</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Kategorie</label>
+        <select id="a-kategorie">
+          <option value="">– wählen –</option>
+          <option>Fleisch</option>
+          <option>Fisch</option>
+          <option>Gemüse</option>
+          <option>Obst</option>
+          <option>Getreide</option>
+          <option>Milchprodukt</option>
+          <option>Öl / Fett</option>
+          <option>Supplement</option>
+          <option>Sonstiges</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="a-status">
+          <option value="">– wählen –</option>
+          <option>Getestet – verträglich</option>
+          <option>Getestet – Reaktion</option>
+          <option>In Test</option>
+          <option>Noch nicht getestet</option>
+          <option>Gesperrt</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Erstmals gegeben</label>
+        <div class="date-row">
+          <input type="date" id="a-datum">
+          <button class="btn-today" onclick="setToday('a-datum')">Heute</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Reaktion</label>
+        <textarea id="a-reaktion" placeholder="Beobachtete Reaktion..."></textarea>
+      </div>
+      <div class="field">
+        <label>Notizen</label>
+        <textarea id="a-notizen" placeholder="Freitext..."></textarea>
+      </div>
+      <button class="submit-btn" id="btn-a" onclick="submitAusschluss()">Zutat speichern</button>
+      <div class="status" id="status-a"></div>
+    </div>
+
+    <!-- 5. BEKANNTE ALLERGENE -->
+    <div id="tab-allergen" class="section">
+      <p class="section-title">⚠️ Bekannte Allergene</p>
+      <div class="field">
+        <label>Allergen</label>
+        <input type="text" id="al-allergen" placeholder="z.B. Gräser, Hausstaubmilbe, Rind...">
+      </div>
+      <div class="field">
+        <label>Kategorie</label>
+        <select id="al-kategorie">
+          <option value="">– wählen –</option>
+          <option>Umweltallergen</option>
+          <option>Futterallergen</option>
+          <option>Kontaktallergen</option>
+          <option>Insekten</option>
+          <option>Sonstiges</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Reaktionsstärke (1–5)</label>
+        <div class="toggle-grid four" style="grid-template-columns:repeat(5,1fr)">
+          <div class="tog-btn" onclick="toggleAlReakt(this)" data-val="1">1</div>
+          <div class="tog-btn" onclick="toggleAlReakt(this)" data-val="2">2</div>
+          <div class="tog-btn" onclick="toggleAlReakt(this)" data-val="3">3</div>
+          <div class="tog-btn" onclick="toggleAlReakt(this)" data-val="4">4</div>
+          <div class="tog-btn" onclick="toggleAlReakt(this)" data-val="5">5</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Symptome</label>
+        <input type="text" id="al-symptome" placeholder="z.B. Juckreiz, Ohren, Pfoten...">
+      </div>
+      <div class="field">
+        <label>Erstmals bemerkt</label>
+        <div class="date-row">
+          <input type="date" id="al-datum">
+          <button class="btn-today" onclick="setToday('al-datum')">Heute</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Notizen (z.B. Bluttest, Hauttest)</label>
+        <textarea id="al-notizen" placeholder="Quelle der Erkenntnis, Testergebnis..."></textarea>
+      </div>
+      <button class="submit-btn" id="btn-al" onclick="submitAllergen()">Allergen speichern</button>
+      <div class="status" id="status-al"></div>
+    </div>
+
+    <!-- 6. TIERARZTBESUCHE -->
+    <div id="tab-tierarzt" class="section">
+      <p class="section-title">🏥 Tierarztbesuch</p>
+      <div class="field">
+        <label>Datum</label>
+        <div class="date-row">
+          <input type="date" id="t-datum">
+          <button class="btn-today" onclick="setToday('t-datum')">Heute</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tierarzt / Klinik</label>
+        <input type="text" id="t-arzt" placeholder="Name der Praxis...">
+      </div>
+      <div class="field">
+        <label>Anlass / Diagnose</label>
+        <textarea id="t-anlass" placeholder="Warum der Besuch, Diagnose..."></textarea>
+      </div>
+      <div class="field">
+        <label>Untersuchungen</label>
+        <textarea id="t-untersuchungen" placeholder="Blutbild, Hauttest, Ohrenabstrich..."></textarea>
+      </div>
+      <div class="field">
+        <label>Ergebnis / Befund</label>
+        <textarea id="t-ergebnis" placeholder="Befund..."></textarea>
+      </div>
+      <div class="field">
+        <label>Empfehlung / Therapie</label>
+        <textarea id="t-therapie" placeholder="Verordnete Behandlung..."></textarea>
+      </div>
+      <div class="field">
+        <label>Folgebesuch geplant</label>
+        <div class="date-row">
+          <input type="date" id="t-folge">
+          <button class="btn-today" onclick="clearDate('t-folge')">Löschen</button>
+        </div>
+      </div>
+      <button class="submit-btn" id="btn-t" onclick="submitTierarzt()">Besuch speichern</button>
+      <div class="status" id="status-t"></div>
+    </div>
+
+    <!-- 7. MEDIKAMENTE -->
+    <div id="tab-medikamente" class="section">
+      <p class="section-title">💊 Medikamente & Behandlungen</p>
+      <div class="field">
+        <label>Medikament / Supplement</label>
+        <input type="text" id="m-name" placeholder="z.B. Apoquel, Hexocare Silbergel...">
+      </div>
+      <div class="field">
+        <label>Typ</label>
+        <select id="m-typ">
+          <option value="">– wählen –</option>
+          <option>Antihistaminikum</option>
+          <option>Antimykotikum</option>
+          <option>Kortikosteroid</option>
+          <option>Antibiotikum</option>
+          <option>Supplement</option>
+          <option>Tropfen</option>
+          <option>Salbe / Gel</option>
+          <option>Sonstiges</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Dosierung</label>
+        <input type="text" id="m-dosierung" placeholder="z.B. 1x täglich 16mg">
+      </div>
+      <div class="field">
+        <label>Häufigkeit</label>
+        <input type="text" id="m-haeufigkeit" placeholder="z.B. täglich, bei Bedarf">
+      </div>
+      <div class="field">
+        <label>Gegeben von (Datum)</label>
+        <div class="date-row">
+          <input type="date" id="m-von">
+          <button class="btn-today" onclick="setToday('m-von')">Heute</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Bis (Datum)</label>
+        <div class="date-row">
+          <input type="date" id="m-bis">
+          <button class="btn-today" onclick="clearDate('m-bis')">Löschen</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Verordnet von</label>
+        <input type="text" id="m-verordnet" placeholder="Tierarzt / selbst">
+      </div>
+      <div class="field">
+        <label>Notizen / Wirkung</label>
+        <textarea id="m-notizen" placeholder="Beobachtete Wirkung, Nebenwirkungen..."></textarea>
+      </div>
+      <button class="submit-btn" id="btn-m" onclick="submitMedikament()">Medikament speichern</button>
+      <div class="status" id="status-m"></div>
+    </div>
+
+    <!-- EINSTELLUNGEN -->
     <div id="tab-einst" class="section">
-      <p class="section-title">Einstellungen</p>
+      <p class="section-title">⚙️ Einstellungen</p>
       <div class="settings-box">
         <h3>Tabellenblatt-Namen</h3>
-        <p>Gib die Namen genau so ein wie sie in deiner Google-Tabelle stehen (auf den Reiter unten schauen).</p>
-        <div class="field">
-          <label>Umwelttagebuch</label>
-          <input type="text" id="sheet-umwelt" placeholder="Umwelttagebuch" oninput="saveSettings()">
-        </div>
-        <div class="field">
-          <label>Fütterungstagebuch</label>
-          <input type="text" id="sheet-futter" placeholder="Fütterungstagebuch" oninput="saveSettings()">
-        </div>
+        <p>Gib die Namen exakt so ein wie in der Google-Tabelle (Reiter unten).</p>
+        <div class="field"><label>Umwelttagebuch</label><input type="text" id="sheet-umwelt" placeholder="📋 Umweltagebuch" oninput="saveSettings()"></div>
+        <div class="field"><label>Symptomtagebuch</label><input type="text" id="sheet-symptom" placeholder="📋 Symptomtagebuch" oninput="saveSettings()"></div>
+        <div class="field"><label>Futtertagebuch</label><input type="text" id="sheet-futter" placeholder="🥩 Futtertagebuch" oninput="saveSettings()"></div>
+        <div class="field"><label>Ausschlussdiät</label><input type="text" id="sheet-ausschluss" placeholder="🥩 Ausschlussdiät" oninput="saveSettings()"></div>
+        <div class="field"><label>Bekannte Allergene</label><input type="text" id="sheet-allergen" placeholder="⚠️ Bekannte Allergene" oninput="saveSettings()"></div>
+        <div class="field"><label>Tierarztbesuche</label><input type="text" id="sheet-tierarzt" placeholder="🏥 Tierarztbesuche" oninput="saveSettings()"></div>
+        <div class="field"><label>Medikamente</label><input type="text" id="sheet-medikamente" placeholder="💊 Medikamente" oninput="saveSettings()"></div>
       </div>
       <div class="install-hint">
         <b>Als App speichern:</b><br>
@@ -231,8 +596,86 @@
       <div class="status" id="status-einst"></div>
       <button class="submit-btn" onclick="testConnection()">Verbindung testen</button>
     </div>
-  </div>
-</div>
+  </div><!-- end eingabe panel -->
+
+  <!-- ========== ANSICHT MODE ========== -->
+  <div id="mode-ansicht-panel" style="display:none">
+    <div class="tab-bar" id="ansicht-tabs">
+      <button class="tab active" onclick="switchViewTab('v-umwelt')">🌿 Umwelt</button>
+      <button class="tab" onclick="switchViewTab('v-symptom')">🔍 Symptome</button>
+      <button class="tab" onclick="switchViewTab('v-futter')">🥩 Futter</button>
+      <button class="tab" onclick="switchViewTab('v-ausschluss')">📋 Ausschluss</button>
+      <button class="tab" onclick="switchViewTab('v-allergen')">⚠️ Allergene</button>
+      <button class="tab" onclick="switchViewTab('v-tierarzt')">🏥 Tierarzt</button>
+      <button class="tab" onclick="switchViewTab('v-medikamente')">💊 Medikamente</button>
+    </div>
+
+    <!-- VIEW: Umwelt -->
+    <div id="v-umwelt" class="section active">
+      <button class="refresh-btn" onclick="loadViewData('umwelt')">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Aktualisieren
+      </button>
+      <div id="v-umwelt-content"><div class="view-empty"><div class="icon">🌿</div>Noch keine Daten geladen.<br>Tippe auf Aktualisieren.</div></div>
+    </div>
+
+    <!-- VIEW: Symptome -->
+    <div id="v-symptom" class="section">
+      <button class="refresh-btn" onclick="loadViewData('symptom')">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Aktualisieren
+      </button>
+      <div id="v-symptom-content"><div class="view-empty"><div class="icon">🔍</div>Noch keine Daten geladen.</div></div>
+    </div>
+
+    <!-- VIEW: Futter -->
+    <div id="v-futter" class="section">
+      <button class="refresh-btn" onclick="loadViewData('futter')">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Aktualisieren
+      </button>
+      <div id="v-futter-content"><div class="view-empty"><div class="icon">🥩</div>Noch keine Daten geladen.</div></div>
+    </div>
+
+    <!-- VIEW: Ausschluss -->
+    <div id="v-ausschluss" class="section">
+      <button class="refresh-btn" onclick="loadViewData('ausschluss')">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Aktualisieren
+      </button>
+      <div id="v-ausschluss-content"><div class="view-empty"><div class="icon">📋</div>Noch keine Daten geladen.</div></div>
+    </div>
+
+    <!-- VIEW: Allergene -->
+    <div id="v-allergen" class="section">
+      <button class="refresh-btn" onclick="loadViewData('allergen')">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Aktualisieren
+      </button>
+      <div id="v-allergen-content"><div class="view-empty"><div class="icon">⚠️</div>Noch keine Daten geladen.</div></div>
+    </div>
+
+    <!-- VIEW: Tierarzt -->
+    <div id="v-tierarzt" class="section">
+      <button class="refresh-btn" onclick="loadViewData('tierarzt')">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Aktualisieren
+      </button>
+      <div id="v-tierarzt-content"><div class="view-empty"><div class="icon">🏥</div>Noch keine Einträge.</div></div>
+    </div>
+
+    <!-- VIEW: Medikamente -->
+    <div id="v-medikamente" class="section">
+      <button class="refresh-btn" onclick="loadViewData('medikamente')">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Aktualisieren
+      </button>
+      <div id="v-medikamente-content"><div class="view-empty"><div class="icon">💊</div>Noch keine Einträge.</div></div>
+    </div>
+
+  </div><!-- end ansicht panel -->
+</div><!-- end main-screen -->
+</div><!-- end app -->
 
 <script src="https://accounts.google.com/gsi/client"></script>
 <script>
@@ -240,44 +683,65 @@ const SPREADSHEET_ID = '1up8Tk3xolshQt9bjogeOoUzirTQILOkZ';
 const CLIENT_ID = '691155115903-q69fuj564d7kaag2vk3fg2nffk2lhpnf.apps.googleusercontent.com';
 const SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email';
 
-let tokenClient, accessToken = '', userEmail = '';
-let selectedSymptoms = [], medState = '', bettState = '', lastFutter = '';
-let settings = {sheetUmwelt:'Umwelttagebuch', sheetFutter:'Fütterungstagebuch'};
+let tokenClient, accessToken='', userEmail='', lastFutter='';
+let medState='', bettState='', ersteGabeState='', zweiWoState='', provState='', aVerdState='';
+let selectedSymKat=[], selectedKoerper=[], schweregradVal='', alReaktVal='';
+let currentMode='eingabe', currentViewTab='v-umwelt';
 
+let settings={
+  sheetUmwelt:'📋 Umweltagebuch',
+  sheetSymptom:'📋 Symptomtagebuch',
+  sheetFutter:'🥩 Futtertagebuch',
+  sheetAusschluss:'🥩 Ausschlussdiät',
+  sheetAllergen:'⚠️ Bekannte Allergene',
+  sheetTierarzt:'🏥 Tierarztbesuche',
+  sheetMedikamente:'💊 Medikamente'
+};
+
+/* ====== AUTH ====== */
 function loadSettings(){
   try{
-    const s = localStorage.getItem('hund_settings');
-    if(s) settings = {...settings,...JSON.parse(s)};
-    const t = localStorage.getItem('hund_token');
-    const e = localStorage.getItem('hund_email');
-    const lf = localStorage.getItem('hund_last_futter');
-    if(t && e){ accessToken=t; userEmail=e; showMain(); }
-    if(lf){ lastFutter=lf; showPrevHint(); }
+    const s=localStorage.getItem('hund_settings');
+    if(s) settings={...settings,...JSON.parse(s)};
+    const t=localStorage.getItem('hund_token');
+    const e=localStorage.getItem('hund_email');
+    const lf=localStorage.getItem('hund_last_futter');
+    if(t&&e){accessToken=t;userEmail=e;showMain();}
+    if(lf){lastFutter=lf;showPrevHint();}
   }catch(e){}
-  document.getElementById('sheet-umwelt').value = settings.sheetUmwelt;
-  document.getElementById('sheet-futter').value = settings.sheetFutter;
+  document.getElementById('sheet-umwelt').value=settings.sheetUmwelt;
+  document.getElementById('sheet-symptom').value=settings.sheetSymptom;
+  document.getElementById('sheet-futter').value=settings.sheetFutter;
+  document.getElementById('sheet-ausschluss').value=settings.sheetAusschluss;
+  document.getElementById('sheet-allergen').value=settings.sheetAllergen;
+  document.getElementById('sheet-tierarzt').value=settings.sheetTierarzt;
+  document.getElementById('sheet-medikamente').value=settings.sheetMedikamente;
 }
 
 function saveSettings(){
-  settings.sheetUmwelt = document.getElementById('sheet-umwelt').value.trim()||'Umwelttagebuch';
-  settings.sheetFutter = document.getElementById('sheet-futter').value.trim()||'Fütterungstagebuch';
-  try{localStorage.setItem('hund_settings', JSON.stringify(settings));}catch(e){}
+  settings.sheetUmwelt=document.getElementById('sheet-umwelt').value.trim()||'📋 Umweltagebuch';
+  settings.sheetSymptom=document.getElementById('sheet-symptom').value.trim()||'📋 Symptomtagebuch';
+  settings.sheetFutter=document.getElementById('sheet-futter').value.trim()||'🥩 Futtertagebuch';
+  settings.sheetAusschluss=document.getElementById('sheet-ausschluss').value.trim()||'🥩 Ausschlussdiät';
+  settings.sheetAllergen=document.getElementById('sheet-allergen').value.trim()||'⚠️ Bekannte Allergene';
+  settings.sheetTierarzt=document.getElementById('sheet-tierarzt').value.trim()||'🏥 Tierarztbesuche';
+  settings.sheetMedikamente=document.getElementById('sheet-medikamente').value.trim()||'💊 Medikamente';
+  try{localStorage.setItem('hund_settings',JSON.stringify(settings));}catch(e){}
 }
 
 function signIn(){
-  if(!window.google){ setTimeout(signIn, 500); return; }
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPE,
-    callback: async (resp) => {
-      if(resp.error){ alert('Login fehlgeschlagen: '+resp.error); return; }
-      accessToken = resp.access_token;
+  if(!window.google){setTimeout(signIn,500);return;}
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID,scope:SCOPE,
+    callback:async(resp)=>{
+      if(resp.error){alert('Login fehlgeschlagen: '+resp.error);return;}
+      accessToken=resp.access_token;
       try{
-        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+accessToken}});
-        const d = await r.json();
-        userEmail = d.email||'Angemeldet';
-        try{localStorage.setItem('hund_token', accessToken); localStorage.setItem('hund_email', userEmail);}catch(e){}
-      }catch(e){ userEmail='Angemeldet'; }
+        const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+accessToken}});
+        const d=await r.json();
+        userEmail=d.email||'Angemeldet';
+        try{localStorage.setItem('hund_token',accessToken);localStorage.setItem('hund_email',userEmail);}catch(e){}
+      }catch(e){userEmail='Angemeldet';}
       showMain();
     }
   });
@@ -285,9 +749,9 @@ function signIn(){
 }
 
 function signOut(){
-  if(window.google && accessToken) google.accounts.oauth2.revoke(accessToken);
-  accessToken=''; userEmail='';
-  try{localStorage.removeItem('hund_token'); localStorage.removeItem('hund_email');}catch(e){}
+  if(window.google&&accessToken) google.accounts.oauth2.revoke(accessToken);
+  accessToken='';userEmail='';
+  try{localStorage.removeItem('hund_token');localStorage.removeItem('hund_email');}catch(e){}
   document.getElementById('main-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
 }
@@ -295,90 +759,158 @@ function signOut(){
 function showMain(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-screen').style.display='block';
-  document.getElementById('user-email').textContent = userEmail;
-  setToday('u-datum'); setToday('f-datum');
+  document.getElementById('user-email').textContent=userEmail;
+  ['u-datum','s-datum','f-datum','al-datum','t-datum','m-von'].forEach(id=>setToday(id));
 }
 
+/* ====== HELPERS ====== */
 function setToday(id){
-  const d = new Date();
-  document.getElementById(id).value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const d=new Date();
+  const el=document.getElementById(id);
+  if(el) el.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-
-function switchTab(tab){
-  ['umwelt','fuetterung','einst'].forEach((t,i)=>{
-    document.querySelectorAll('.tab')[i].classList.toggle('active',t===tab);
-    const s = document.getElementById('tab-'+t);
-    s.classList.toggle('active',t===tab);
-    s.style.display = t===tab?'block':'none';
-  });
-}
-
-function toggleSym(el){
-  if(el.textContent==='Keine') document.querySelectorAll('#tab-fuetterung .tog-btn').forEach(b=>{if(b!==el)b.classList.remove('sel')});
-  el.classList.toggle('sel');
-  selectedSymptoms = Array.from(document.querySelectorAll('#tab-fuetterung .tog-btn.sel')).map(b=>b.textContent);
-}
-
-function toggleMed(val){
-  medState = medState===val?'':val;
-  document.getElementById('med-ja').classList.toggle('sel', medState==='ja');
-  document.getElementById('med-nein').classList.toggle('sel', medState==='nein');
-}
-
-function toggleBett(el){
-  const wasSelected = el.classList.contains('sel');
-  document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b=>b.classList.remove('sel'));
-  if(!wasSelected){ el.classList.add('sel'); bettState=el.textContent; document.getElementById('u-bett').value=''; }
-  else bettState='';
-}
-
-function showPrevHint(){
-  if(!lastFutter) return;
-  document.getElementById('prev-text').textContent = lastFutter.length>30?lastFutter.slice(0,30)+'…':lastFutter;
-  document.getElementById('prev-hint').style.display='flex';
-}
-
-function usePrev(){ document.getElementById('f-futter').value = lastFutter; }
+function clearDate(id){document.getElementById(id).value='';}
 
 function formatDate(iso){
-  if(!iso) return '';
-  const [y,m,d]=iso.split('-');
+  if(!iso)return'';
+  const[y,m,d]=iso.split('-');
   return d+'.'+m+'.'+y;
 }
 
-function setStatus(id, type, msg){
+function setStatus(id,type,msg){
   const el=document.getElementById(id);
   el.className='status '+type;
   el.textContent=msg;
 }
 
-async function appendRow(sheet, values){
+function esc(s){return String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ====== MODE & TAB SWITCHING ====== */
+function switchMode(mode){
+  currentMode=mode;
+  document.getElementById('mode-eingabe').classList.toggle('active',mode==='eingabe');
+  document.getElementById('mode-ansicht').classList.toggle('active',mode==='ansicht');
+  document.getElementById('mode-eingabe-panel').style.display=mode==='eingabe'?'block':'none';
+  document.getElementById('mode-ansicht-panel').style.display=mode==='ansicht'?'block':'none';
+}
+
+function switchTab(tab){
+  const tabs=['umwelt','symptom','futter','ausschluss','allergen','tierarzt','medikamente','einst'];
+  const tabEls=document.querySelectorAll('#eingabe-tabs .tab');
+  tabs.forEach((t,i)=>{
+    if(tabEls[i]) tabEls[i].classList.toggle('active',t===tab);
+    const s=document.getElementById('tab-'+t);
+    if(s){s.classList.toggle('active',t===tab);s.style.display=t===tab?'block':'none';}
+  });
+}
+
+function switchViewTab(tab){
+  currentViewTab=tab;
+  const tabs=['v-umwelt','v-symptom','v-futter','v-ausschluss','v-allergen','v-tierarzt','v-medikamente'];
+  const tabEls=document.querySelectorAll('#ansicht-tabs .tab');
+  tabs.forEach((t,i)=>{
+    if(tabEls[i]) tabEls[i].classList.toggle('active',t===tab);
+    const s=document.getElementById(t);
+    if(s){s.classList.toggle('active',t===tab);s.style.display=t===tab?'block':'none';}
+  });
+}
+
+/* ====== TOGGLE HELPERS ====== */
+function toggleBett(el){
+  const was=el.classList.contains('sel');
+  document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b=>b.classList.remove('sel'));
+  if(!was){el.classList.add('sel');bettState=el.textContent;document.getElementById('u-bett').value='';}
+  else bettState='';
+}
+function toggleMed(val){
+  medState=medState===val?'':val;
+  document.getElementById('med-ja').classList.toggle('sel',medState==='ja');
+  document.getElementById('med-nein').classList.toggle('sel',medState==='nein');
+}
+function toggleSymKat(el){
+  el.classList.toggle('sel');
+  selectedSymKat=Array.from(document.querySelectorAll('#sym-kat-grid .tog-btn.sel')).map(b=>b.textContent);
+}
+function toggleSchwere(el){
+  document.querySelectorAll('#tab-symptom .tog-btn[data-val]').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');schweregradVal=el.dataset.val;
+}
+function toggleKoerper(el){
+  el.classList.toggle('sel');
+  selectedKoerper=Array.from(document.querySelectorAll('#tab-symptom .field:nth-child(5) .tog-btn.sel')).map(b=>b.textContent);
+}
+function toggleAlReakt(el){
+  document.querySelectorAll('#tab-allergen .tog-btn[data-val]').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');alReaktVal=el.dataset.val;
+}
+function toggleErsteGabe(val){
+  ersteGabeState=ersteGabeState===val?'':val;
+  document.getElementById('erstegabe-ja').classList.toggle('sel',ersteGabeState==='ja');
+  document.getElementById('erstegabe-nein').classList.toggle('sel',ersteGabeState==='nein');
+}
+function toggleZweiWo(val){
+  zweiWoState=zweiWoState===val?'':val;
+  document.getElementById('zweiwo-ja').classList.toggle('sel',zweiWoState==='ja');
+  document.getElementById('zweiwo-nein').classList.toggle('sel',zweiWoState==='nein');
+}
+function toggleProv(val){
+  provState=provState===val?'':val;
+  document.getElementById('prov-ja').classList.toggle('sel',provState==='ja');
+  document.getElementById('prov-nein').classList.toggle('sel',provState==='nein');
+}
+function toggleAVerd(val){
+  aVerdState=aVerdState===val?'':val;
+  document.getElementById('averd-ja').classList.toggle('sel',aVerdState==='ja');
+  document.getElementById('averd-nein').classList.toggle('sel',aVerdState==='nein');
+}
+
+function showPrevHint(){
+  if(!lastFutter)return;
+  document.getElementById('prev-text').textContent=lastFutter.length>30?lastFutter.slice(0,30)+'…':lastFutter;
+  document.getElementById('prev-hint').style.display='flex';
+}
+function usePrev(){document.getElementById('f-futter').value=lastFutter;}
+
+/* ====== SHEETS API ====== */
+async function appendRow(sheet,values){
   if(!accessToken) throw new Error('Nicht angemeldet');
-  const range = encodeURIComponent(sheet+'!A:Z');
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-  const res = await fetch(url,{
+  const range=encodeURIComponent(sheet+'!A:Z');
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const res=await fetch(url,{
     method:'POST',
     headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
-    body: JSON.stringify({values:[values]})
+    body:JSON.stringify({values:[values]})
   });
-  if(res.status===401){
-    accessToken='';
-    try{localStorage.removeItem('hund_token');}catch(e){}
-    document.getElementById('main-screen').style.display='none';
-    document.getElementById('login-screen').style.display='flex';
-    throw new Error('Sitzung abgelaufen – bitte neu anmelden.');
-  }
-  if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e?.error?.message||'HTTP '+res.status); }
+  if(res.status===401){handleExpired();throw new Error('Sitzung abgelaufen – bitte neu anmelden.');}
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||'HTTP '+res.status);}
   return res.json();
 }
 
+async function readSheet(sheet){
+  if(!accessToken) throw new Error('Nicht angemeldet');
+  const range=encodeURIComponent(sheet+'!A:Z');
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}`;
+  const res=await fetch(url,{headers:{'Authorization':'Bearer '+accessToken}});
+  if(res.status===401){handleExpired();throw new Error('Sitzung abgelaufen.');}
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||'HTTP '+res.status);}
+  const data=await res.json();
+  return data.values||[];
+}
+
+function handleExpired(){
+  accessToken='';
+  try{localStorage.removeItem('hund_token');}catch(e){}
+  document.getElementById('main-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+
+/* ====== SUBMIT FUNCTIONS ====== */
 async function submitUmwelt(){
   const datum=document.getElementById('u-datum').value;
   if(!datum){setStatus('status-u','err','Bitte Datum auswählen.');return;}
-  const btn=document.getElementById('btn-u');
-  btn.disabled=true;
+  const btn=document.getElementById('btn-u');btn.disabled=true;
   setStatus('status-u','loading','Wird gespeichert…');
-  const bettVal = bettState || document.getElementById('u-bett').value;
+  const bettVal=bettState||document.getElementById('u-bett').value;
   try{
     await appendRow(settings.sheetUmwelt,[
       formatDate(datum),
@@ -391,33 +923,153 @@ async function submitUmwelt(){
     ]);
     setStatus('status-u','ok','✓ Gespeichert!');
     ['u-wetter','u-pollen','u-raumklima','u-bett','u-notizen'].forEach(id=>document.getElementById(id).value='');
-    medState=''; bettState='';
+    medState='';bettState='';
     document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b=>b.classList.remove('sel'));
-  }catch(e){ setStatus('status-u','err','Fehler: '+e.message); }
+  }catch(e){setStatus('status-u','err','Fehler: '+e.message);}
   btn.disabled=false;
 }
 
-async function submitFuetterung(){
+async function submitSymptom(){
+  const datum=document.getElementById('s-datum').value;
+  if(!datum){setStatus('status-s','err','Bitte Datum auswählen.');return;}
+  const btn=document.getElementById('btn-s');btn.disabled=true;
+  setStatus('status-s','loading','Wird gespeichert…');
+  const katExtra=document.getElementById('s-kat-extra').value;
+  const katAll=[...selectedSymKat,katExtra].filter(Boolean).join(', ');
+  const koerperExtra=document.getElementById('s-koerper-extra').value;
+  const koerperAll=[...selectedKoerper,koerperExtra].filter(Boolean).join(', ');
+  try{
+    await appendRow(settings.sheetSymptom,[
+      formatDate(datum),katAll,
+      document.getElementById('s-beschreibung').value,
+      schweregradVal,koerperAll,
+      document.getElementById('s-notizen').value
+    ]);
+    setStatus('status-s','ok','✓ Gespeichert!');
+    ['s-beschreibung','s-notizen','s-kat-extra','s-koerper-extra'].forEach(id=>document.getElementById(id).value='');
+    selectedSymKat=[];selectedKoerper=[];schweregradVal='';
+    document.querySelectorAll('#tab-symptom .tog-btn').forEach(b=>b.classList.remove('sel'));
+  }catch(e){setStatus('status-s','err','Fehler: '+e.message);}
+  btn.disabled=false;
+}
+
+async function submitFutter(){
   const datum=document.getElementById('f-datum').value;
   const futter=document.getElementById('f-futter').value.trim();
   if(!datum){setStatus('status-f','err','Bitte Datum auswählen.');return;}
-  if(!futter){setStatus('status-f','err','Bitte Fütterung eintragen.');return;}
-  const btn=document.getElementById('btn-f');
-  btn.disabled=true;
+  if(!futter){setStatus('status-f','err','Bitte Futter eintragen.');return;}
+  const btn=document.getElementById('btn-f');btn.disabled=true;
   setStatus('status-f','loading','Wird gespeichert…');
-  const extra=document.getElementById('f-symptome-extra').value;
-  const symText=selectedSymptoms.join(', ')+(extra?' – '+extra:'');
   try{
-    await appendRow(settings.sheetFutter,[formatDate(datum), futter, symText]);
+    await appendRow(settings.sheetFutter,[
+      formatDate(datum),futter,
+      ersteGabeState==='ja'?'Ja':'Nein',
+      zweiWoState==='ja'?'Ja':'Nein',
+      provState==='ja'?'Ja':'Nein',
+      document.getElementById('f-beschreibung').value,
+      document.getElementById('f-notizen').value
+    ]);
     lastFutter=futter;
     try{localStorage.setItem('hund_last_futter',futter);}catch(e){}
     showPrevHint();
     setStatus('status-f','ok','✓ Gespeichert!');
     document.getElementById('f-futter').value='';
-    document.getElementById('f-symptome-extra').value='';
-    selectedSymptoms=[];
-    document.querySelectorAll('#tab-fuetterung .tog-btn').forEach(b=>b.classList.remove('sel'));
-  }catch(e){ setStatus('status-f','err','Fehler: '+e.message); }
+    document.getElementById('f-beschreibung').value='';
+    document.getElementById('f-notizen').value='';
+    ersteGabeState='';zweiWoState='';provState='';
+    document.querySelectorAll('#tab-futter .tog-btn').forEach(b=>b.classList.remove('sel'));
+  }catch(e){setStatus('status-f','err','Fehler: '+e.message);}
+  btn.disabled=false;
+}
+
+async function submitAusschluss(){
+  const zutat=document.getElementById('a-zutat').value.trim();
+  if(!zutat){setStatus('status-a','err','Bitte Zutat eingeben.');return;}
+  const btn=document.getElementById('btn-a');btn.disabled=true;
+  setStatus('status-a','loading','Wird gespeichert…');
+  try{
+    await appendRow(settings.sheetAusschluss,[
+      zutat,aVerdState==='ja'?'Ja':'',
+      document.getElementById('a-kategorie').value,
+      document.getElementById('a-status').value,
+      formatDate(document.getElementById('a-datum').value),
+      document.getElementById('a-reaktion').value,
+      document.getElementById('a-notizen').value
+    ]);
+    setStatus('status-a','ok','✓ Gespeichert!');
+    document.getElementById('a-zutat').value='';
+    document.getElementById('a-reaktion').value='';
+    document.getElementById('a-notizen').value='';
+    aVerdState='';
+    document.querySelectorAll('#tab-ausschluss .tog-btn').forEach(b=>b.classList.remove('sel'));
+  }catch(e){setStatus('status-a','err','Fehler: '+e.message);}
+  btn.disabled=false;
+}
+
+async function submitAllergen(){
+  const allergen=document.getElementById('al-allergen').value.trim();
+  if(!allergen){setStatus('status-al','err','Bitte Allergen eingeben.');return;}
+  const btn=document.getElementById('btn-al');btn.disabled=true;
+  setStatus('status-al','loading','Wird gespeichert…');
+  try{
+    await appendRow(settings.sheetAllergen,[
+      allergen,
+      document.getElementById('al-kategorie').value,
+      alReaktVal,
+      document.getElementById('al-symptome').value,
+      formatDate(document.getElementById('al-datum').value),
+      document.getElementById('al-notizen').value
+    ]);
+    setStatus('status-al','ok','✓ Gespeichert!');
+    ['al-allergen','al-symptome','al-notizen'].forEach(id=>document.getElementById(id).value='');
+    alReaktVal='';
+    document.querySelectorAll('#tab-allergen .tog-btn').forEach(b=>b.classList.remove('sel'));
+  }catch(e){setStatus('status-al','err','Fehler: '+e.message);}
+  btn.disabled=false;
+}
+
+async function submitTierarzt(){
+  const datum=document.getElementById('t-datum').value;
+  if(!datum){setStatus('status-t','err','Bitte Datum auswählen.');return;}
+  const btn=document.getElementById('btn-t');btn.disabled=true;
+  setStatus('status-t','loading','Wird gespeichert…');
+  try{
+    await appendRow(settings.sheetTierarzt,[
+      formatDate(datum),
+      document.getElementById('t-arzt').value,
+      document.getElementById('t-anlass').value,
+      document.getElementById('t-untersuchungen').value,
+      document.getElementById('t-ergebnis').value,
+      document.getElementById('t-therapie').value,
+      formatDate(document.getElementById('t-folge').value)
+    ]);
+    setStatus('status-t','ok','✓ Gespeichert!');
+    ['t-arzt','t-anlass','t-untersuchungen','t-ergebnis','t-therapie'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('t-folge').value='';
+  }catch(e){setStatus('status-t','err','Fehler: '+e.message);}
+  btn.disabled=false;
+}
+
+async function submitMedikament(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){setStatus('status-m','err','Bitte Medikament eingeben.');return;}
+  const btn=document.getElementById('btn-m');btn.disabled=true;
+  setStatus('status-m','loading','Wird gespeichert…');
+  try{
+    await appendRow(settings.sheetMedikamente,[
+      name,
+      document.getElementById('m-typ').value,
+      document.getElementById('m-dosierung').value,
+      document.getElementById('m-haeufigkeit').value,
+      formatDate(document.getElementById('m-von').value),
+      formatDate(document.getElementById('m-bis').value),
+      document.getElementById('m-verordnet').value,
+      document.getElementById('m-notizen').value
+    ]);
+    setStatus('status-m','ok','✓ Gespeichert!');
+    ['m-name','m-dosierung','m-haeufigkeit','m-verordnet','m-notizen'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('m-bis').value='';
+  }catch(e){setStatus('status-m','err','Fehler: '+e.message);}
   btn.disabled=false;
 }
 
@@ -426,17 +1078,194 @@ async function testConnection(){
   if(!accessToken){setStatus('status-einst','err','Bitte zuerst anmelden.');return;}
   setStatus('status-einst','loading','Verbindung wird getestet…');
   try{
-    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?fields=sheets.properties.title`,{
-      headers:{'Authorization':'Bearer '+accessToken}
-    });
+    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?fields=sheets.properties.title`,{headers:{'Authorization':'Bearer '+accessToken}});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();
     const sheets=data.sheets.map(s=>s.properties.title).join(', ');
-    setStatus('status-einst','ok','✓ Verbunden! Gefundene Blätter: '+sheets);
-  }catch(e){ setStatus('status-einst','err','Fehler: '+e.message); }
+    setStatus('status-einst','ok','✓ Verbunden! Blätter: '+sheets);
+  }catch(e){setStatus('status-einst','err','Fehler: '+e.message);}
 }
 
-window.addEventListener('load', loadSettings);
+/* ====== VIEW DATA LOADING ====== */
+function severityDots(val,max=5){
+  const n=parseInt(val)||0;
+  let h='<span class="severity">';
+  for(let i=1;i<=max;i++){
+    const cls=i<=n?(n>=4?'on vhigh':n>=3?'on high':'on'):'';
+    h+=`<span class="${cls}"></span>`;
+  }
+  return h+'</span>';
+}
+
+function ecRow(key,val){
+  if(!val&&val!==0)return'';
+  return`<div class="ec-row"><span class="ec-key">${esc(key)}</span><span class="ec-val">${esc(String(val))}</span></div>`;
+}
+
+async function loadViewData(which){
+  const mapId={
+    umwelt:'v-umwelt',symptom:'v-symptom',futter:'v-futter',
+    ausschluss:'v-ausschluss',allergen:'v-allergen',
+    tierarzt:'v-tierarzt',medikamente:'v-medikamente'
+  };
+  const contentId=mapId[which]+'-content';
+  const el=document.getElementById(contentId);
+  el.innerHTML='<div class="view-loading"><div class="spinner"></div>Daten werden geladen…</div>';
+
+  try{
+    let sheetName;
+    if(which==='umwelt') sheetName=settings.sheetUmwelt;
+    else if(which==='symptom') sheetName=settings.sheetSymptom;
+    else if(which==='futter') sheetName=settings.sheetFutter;
+    else if(which==='ausschluss') sheetName=settings.sheetAusschluss;
+    else if(which==='allergen') sheetName=settings.sheetAllergen;
+    else if(which==='tierarzt') sheetName=settings.sheetTierarzt;
+    else if(which==='medikamente') sheetName=settings.sheetMedikamente;
+
+    const rows=await readSheet(sheetName);
+    if(!rows||rows.length<2){
+      el.innerHTML='<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge.</div>';
+      return;
+    }
+
+    // Skip header rows (row 0 = section title, row 1 = column headers in this sheet format)
+    const headers=rows[1]||[];
+    const dataRows=rows.slice(2).filter(r=>r&&r.some(c=>c));
+
+    if(which==='umwelt') el.innerHTML=renderUmwelt(headers,dataRows);
+    else if(which==='symptom') el.innerHTML=renderSymptom(headers,dataRows);
+    else if(which==='futter') el.innerHTML=renderFutter(headers,dataRows);
+    else if(which==='ausschluss') el.innerHTML=renderAusschluss(headers,dataRows);
+    else if(which==='allergen') el.innerHTML=renderAllergen(headers,dataRows);
+    else if(which==='tierarzt') el.innerHTML=renderTierarzt(headers,dataRows);
+    else if(which==='medikamente') el.innerHTML=renderMedikamente(headers,dataRows);
+
+  }catch(e){
+    el.innerHTML=`<div class="status err" style="display:block">Fehler: ${esc(e.message)}</div>`;
+  }
+}
+
+function get(row,i){return(row[i]||'').toString().trim();}
+
+function renderUmwelt(h,rows){
+  // cols: Datum, Wetter, Pollen, Raumklima, Bett, Medikament, Notizen
+  const sorted=[...rows].reverse();
+  return sorted.map(r=>`
+    <div class="entry-card">
+      <div class="ec-date">📅 ${esc(get(r,0))}</div>
+      ${ecRow('Wetter',get(r,1))}
+      ${ecRow('Pollen',get(r,2))}
+      ${ecRow('Raumklima',get(r,3))}
+      ${ecRow('Bett',get(r,4))}
+      ${get(r,5)?`<div class="ec-row"><span class="ec-key">Medikament</span><span class="ec-val badge ${get(r,5)==='Ja'?'':'badge-warn'}">${esc(get(r,5))}</span></div>`:''}
+      ${ecRow('Notizen',get(r,6))}
+    </div>`).join('');
+}
+
+function renderSymptom(h,rows){
+  const sorted=[...rows].reverse();
+  return sorted.map(r=>`
+    <div class="entry-card">
+      <div class="ec-date">📅 ${esc(get(r,0))}</div>
+      <div class="ec-row"><span class="ec-key">Symptom</span><span class="ec-val badge badge-warn">${esc(get(r,1))}</span></div>
+      ${ecRow('Beschreibung',get(r,2))}
+      ${get(r,3)?`<div class="ec-row"><span class="ec-key">Schweregrad</span><span class="ec-val">${severityDots(get(r,3))} ${esc(get(r,3))}/5</span></div>`:''}
+      ${ecRow('Körperstelle',get(r,4))}
+      ${ecRow('Notizen',get(r,5))}
+    </div>`).join('');
+}
+
+function renderFutter(h,rows){
+  const sorted=[...rows].reverse();
+  return sorted.map(r=>`
+    <div class="entry-card">
+      <div class="ec-date">📅 ${esc(get(r,0))}${get(r,2)==='Ja'?' <span class="ec-val badge" style="margin-left:6px;font-size:11px">Erste Gabe</span>':''}</div>
+      ${ecRow('Futter',get(r,1))}
+      ${get(r,4)==='Ja'?`<div class="ec-row"><span class="ec-key">Provokation</span><span class="ec-val badge badge-warn">Ja</span></div>`:''}
+      ${ecRow('Reaktion',get(r,5))}
+      ${ecRow('Notizen',get(r,6))}
+    </div>`).join('');
+}
+
+function renderAusschluss(h,rows){
+  // Group by status
+  const statusOrder=['Getestet – verträglich','In Test','Noch nicht getestet','Getestet – Reaktion','Gesperrt'];
+  const groups={};
+  rows.forEach(r=>{
+    const st=get(r,3)||'Unbekannt';
+    if(!groups[st]) groups[st]=[];
+    groups[st].push(r);
+  });
+  let html='';
+  statusOrder.forEach(st=>{
+    if(!groups[st]) return;
+    const isOk=st.includes('verträglich');
+    const isBad=st.includes('Reaktion')||st.includes('Gesperrt');
+    const cls=isOk?'badge-ok':isBad?'badge-bad':'badge-warn';
+    html+=`<div class="divider"><span>${esc(st)} (${groups[st].length})</span></div>`;
+    html+='<div class="badge-list">';
+    groups[st].forEach(r=>{
+      html+=`<span class="badge-item ${cls}">${esc(get(r,0))}${get(r,1)==='Ja'?' ⚠️':''}</span>`;
+    });
+    html+='</div>';
+  });
+  // Also show details
+  html+=`<div class="divider"><span>Alle Einträge</span></div>`;
+  rows.forEach(r=>{
+    const isBad=get(r,3).includes('Reaktion')||get(r,3).includes('Gesperrt');
+    html+=`<div class="entry-card">
+      <div class="ec-date">${esc(get(r,0))}${get(r,4)?' – '+esc(get(r,4)):''}</div>
+      <div class="ec-row"><span class="ec-key">Status</span><span class="ec-val badge ${isBad?'badge-bad':get(r,3).includes('verträglich')?'badge-ok':'badge-warn'}">${esc(get(r,3))}</span></div>
+      ${ecRow('Kategorie',get(r,2))}
+      ${get(r,1)==='Ja'?'<div class="ec-row"><span class="ec-key">Verdacht</span><span class="ec-val badge badge-warn">⚠️ Ja</span></div>':''}
+      ${ecRow('Reaktion',get(r,5))}
+      ${ecRow('Notizen',get(r,6))}
+    </div>`;
+  });
+  return html;
+}
+
+function renderAllergen(h,rows){
+  return rows.map(r=>`
+    <div class="entry-card">
+      <div class="ec-date">⚠️ ${esc(get(r,0))}</div>
+      ${ecRow('Kategorie',get(r,1))}
+      ${get(r,2)?`<div class="ec-row"><span class="ec-key">Reaktion</span><span class="ec-val">${severityDots(get(r,2))} ${esc(get(r,2))}/5</span></div>`:''}
+      ${ecRow('Symptome',get(r,3))}
+      ${ecRow('Bemerkt',get(r,4))}
+      ${ecRow('Notizen',get(r,5))}
+    </div>`).join('');
+}
+
+function renderTierarzt(h,rows){
+  if(!rows.length) return '<div class="view-empty"><div class="icon">🏥</div>Noch keine Besuche eingetragen.</div>';
+  return [...rows].reverse().map(r=>`
+    <div class="entry-card">
+      <div class="ec-date">📅 ${esc(get(r,0))}</div>
+      ${ecRow('Praxis',get(r,1))}
+      ${ecRow('Anlass',get(r,2))}
+      ${ecRow('Untersuchungen',get(r,3))}
+      ${ecRow('Befund',get(r,4))}
+      ${ecRow('Therapie',get(r,5))}
+      ${get(r,6)?`<div class="ec-row"><span class="ec-key">Folgebesuch</span><span class="ec-val badge">${esc(get(r,6))}</span></div>`:''}
+    </div>`).join('');
+}
+
+function renderMedikamente(h,rows){
+  return rows.map(r=>`
+    <div class="entry-card">
+      <div class="ec-date">💊 ${esc(get(r,0))}</div>
+      ${ecRow('Typ',get(r,1))}
+      ${ecRow('Dosierung',get(r,2))}
+      ${ecRow('Häufigkeit',get(r,3))}
+      ${ecRow('Von',get(r,4))}
+      ${ecRow('Bis',get(r,5))}
+      ${ecRow('Verordnet',get(r,6))}
+      ${ecRow('Wirkung',get(r,7))}
+    </div>`).join('');
+}
+
+window.addEventListener('load',loadSettings);
 </script>
 </body>
 </html>
