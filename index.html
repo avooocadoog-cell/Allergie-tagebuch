@@ -580,13 +580,13 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="settings-box">
         <h3>Tabellenblatt-Namen</h3>
         <p>Gib die Namen exakt so ein wie in der Google-Tabelle (Reiter unten).</p>
-        <div class="field"><label>Umwelttagebuch</label><input type="text" id="sheet-umwelt" placeholder="📋 Umweltagebuch" oninput="saveSettings()"></div>
-        <div class="field"><label>Symptomtagebuch</label><input type="text" id="sheet-symptom" placeholder="📋 Symptomtagebuch" oninput="saveSettings()"></div>
-        <div class="field"><label>Futtertagebuch</label><input type="text" id="sheet-futter" placeholder="🥩 Futtertagebuch" oninput="saveSettings()"></div>
-        <div class="field"><label>Ausschlussdiät</label><input type="text" id="sheet-ausschluss" placeholder="🥩 Ausschlussdiät" oninput="saveSettings()"></div>
-        <div class="field"><label>Bekannte Allergene</label><input type="text" id="sheet-allergen" placeholder="⚠️ Bekannte Allergene" oninput="saveSettings()"></div>
-        <div class="field"><label>Tierarztbesuche</label><input type="text" id="sheet-tierarzt" placeholder="🏥 Tierarztbesuche" oninput="saveSettings()"></div>
-        <div class="field"><label>Medikamente</label><input type="text" id="sheet-medikamente" placeholder="💊 Medikamente" oninput="saveSettings()"></div>
+        <div class="field"><label>Umwelttagebuch</label><input type="text" id="sheet-umwelt" placeholder="Umweltagebuch" oninput="saveSettings()"></div>
+        <div class="field"><label>Symptomtagebuch</label><input type="text" id="sheet-symptom" placeholder="Symptomtagebuch" oninput="saveSettings()"></div>
+        <div class="field"><label>Futtertagebuch</label><input type="text" id="sheet-futter" placeholder="Futtertagebuch" oninput="saveSettings()"></div>
+        <div class="field"><label>Ausschlussdiät</label><input type="text" id="sheet-ausschluss" placeholder="Ausschlussdiät" oninput="saveSettings()"></div>
+        <div class="field"><label>Bekannte Allergene</label><input type="text" id="sheet-allergen" placeholder="Bekannte Allergene" oninput="saveSettings()"></div>
+        <div class="field"><label>Tierarztbesuche</label><input type="text" id="sheet-tierarzt" placeholder="Tierarztbesuche" oninput="saveSettings()"></div>
+        <div class="field"><label>Medikamente</label><input type="text" id="sheet-medikamente" placeholder="Medikamente" oninput="saveSettings()"></div>
       </div>
       <div class="install-hint">
         <b>Als App speichern:</b><br>
@@ -679,7 +679,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 
 <script src="https://accounts.google.com/gsi/client"></script>
 <script>
-const SPREADSHEET_ID = '1up8Tk3xolshQt9bjogeOoUzirTQILOkZ';
+const SPREADSHEET_ID = '1k__ZEMOOTjxvKnGC0gyIrIZDNvLG7TPXAgm0-HZEOS8';
 const CLIENT_ID = '691155115903-q69fuj564d7kaag2vk3fg2nffk2lhpnf.apps.googleusercontent.com';
 const SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email';
 
@@ -689,13 +689,13 @@ let selectedSymKat=[], selectedKoerper=[], schweregradVal='', alReaktVal='';
 let currentMode='eingabe', currentViewTab='v-umwelt';
 
 let settings={
-  sheetUmwelt:'📋 Umweltagebuch',
-  sheetSymptom:'📋 Symptomtagebuch',
-  sheetFutter:'🥩 Futtertagebuch',
-  sheetAusschluss:'🥩 Ausschlussdiät',
-  sheetAllergen:'⚠️ Bekannte Allergene',
-  sheetTierarzt:'🏥 Tierarztbesuche',
-  sheetMedikamente:'💊 Medikamente'
+  sheetUmwelt:'Umweltagebuch',
+  sheetSymptom:'Symptomtagebuch',
+  sheetFutter:'Futtertagebuch',
+  sheetAusschluss:'Ausschlussdiät',
+  sheetAllergen:'Bekannte Allergene',
+  sheetTierarzt:'Tierarztbesuche',
+  sheetMedikamente:'Medikamente'
 };
 
 /* ====== AUTH ====== */
@@ -719,13 +719,13 @@ function loadSettings(){
 }
 
 function saveSettings(){
-  settings.sheetUmwelt=document.getElementById('sheet-umwelt').value.trim()||'📋 Umweltagebuch';
-  settings.sheetSymptom=document.getElementById('sheet-symptom').value.trim()||'📋 Symptomtagebuch';
-  settings.sheetFutter=document.getElementById('sheet-futter').value.trim()||'🥩 Futtertagebuch';
-  settings.sheetAusschluss=document.getElementById('sheet-ausschluss').value.trim()||'🥩 Ausschlussdiät';
-  settings.sheetAllergen=document.getElementById('sheet-allergen').value.trim()||'⚠️ Bekannte Allergene';
-  settings.sheetTierarzt=document.getElementById('sheet-tierarzt').value.trim()||'🏥 Tierarztbesuche';
-  settings.sheetMedikamente=document.getElementById('sheet-medikamente').value.trim()||'💊 Medikamente';
+  settings.sheetUmwelt=document.getElementById('sheet-umwelt').value.trim()||'Umweltagebuch';
+  settings.sheetSymptom=document.getElementById('sheet-symptom').value.trim()||'Symptomtagebuch';
+  settings.sheetFutter=document.getElementById('sheet-futter').value.trim()||'Futtertagebuch';
+  settings.sheetAusschluss=document.getElementById('sheet-ausschluss').value.trim()||'Ausschlussdiät';
+  settings.sheetAllergen=document.getElementById('sheet-allergen').value.trim()||'Bekannte Allergene';
+  settings.sheetTierarzt=document.getElementById('sheet-tierarzt').value.trim()||'Tierarztbesuche';
+  settings.sheetMedikamente=document.getElementById('sheet-medikamente').value.trim()||'Medikamente';
   try{localStorage.setItem('hund_settings',JSON.stringify(settings));}catch(e){}
 }
 
