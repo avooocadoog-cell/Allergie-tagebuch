@@ -888,11 +888,15 @@ async function appendRow(sheet,values){
 
 async function readSheet(sheet){
   if(!accessToken) throw new Error('Nicht angemeldet');
-  const range=encodeURIComponent(sheet+'!A:Z');
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}`;
+  // Use A1:Z1000 explicitly to get all rows
+  const range=encodeURIComponent(sheet+'!A1:Z1000');
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
   const res=await fetch(url,{headers:{'Authorization':'Bearer '+accessToken}});
   if(res.status===401){handleExpired();throw new Error('Sitzung abgelaufen.');}
-  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||'HTTP '+res.status);}
+  if(!res.ok){
+    const e=await res.json().catch(()=>({}));
+    throw new Error(e?.error?.message||'HTTP '+res.status);
+  }
   const data=await res.json();
   return data.values||[];
 }
@@ -1102,6 +1106,32 @@ function ecRow(key,val){
   return`<div class="ec-row"><span class="ec-key">${esc(key)}</span><span class="ec-val">${esc(String(val))}</span></div>`;
 }
 
+// Known first-column header values that mark the real column header row
+const HEADER_MARKERS={
+  umwelt:'Datum',
+  symptom:'Datum',
+  futter:'Datum',
+  ausschluss:'Zutat',
+  allergen:'Allergen',
+  tierarzt:'Datum',
+  medikamente:'Medikament'
+};
+
+function findDataRows(rows, which){
+  // Find the row where real column headers start, then return everything after
+  const marker=(HEADER_MARKERS[which]||'').toLowerCase();
+  let headerIdx=0;
+  for(let i=0;i<Math.min(rows.length,5);i++){
+    const first=(rows[i][0]||'').toString().toLowerCase().trim();
+    if(marker && first.includes(marker)){headerIdx=i;break;}
+  }
+  const headers=rows[headerIdx]||[];
+  const dataRows=rows.slice(headerIdx+1).filter(r=>
+    r && r.length>0 && r.some(c=>c!==null&&c!==undefined&&String(c).trim()!=='')
+  );
+  return {headers, dataRows};
+}
+
 async function loadViewData(which){
   const mapId={
     umwelt:'v-umwelt',symptom:'v-symptom',futter:'v-futter',
@@ -1113,35 +1143,40 @@ async function loadViewData(which){
   el.innerHTML='<div class="view-loading"><div class="spinner"></div>Daten werden geladen…</div>';
 
   try{
-    let sheetName;
-    if(which==='umwelt') sheetName=settings.sheetUmwelt;
-    else if(which==='symptom') sheetName=settings.sheetSymptom;
-    else if(which==='futter') sheetName=settings.sheetFutter;
-    else if(which==='ausschluss') sheetName=settings.sheetAusschluss;
-    else if(which==='allergen') sheetName=settings.sheetAllergen;
-    else if(which==='tierarzt') sheetName=settings.sheetTierarzt;
-    else if(which==='medikamente') sheetName=settings.sheetMedikamente;
-
+    const sheetMap={
+      umwelt:settings.sheetUmwelt, symptom:settings.sheetSymptom,
+      futter:settings.sheetFutter, ausschluss:settings.sheetAusschluss,
+      allergen:settings.sheetAllergen, tierarzt:settings.sheetTierarzt,
+      medikamente:settings.sheetMedikamente
+    };
+    const sheetName=sheetMap[which];
     const rows=await readSheet(sheetName);
-    if(!rows||rows.length<2){
+
+    if(!rows||rows.length===0){
       el.innerHTML='<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge.</div>';
       return;
     }
 
-    // Skip header rows (row 0 = section title, row 1 = column headers in this sheet format)
-    const headers=rows[1]||[];
-    const dataRows=rows.slice(2).filter(r=>r&&r.some(c=>c));
+    const {headers, dataRows}=findDataRows(rows, which);
 
-    if(which==='umwelt') el.innerHTML=renderUmwelt(headers,dataRows);
-    else if(which==='symptom') el.innerHTML=renderSymptom(headers,dataRows);
-    else if(which==='futter') el.innerHTML=renderFutter(headers,dataRows);
-    else if(which==='ausschluss') el.innerHTML=renderAusschluss(headers,dataRows);
-    else if(which==='allergen') el.innerHTML=renderAllergen(headers,dataRows);
-    else if(which==='tierarzt') el.innerHTML=renderTierarzt(headers,dataRows);
-    else if(which==='medikamente') el.innerHTML=renderMedikamente(headers,dataRows);
+    if(dataRows.length===0){
+      el.innerHTML='<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge vorhanden.</div>';
+      return;
+    }
+
+    let html='';
+    if(which==='umwelt') html=renderUmwelt(headers,dataRows);
+    else if(which==='symptom') html=renderSymptom(headers,dataRows);
+    else if(which==='futter') html=renderFutter(headers,dataRows);
+    else if(which==='ausschluss') html=renderAusschluss(headers,dataRows);
+    else if(which==='allergen') html=renderAllergen(headers,dataRows);
+    else if(which==='tierarzt') html=renderTierarzt(headers,dataRows);
+    else if(which==='medikamente') html=renderMedikamente(headers,dataRows);
+
+    el.innerHTML=html||'<div class="view-empty"><div class="icon">📭</div>Keine Daten gefunden.</div>';
 
   }catch(e){
-    el.innerHTML=`<div class="status err" style="display:block">Fehler: ${esc(e.message)}</div>`;
+    el.innerHTML=`<div class="status err" style="display:block">Fehler beim Laden: ${esc(e.message)}<br><small>Prüfe den Tabellenblatt-Namen in den Einstellungen.</small></div>`;
   }
 }
 
@@ -1188,38 +1223,56 @@ function renderFutter(h,rows){
 }
 
 function renderAusschluss(h,rows){
-  // Group by status
-  const statusOrder=['Getestet – verträglich','In Test','Noch nicht getestet','Getestet – Reaktion','Gesperrt'];
-  const groups={};
+  // cols: Zutat(0), Verdacht(1)=number, Kategorie(2), Status(3), Erstmals(4), Reaktion(5), Notizen(6)
+  // Verdacht is stored as a number (1-3 = priority/suspicion level), not Ja/Nein
+  
+  // Quick overview: badge list by category
+  const cats={};
   rows.forEach(r=>{
-    const st=get(r,3)||'Unbekannt';
-    if(!groups[st]) groups[st]=[];
-    groups[st].push(r);
+    const kat=get(r,2)||'Sonstiges';
+    if(!cats[kat]) cats[kat]=[];
+    cats[kat].push(r);
   });
-  let html='';
-  statusOrder.forEach(st=>{
-    if(!groups[st]) return;
-    const isOk=st.includes('verträglich');
-    const isBad=st.includes('Reaktion')||st.includes('Gesperrt');
-    const cls=isOk?'badge-ok':isBad?'badge-bad':'badge-warn';
-    html+=`<div class="divider"><span>${esc(st)} (${groups[st].length})</span></div>`;
-    html+='<div class="badge-list">';
-    groups[st].forEach(r=>{
-      html+=`<span class="badge-item ${cls}">${esc(get(r,0))}${get(r,1)==='Ja'?' ⚠️':''}</span>`;
+  
+  // Status-based color
+  function statusCls(st){
+    if(!st) return 'badge-warn';
+    const s=st.toLowerCase();
+    if(s.includes('vertr')) return 'badge-ok';
+    if(s.includes('reaktion')||s.includes('gesperrt')) return 'badge-bad';
+    return 'badge-warn';
+  }
+
+  // Badge overview
+  let html=`<div class="divider"><span>Übersicht nach Kategorie</span></div>`;
+  Object.keys(cats).sort().forEach(kat=>{
+    html+=`<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">${esc(kat)}</div><div class="badge-list">`;
+    cats[kat].forEach(r=>{
+      const verdacht=get(r,1);
+      const hasVerdacht=verdacht&&verdacht!=='0'&&verdacht!=='';
+      html+=`<span class="badge-item ${statusCls(get(r,3))}">${esc(get(r,0))}${hasVerdacht?' ⚠️':''}</span>`;
     });
-    html+='</div>';
+    html+='</div></div>';
   });
-  // Also show details
-  html+=`<div class="divider"><span>Alle Einträge</span></div>`;
+
+  // Detailed cards – only show rows with noteworthy info
+  html+=`<div class="divider"><span>Alle Zutaten (${rows.length})</span></div>`;
   rows.forEach(r=>{
-    const isBad=get(r,3).includes('Reaktion')||get(r,3).includes('Gesperrt');
+    const zutat=get(r,0);
+    if(!zutat) return;
+    const verdacht=get(r,1);
+    const hasVerdacht=verdacht&&verdacht!=='0'&&verdacht!=='';
+    const status=get(r,3);
+    const reaktion=get(r,5);
+    const notizen=get(r,6);
+    // Only show full card if there's meaningful data beyond just the name
     html+=`<div class="entry-card">
-      <div class="ec-date">${esc(get(r,0))}${get(r,4)?' – '+esc(get(r,4)):''}</div>
-      <div class="ec-row"><span class="ec-key">Status</span><span class="ec-val badge ${isBad?'badge-bad':get(r,3).includes('verträglich')?'badge-ok':'badge-warn'}">${esc(get(r,3))}</span></div>
+      <div class="ec-date">${esc(zutat)}${get(r,4)?' – seit '+esc(get(r,4)):''}</div>
+      ${status?`<div class="ec-row"><span class="ec-key">Status</span><span class="ec-val badge ${statusCls(status)}">${esc(status)}</span></div>`:''}
       ${ecRow('Kategorie',get(r,2))}
-      ${get(r,1)==='Ja'?'<div class="ec-row"><span class="ec-key">Verdacht</span><span class="ec-val badge badge-warn">⚠️ Ja</span></div>':''}
-      ${ecRow('Reaktion',get(r,5))}
-      ${ecRow('Notizen',get(r,6))}
+      ${hasVerdacht?`<div class="ec-row"><span class="ec-key">Verdacht</span><span class="ec-val badge badge-warn">⚠️ Stufe ${esc(verdacht)}</span></div>`:''}
+      ${ecRow('Reaktion',reaktion)}
+      ${ecRow('Notizen',notizen)}
     </div>`;
   });
   return html;
