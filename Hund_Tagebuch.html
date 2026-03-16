@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Milow Tagebuch">
+<title>Milow Tagebuch</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --c1:#2d6a4f;--c2:#40916c;--c3:#74c69d;--c4:#d8f3dc;
+    --bg:#ffffff;--bg2:#f5f5f0;--text:#1a1a1a;--sub:#666;
+    --border:#e0e0d8;--radius:12px;--radius-sm:8px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#1a1a1a;--bg2:#252520;--text:#f0f0ec;--sub:#999;--border:#333;--c4:#1a3d2b}
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent}
+  .app{max-width:480px;margin:0 auto;padding:1rem;padding-bottom:2rem}
+
+  /* Login */
+  .login-screen{text-align:center;padding:3rem 1.5rem;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .login-screen .icon{font-size:64px;margin-bottom:1.5rem}
+  .login-screen h1{font-size:24px;font-weight:600;margin-bottom:.5rem}
+  .login-screen p{font-size:15px;color:var(--sub);margin-bottom:2rem;line-height:1.6}
+  .google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:280px;padding:14px 20px;font-size:15px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;transition:background .15s}
+  .google-btn:active{background:var(--bg2)}
+
+  /* User bar */
+  .user-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);margin-bottom:1.25rem;font-size:13px}
+  .user-bar span{color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+  .user-bar button{font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--sub);cursor:pointer;flex-shrink:0}
+
+  /* Tabs */
+  .tab-bar{display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1.5rem;background:var(--bg2)}
+  .tab{flex:1;padding:11px 6px;font-size:13px;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--sub);transition:all .2s;font-family:inherit}
+  .tab.active{background:var(--bg);color:var(--text);font-weight:500}
+
+  /* Sections */
+  .section{display:none}.section.active{display:block}
+  .section-title{font-size:17px;font-weight:600;margin-bottom:1.25rem}
+
+  /* Fields */
+  .field{margin-bottom:1.25rem}
+  label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:500;letter-spacing:.03em;text-transform:uppercase}
+  input[type=text],input[type=date],textarea{width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none;appearance:none;transition:border .15s}
+  input:focus,textarea:focus{outline:none;border-color:var(--c2)}
+  textarea{resize:vertical;min-height:80px;line-height:1.5}
+  .date-row{display:flex;align-items:center;gap:8px}
+  .date-row input{flex:1}
+  .btn-today{padding:10px 14px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0}
+  .btn-today:active{background:var(--border)}
+
+  /* Toggle buttons */
+  .toggle-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+  .toggle-grid.three{grid-template-columns:1fr 1fr 1fr}
+  .tog-btn{padding:11px 8px;font-size:14px;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:var(--bg);color:var(--text);transition:all .15s;user-select:none;font-family:inherit}
+  .tog-btn.sel{background:var(--c4);border-color:var(--c2);color:#1a4731;font-weight:500}
+  .tog-btn:active{transform:scale(.97)}
+  @media(prefers-color-scheme:dark){.tog-btn.sel{color:#74c69d}}
+
+  /* Prev hint */
+  .prev-hint{font-size:13px;color:var(--sub);margin-top:6px;padding:9px 12px;background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;display:none;align-items:center;gap:8px;line-height:1.4}
+  .prev-hint b{color:var(--c2)}
+
+  /* Submit button */
+  .submit-btn{width:100%;padding:15px;font-size:16px;font-weight:600;border:none;border-radius:var(--radius);background:var(--c2);color:#fff;cursor:pointer;margin-top:.5rem;font-family:inherit;transition:background .15s}
+  .submit-btn:active{background:var(--c1)}
+  .submit-btn:disabled{background:var(--border);color:var(--sub);cursor:default}
+
+  /* Status */
+  .status{padding:12px 14px;border-radius:var(--radius-sm);font-size:14px;margin-top:.75rem;display:none;line-height:1.5}
+  .status.ok{background:#d8f3dc;color:#1a4731;display:block}
+  .status.err{background:#fee2e2;color:#7f1d1d;display:block}
+  .status.loading{background:var(--bg2);color:var(--sub);display:block}
+  @media(prefers-color-scheme:dark){
+    .status.ok{background:#1a3d2b;color:#74c69d}
+    .status.err{background:#3d1a1a;color:#fca5a5}
+  }
+
+  /* Settings box */
+  .settings-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
+  .settings-box h3{font-size:14px;font-weight:600;margin-bottom:.5rem}
+  .settings-box p{font-size:13px;color:var(--sub);line-height:1.6;margin-bottom:1rem}
+  .settings-box .field{margin-bottom:.75rem}
+  .settings-box .field:last-child{margin-bottom:0}
+
+  /* Install hint */
+  .install-hint{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;font-size:13px;color:var(--sub);line-height:1.7}
+  .install-hint b{color:var(--text)}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="icon">🐕</div>
+    <h1>Milow Tagebuch</h1>
+    <p>Melde dich mit deinem Google-Konto an,<br>um direkt in deine Tabelle zu schreiben.</p>
+    <button class="google-btn" onclick="signIn()">
+      <svg width="18" height="18" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Mit Google anmelden
+    </button>
+  </div>
+
+  <!-- Main Screen -->
+  <div id="main-screen" style="display:none">
+    <div class="user-bar">
+      <span id="user-email">–</span>
+      <button onclick="signOut()">Abmelden</button>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('umwelt')">Umwelt</button>
+      <button class="tab" onclick="switchTab('fuetterung')">Fütterung</button>
+      <button class="tab" onclick="switchTab('einst')">Einstellungen</button>
+    </div>
+
+    <!-- Umwelttagebuch -->
+    <div id="tab-umwelt" class="section active">
+      <p class="section-title">Umwelttagebuch</p>
+      <div class="field">
+        <label>Datum</label>
+        <div class="date-row">
+          <input type="date" id="u-datum">
+          <button class="btn-today" onclick="setToday('u-datum')">Heute</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Wetter</label>
+        <input type="text" id="u-wetter" placeholder="z.B. 6–13°C, trocken">
+      </div>
+      <div class="field">
+        <label>Pollen (stark bis sehr stark)</label>
+        <input type="text" id="u-pollen" placeholder="z.B. Hasel, Erle">
+      </div>
+      <div class="field">
+        <label>Raumklima</label>
+        <input type="text" id="u-raumklima" placeholder="z.B. 20,0°C 50% Luftfeuchtigkeit">
+      </div>
+      <div class="field">
+        <label>Bett</label>
+        <div class="toggle-grid three">
+          <div class="tog-btn" onclick="toggleBett(this)">Unverändert</div>
+          <div class="tog-btn" onclick="toggleBett(this)">Neu bezogen</div>
+          <div class="tog-btn" onclick="toggleBett(this)">Gewaschen</div>
+        </div>
+        <input type="text" id="u-bett" placeholder="Sonstiges..." style="margin-top:8px">
+      </div>
+      <div class="field">
+        <label>Medikament gegeben</label>
+        <div class="toggle-grid">
+          <div class="tog-btn" id="med-nein" onclick="toggleMed('nein')">Nein</div>
+          <div class="tog-btn" id="med-ja" onclick="toggleMed('ja')">Ja</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Notizen</label>
+        <textarea id="u-notizen" placeholder="Freitext..."></textarea>
+      </div>
+      <button class="submit-btn" id="btn-u" onclick="submitUmwelt()">Eintrag speichern</button>
+      <div class="status" id="status-u"></div>
+    </div>
+
+    <!-- Fütterungstagebuch -->
+    <div id="tab-fuetterung" class="section">
+      <p class="section-title">Fütterungstagebuch</p>
+      <div class="field">
+        <label>Datum</label>
+        <div class="date-row">
+          <input type="date" id="f-datum">
+          <button class="btn-today" onclick="setToday('f-datum')">Heute</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Fütterung / Mahlzeit</label>
+        <textarea id="f-futter" placeholder="z.B. Rindermuskelfleisch 300g, Leber 50g, Karotte..."></textarea>
+        <div id="prev-hint" class="prev-hint" onclick="usePrev()">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5V8l2.5 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Letzten Eintrag übernehmen: <b id="prev-text"></b>
+        </div>
+      </div>
+      <div class="field">
+        <label>Symptome / Auffälligkeiten</label>
+        <div class="toggle-grid">
+          <div class="tog-btn" onclick="toggleSym(this)">Juckreiz</div>
+          <div class="tog-btn" onclick="toggleSym(this)">Pfoten lecken</div>
+          <div class="tog-btn" onclick="toggleSym(this)">Ohren kratzen</div>
+          <div class="tog-btn" onclick="toggleSym(this)">Rötungen</div>
+          <div class="tog-btn" onclick="toggleSym(this)">Durchfall</div>
+          <div class="tog-btn" onclick="toggleSym(this)">Erbrechen</div>
+          <div class="tog-btn" onclick="toggleSym(this)">Keine</div>
+          <div class="tog-btn" onclick="toggleSym(this)">Sonstige</div>
+        </div>
+        <textarea id="f-symptome-extra" placeholder="Weitere Notizen..." style="margin-top:8px"></textarea>
+      </div>
+      <button class="submit-btn" id="btn-f" onclick="submitFuetterung()">Eintrag speichern</button>
+      <div class="status" id="status-f"></div>
+    </div>
+
+    <!-- Einstellungen -->
+    <div id="tab-einst" class="section">
+      <p class="section-title">Einstellungen</p>
+      <div class="settings-box">
+        <h3>Tabellenblatt-Namen</h3>
+        <p>Gib die Namen genau so ein wie sie in deiner Google-Tabelle stehen (auf den Reiter unten schauen).</p>
+        <div class="field">
+          <label>Umwelttagebuch</label>
+          <input type="text" id="sheet-umwelt" placeholder="Umwelttagebuch" oninput="saveSettings()">
+        </div>
+        <div class="field">
+          <label>Fütterungstagebuch</label>
+          <input type="text" id="sheet-futter" placeholder="Fütterungstagebuch" oninput="saveSettings()">
+        </div>
+      </div>
+      <div class="install-hint">
+        <b>Als App speichern:</b><br>
+        iPhone: Teilen → "Zum Home-Bildschirm"<br>
+        Android: Menü (⋮) → "Zum Startbildschirm hinzufügen"
+      </div>
+      <div class="status" id="status-einst"></div>
+      <button class="submit-btn" onclick="testConnection()">Verbindung testen</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client"></script>
+<script>
+const SPREADSHEET_ID = '1up8Tk3xolshQt9bjogeOoUzirTQILOkZ';
+const CLIENT_ID = '691155115903-q69fuj564d7kaag2vk3fg2nffk2lhpnf.apps.googleusercontent.com';
+const SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email';
+
+let tokenClient, accessToken = '', userEmail = '';
+let selectedSymptoms = [], medState = '', bettState = '', lastFutter = '';
+let settings = {sheetUmwelt:'Umwelttagebuch', sheetFutter:'Fütterungstagebuch'};
+
+function loadSettings(){
+  try{
+    const s = localStorage.getItem('hund_settings');
+    if(s) settings = {...settings,...JSON.parse(s)};
+    const t = localStorage.getItem('hund_token');
+    const e = localStorage.getItem('hund_email');
+    const lf = localStorage.getItem('hund_last_futter');
+    if(t && e){ accessToken=t; userEmail=e; showMain(); }
+    if(lf){ lastFutter=lf; showPrevHint(); }
+  }catch(e){}
+  document.getElementById('sheet-umwelt').value = settings.sheetUmwelt;
+  document.getElementById('sheet-futter').value = settings.sheetFutter;
+}
+
+function saveSettings(){
+  settings.sheetUmwelt = document.getElementById('sheet-umwelt').value.trim()||'Umwelttagebuch';
+  settings.sheetFutter = document.getElementById('sheet-futter').value.trim()||'Fütterungstagebuch';
+  try{localStorage.setItem('hund_settings', JSON.stringify(settings));}catch(e){}
+}
+
+function signIn(){
+  if(!window.google){ setTimeout(signIn, 500); return; }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPE,
+    callback: async (resp) => {
+      if(resp.error){ alert('Login fehlgeschlagen: '+resp.error); return; }
+      accessToken = resp.access_token;
+      try{
+        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+accessToken}});
+        const d = await r.json();
+        userEmail = d.email||'Angemeldet';
+        try{localStorage.setItem('hund_token', accessToken); localStorage.setItem('hund_email', userEmail);}catch(e){}
+      }catch(e){ userEmail='Angemeldet'; }
+      showMain();
+    }
+  });
+  tokenClient.requestAccessToken({prompt:'consent'});
+}
+
+function signOut(){
+  if(window.google && accessToken) google.accounts.oauth2.revoke(accessToken);
+  accessToken=''; userEmail='';
+  try{localStorage.removeItem('hund_token'); localStorage.removeItem('hund_email');}catch(e){}
+  document.getElementById('main-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+
+function showMain(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-screen').style.display='block';
+  document.getElementById('user-email').textContent = userEmail;
+  setToday('u-datum'); setToday('f-datum');
+}
+
+function setToday(id){
+  const d = new Date();
+  document.getElementById(id).value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function switchTab(tab){
+  ['umwelt','fuetterung','einst'].forEach((t,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active',t===tab);
+    const s = document.getElementById('tab-'+t);
+    s.classList.toggle('active',t===tab);
+    s.style.display = t===tab?'block':'none';
+  });
+}
+
+function toggleSym(el){
+  if(el.textContent==='Keine') document.querySelectorAll('#tab-fuetterung .tog-btn').forEach(b=>{if(b!==el)b.classList.remove('sel')});
+  el.classList.toggle('sel');
+  selectedSymptoms = Array.from(document.querySelectorAll('#tab-fuetterung .tog-btn.sel')).map(b=>b.textContent);
+}
+
+function toggleMed(val){
+  medState = medState===val?'':val;
+  document.getElementById('med-ja').classList.toggle('sel', medState==='ja');
+  document.getElementById('med-nein').classList.toggle('sel', medState==='nein');
+}
+
+function toggleBett(el){
+  const wasSelected = el.classList.contains('sel');
+  document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b=>b.classList.remove('sel'));
+  if(!wasSelected){ el.classList.add('sel'); bettState=el.textContent; document.getElementById('u-bett').value=''; }
+  else bettState='';
+}
+
+function showPrevHint(){
+  if(!lastFutter) return;
+  document.getElementById('prev-text').textContent = lastFutter.length>30?lastFutter.slice(0,30)+'…':lastFutter;
+  document.getElementById('prev-hint').style.display='flex';
+}
+
+function usePrev(){ document.getElementById('f-futter').value = lastFutter; }
+
+function formatDate(iso){
+  if(!iso) return '';
+  const [y,m,d]=iso.split('-');
+  return d+'.'+m+'.'+y;
+}
+
+function setStatus(id, type, msg){
+  const el=document.getElementById(id);
+  el.className='status '+type;
+  el.textContent=msg;
+}
+
+async function appendRow(sheet, values){
+  if(!accessToken) throw new Error('Nicht angemeldet');
+  const range = encodeURIComponent(sheet+'!A:Z');
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const res = await fetch(url,{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
+    body: JSON.stringify({values:[values]})
+  });
+  if(res.status===401){
+    accessToken='';
+    try{localStorage.removeItem('hund_token');}catch(e){}
+    document.getElementById('main-screen').style.display='none';
+    document.getElementById('login-screen').style.display='flex';
+    throw new Error('Sitzung abgelaufen – bitte neu anmelden.');
+  }
+  if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e?.error?.message||'HTTP '+res.status); }
+  return res.json();
+}
+
+async function submitUmwelt(){
+  const datum=document.getElementById('u-datum').value;
+  if(!datum){setStatus('status-u','err','Bitte Datum auswählen.');return;}
+  const btn=document.getElementById('btn-u');
+  btn.disabled=true;
+  setStatus('status-u','loading','Wird gespeichert…');
+  const bettVal = bettState || document.getElementById('u-bett').value;
+  try{
+    await appendRow(settings.sheetUmwelt,[
+      formatDate(datum),
+      document.getElementById('u-wetter').value,
+      document.getElementById('u-pollen').value,
+      document.getElementById('u-raumklima').value,
+      bettVal,
+      medState==='ja'?'Ja':medState==='nein'?'Nein':'',
+      document.getElementById('u-notizen').value
+    ]);
+    setStatus('status-u','ok','✓ Gespeichert!');
+    ['u-wetter','u-pollen','u-raumklima','u-bett','u-notizen'].forEach(id=>document.getElementById(id).value='');
+    medState=''; bettState='';
+    document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b=>b.classList.remove('sel'));
+  }catch(e){ setStatus('status-u','err','Fehler: '+e.message); }
+  btn.disabled=false;
+}
+
+async function submitFuetterung(){
+  const datum=document.getElementById('f-datum').value;
+  const futter=document.getElementById('f-futter').value.trim();
+  if(!datum){setStatus('status-f','err','Bitte Datum auswählen.');return;}
+  if(!futter){setStatus('status-f','err','Bitte Fütterung eintragen.');return;}
+  const btn=document.getElementById('btn-f');
+  btn.disabled=true;
+  setStatus('status-f','loading','Wird gespeichert…');
+  const extra=document.getElementById('f-symptome-extra').value;
+  const symText=selectedSymptoms.join(', ')+(extra?' – '+extra:'');
+  try{
+    await appendRow(settings.sheetFutter,[formatDate(datum), futter, symText]);
+    lastFutter=futter;
+    try{localStorage.setItem('hund_last_futter',futter);}catch(e){}
+    showPrevHint();
+    setStatus('status-f','ok','✓ Gespeichert!');
+    document.getElementById('f-futter').value='';
+    document.getElementById('f-symptome-extra').value='';
+    selectedSymptoms=[];
+    document.querySelectorAll('#tab-fuetterung .tog-btn').forEach(b=>b.classList.remove('sel'));
+  }catch(e){ setStatus('status-f','err','Fehler: '+e.message); }
+  btn.disabled=false;
+}
+
+async function testConnection(){
+  saveSettings();
+  if(!accessToken){setStatus('status-einst','err','Bitte zuerst anmelden.');return;}
+  setStatus('status-einst','loading','Verbindung wird getestet…');
+  try{
+    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?fields=sheets.properties.title`,{
+      headers:{'Authorization':'Bearer '+accessToken}
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const sheets=data.sheets.map(s=>s.properties.title).join(', ');
+    setStatus('status-einst','ok','✓ Verbunden! Gefundene Blätter: '+sheets);
+  }catch(e){ setStatus('status-einst','err','Fehler: '+e.message); }
+}
+
+window.addEventListener('load', loadSettings);
+</script>
+</body>
+</html>
