@@ -226,6 +226,16 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <!-- 1. UMWELTTAGEBUCH -->
     <div id="tab-umwelt" class="section active">
       <p class="section-title">🌿 Umwelttagebuch</p>
+
+      <!-- Auto-load bar -->
+      <div id="autoload-bar" style="display:flex;align-items:center;gap:8px;margin-bottom:1.25rem">
+        <button class="refresh-btn" style="margin-bottom:0;flex:1" onclick="loadUmweltData()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Wetter & Pollen automatisch laden
+        </button>
+      </div>
+      <div id="autoload-status" style="display:none;font-size:12px;color:var(--sub);margin-top:-1rem;margin-bottom:1rem;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border);line-height:1.6"></div>
+
       <div class="field">
         <label>Datum</label>
         <div class="date-row">
@@ -234,11 +244,11 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         </div>
       </div>
       <div class="field">
-        <label>Wetter</label>
+        <label>Wetter <span id="wetter-source" style="font-size:10px;color:var(--c2);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px"></span></label>
         <input type="text" id="u-wetter" placeholder="z.B. 6–13°C, trocken">
       </div>
       <div class="field">
-        <label>Pollen (stark bis sehr stark)</label>
+        <label>Pollen (stark bis sehr stark) <span id="pollen-source" style="font-size:10px;color:var(--c2);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px"></span></label>
         <input type="text" id="u-pollen" placeholder="z.B. Hasel, Erle">
       </div>
       <div class="field">
@@ -777,6 +787,8 @@ function showMain(){
   // Default Bett to "Unverändert"
   const bettBtns=document.querySelectorAll('#tab-umwelt .tog-btn');
   bettBtns[0].classList.add('sel'); bettState='Unverändert';
+  // Auto-load weather & pollen
+  setTimeout(loadUmweltData, 300);
 }
 
 /* ====== HELPERS ====== */
@@ -922,6 +934,148 @@ function handleExpired(){
   try{localStorage.removeItem('hund_token');}catch(e){}
   document.getElementById('main-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
+}
+
+/* ====== AUTO-LOAD WETTER & POLLEN ====== */
+// Berlin Blankenfelde coords (matching wetter.com location)
+const BERLIN_LAT = 52.4; 
+const BERLIN_LON = 13.4;
+// DWD region 50 = Brandenburg und Berlin
+const DWD_REGION_ID = 50;
+
+// Pollen name mapping DWD → German display name
+const POLLEN_NAMES = {
+  Graeser:'Gräser', Roggen:'Roggen', Hasel:'Hasel',
+  Beifuss:'Beifuß', Esche:'Esche', Birke:'Birke',
+  Erle:'Erle', Ambrosia:'Ambrosia'
+};
+// DWD value scale: 0=keine, 0-1=keine-gering, 1=gering, 1-2=gering-mittel,
+// 2=mittel, 2-3=mittel-hoch, 3=hoch — we want >= 2 (mittel = Stufe 2+)
+const POLLEN_MIN_LEVEL = 2;
+
+async function loadUmweltData(){
+  const bar = document.getElementById('autoload-status');
+  bar.style.display = 'block';
+  bar.textContent = '⏳ Lade Wetter und Pollen…';
+
+  const results = await Promise.allSettled([
+    fetchWetter(),
+    fetchPollen()
+  ]);
+
+  const msgs = [];
+  if(results[0].status === 'fulfilled') msgs.push('✅ Wetter geladen');
+  else msgs.push('⚠️ Wetter: ' + results[0].reason);
+  if(results[1].status === 'fulfilled') msgs.push('✅ Pollen geladen');
+  else msgs.push('⚠️ Pollen: ' + results[1].reason);
+
+  bar.textContent = msgs.join('  ·  ');
+  setTimeout(()=>{ bar.style.display='none'; }, 5000);
+}
+
+async function fetchWetter(){
+  // BrightSky API – current weather for Berlin, CORS-free, no key needed
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0,10);
+  const url = `https://api.brightsky.dev/weather?lat=${BERLIN_LAT}&lon=${BERLIN_LON}&date=${dateStr}&tz=Europe/Berlin`;
+  
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  
+  const records = data.weather || [];
+  if(!records.length) throw new Error('Keine Daten');
+
+  // Get min/max temperature for today
+  const temps = records.map(r => r.temperature).filter(t => t != null);
+  const precip = records.map(r => r.precipitation || 0);
+  
+  const tMin = Math.round(Math.min(...temps));
+  const tMax = Math.round(Math.max(...temps));
+  const totalRain = precip.reduce((a,b) => a+b, 0);
+  
+  // Build description
+  const rainPart = totalRain > 0.1
+    ? `, ${totalRain.toFixed(1).replace('.',',')} mm Regen`
+    : ', trocken';
+  
+  // Dominant condition from most recent record
+  const latest = records[records.length - 1];
+  const condMap = {
+    'clear-day':'sonnig','clear-night':'klar','partly-cloudy-day':'teils bewölkt',
+    'partly-cloudy-night':'teils bewölkt','cloudy':'bewölkt','fog':'Nebel',
+    'wind':'windig','rain':'Regen','sleet':'Schneeregen','snow':'Schnee',
+    'hail':'Hagel','thunderstorm':'Gewitter'
+  };
+  const cond = condMap[latest?.icon] || '';
+  const condPart = cond ? `, ${cond}` : '';
+
+  const wetterText = `${tMin}–${tMax}°C${rainPart}${condPart}`;
+  document.getElementById('u-wetter').value = wetterText;
+  document.getElementById('wetter-source').textContent = '(DWD via BrightSky)';
+}
+
+async function fetchPollen(){
+  // DWD Open Data – CORS-friendly via proxy
+  // Direct DWD URL has CORS issues, use a public CORS proxy
+  const dwdUrl = 'https://opendata.dwd.de/climate_environment/health/alerts/s31fg.json';
+  // Try direct first, fall back to proxy
+  let data;
+  try {
+    const res = await fetch(dwdUrl);
+    if(!res.ok) throw new Error('direct failed');
+    data = await res.json();
+  } catch(e) {
+    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(dwdUrl);
+    const res2 = await fetch(proxyUrl);
+    if(!res2.ok) throw new Error('HTTP ' + res2.status);
+    data = await res2.json();
+  }
+
+  // Find region 50 (Brandenburg und Berlin)
+  const region = (data.content || []).find(r => r.region_id === DWD_REGION_ID);
+  if(!region) throw new Error('Region nicht gefunden');
+
+  // Get today's date key (DWD uses "today" / "tomorrow" keys)
+  const pollenData = region.Pollen;
+  
+  // Collect pollen at level >= POLLEN_MIN_LEVEL for "today"
+  const highPollen = [];
+  for(const [key, displayName] of Object.entries(POLLEN_NAMES)){
+    if(!pollenData[key]) continue;
+    const todayRaw = pollenData[key].today;
+    // Parse value: "0", "1", "2", "3", "0-1", "1-2", "2-3"
+    const level = parsePollenLevel(todayRaw);
+    if(level >= POLLEN_MIN_LEVEL){
+      const levelLabel = formatPollenLevel(todayRaw);
+      highPollen.push(`${displayName} (${levelLabel})`);
+    }
+  }
+
+  const pollenText = highPollen.length > 0
+    ? highPollen.join(', ')
+    : 'keine erhöhte Belastung';
+
+  document.getElementById('u-pollen').value = pollenText;
+  document.getElementById('pollen-source').textContent = '(DWD)';
+}
+
+function parsePollenLevel(raw){
+  if(!raw || raw === '-1') return -1;
+  // "2-3" → take the higher value
+  if(raw.includes('-')){
+    const parts = raw.split('-').map(Number);
+    return Math.max(...parts);
+  }
+  return parseFloat(raw) || 0;
+}
+
+function formatPollenLevel(raw){
+  const map = {
+    '0':'keine','0-1':'keine–gering','1':'gering','1-2':'gering–mittel',
+    '2':'mittel','2-3':'mittel–hoch','3':'hoch'
+  };
+  return map[raw] || raw;
 }
 
 /* ====== SUBMIT FUNCTIONS ====== */
