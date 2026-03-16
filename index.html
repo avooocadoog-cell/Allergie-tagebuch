@@ -1016,21 +1016,30 @@ async function fetchWetter(){
 }
 
 async function fetchPollen(){
-  // DWD Open Data – CORS-friendly via proxy
-  // Direct DWD URL has CORS issues, use a public CORS proxy
   const dwdUrl = 'https://opendata.dwd.de/climate_environment/health/alerts/s31fg.json';
-  // Try direct first, fall back to proxy
-  let data;
-  try {
-    const res = await fetch(dwdUrl);
-    if(!res.ok) throw new Error('direct failed');
-    data = await res.json();
-  } catch(e) {
-    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(dwdUrl);
-    const res2 = await fetch(proxyUrl);
-    if(!res2.ok) throw new Error('HTTP ' + res2.status);
-    data = await res2.json();
+  // Multiple proxies as fallback – DWD blocks direct browser requests
+  const proxyUrls = [
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(dwdUrl),
+    'https://corsproxy.io/?' + encodeURIComponent(dwdUrl),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(dwdUrl),
+  ];
+
+  let data = null;
+  let lastErr = '';
+  for(const url of proxyUrls){
+    try{
+      const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      // allorigins sometimes wraps in {contents:...}
+      const parsed = JSON.parse(text);
+      data = parsed.contents ? JSON.parse(parsed.contents) : parsed;
+      if(data && data.content) break; // success
+      data = null;
+      throw new Error('Unbekanntes Format');
+    }catch(e){ lastErr = e.message; data = null; }
   }
+  if(!data) throw new Error('Alle Proxies fehlgeschlagen: ' + lastErr);
 
   // Find region 50 (Brandenburg und Berlin)
   const region = (data.content || []).find(r => r.region_id === DWD_REGION_ID);
