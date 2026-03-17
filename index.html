@@ -400,6 +400,15 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           </div>
           <!-- Hinzufügen -->
           <div class="fr-add-box">
+            <!-- Filter: Kategorie + Hersteller -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+              <select id="fr-filter-kat" onchange="frFilterIngredients()" style="padding:7px 10px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)">
+                <option value="">🏷 Alle Kategorien</option>
+              </select>
+              <select id="fr-filter-her" onchange="frFilterIngredients()" style="padding:7px 10px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)">
+                <option value="">🏭 Alle Hersteller</option>
+              </select>
+            </div>
             <div class="fr-add-row">
               <select id="fr-ing-select">
                 <option value="">— Zutat wählen —</option>
@@ -1106,30 +1115,75 @@ function frUpdateWeight2(){
 }
 
 function frInitIngredientSelect(){
+  // Populate filter dropdowns
+  const katSel=document.getElementById('fr-filter-kat');
+  const herSel=document.getElementById('fr-filter-her');
+  if(katSel){
+    const curKat=katSel.value;
+    katSel.innerHTML='<option value="">🏷 Alle Kategorien</option>';
+    INGREDIENT_CATEGORIES.forEach(c=>{
+      const opt=document.createElement('option');
+      opt.value=c; opt.textContent=c;
+      katSel.appendChild(opt);
+    });
+    katSel.value=curKat;
+  }
+  if(herSel){
+    const curHer=herSel.value;
+    herSel.innerHTML='<option value="">🏭 Alle Hersteller</option>';
+    const hersteller=[...new Set(Object.values(INGREDIENT_META).map(m=>m.hersteller).filter(Boolean))].sort();
+    hersteller.forEach(h=>{
+      const opt=document.createElement('option');
+      opt.value=h; opt.textContent=h;
+      herSel.appendChild(opt);
+    });
+    herSel.value=curHer;
+  }
+  frFilterIngredients();
+}
+
+function frFilterIngredients(){
+  const katFilter=(document.getElementById('fr-filter-kat')||{}).value||'';
+  const herFilter=(document.getElementById('fr-filter-her')||{}).value||'';
   const sel=document.getElementById('fr-ing-select');
+  if(!sel) return;
   sel.innerHTML='<option value="">— Zutat wählen —</option>';
-  // Group by category
+
+  // Build filtered + grouped list
   const groups={};
   INGREDIENT_CATEGORIES.forEach(c=>groups[c]=[]);
   Object.keys(INGREDIENTS_DB).sort((a,b)=>a.localeCompare(b,'de')).forEach(name=>{
-    const kat=(INGREDIENT_META[name]||{}).kategorie||'Sonstiges';
+    const meta=INGREDIENT_META[name]||{};
+    const kat=meta.kategorie||'Sonstiges';
+    const her=meta.hersteller||'';
+    if(katFilter && kat!==katFilter) return;
+    if(herFilter && her!==herFilter) return;
     if(!groups[kat]) groups[kat]=[];
-    groups[kat].push(name);
+    groups[kat].push({name,her});
   });
+
+  let totalShown=0;
   INGREDIENT_CATEGORIES.forEach(kat=>{
     const items=groups[kat]||[];
     if(!items.length) return;
     const grp=document.createElement('optgroup');
-    grp.label=kat;
-    items.forEach(name=>{
+    grp.label=kat+(katFilter===kat?'':' ('+items.length+')');
+    items.forEach(({name,her})=>{
       const opt=document.createElement('option');
       opt.value=name;
-      const her=(INGREDIENT_META[name]||{}).hersteller;
-      opt.textContent=name+(her?' ('+her+')':'');
+      opt.textContent=name+(her?' · '+her:'');
       grp.appendChild(opt);
+      totalShown++;
     });
     sel.appendChild(grp);
   });
+
+  if(totalShown===0){
+    const opt=document.createElement('option');
+    opt.disabled=true;
+    opt.textContent='Keine Zutaten für diese Filter';
+    sel.appendChild(opt);
+  }
 }
 
 function frInitCustomNutrGrid(){
