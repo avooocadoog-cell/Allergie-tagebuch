@@ -42,10 +42,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mode-btn{flex:1;padding:10px 6px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--sub);transition:all .2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}
 .mode-btn.active{background:var(--c2);color:#fff}
 
-/* Nav tabs – scrollable */
-.tab-bar{display:flex;overflow-x:auto;gap:4px;margin-bottom:1.25rem;padding-bottom:2px;scrollbar-width:none}
-.tab-bar::-webkit-scrollbar{display:none}
-.tab{flex-shrink:0;padding:9px 13px;font-size:12.5px;text-align:center;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);transition:all .2s;font-family:inherit;white-space:nowrap}
+/* Nav tabs – 2x4 grid */
+.tab-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:1.25rem}
+.tab{padding:9px 6px;font-size:12px;text-align:center;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);transition:all .2s;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab.active{background:var(--c2);color:#fff;border-color:var(--c2);font-weight:500}
 
 /* Sections */
@@ -161,6 +160,14 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .divider span{font-size:12px;color:var(--sub);white-space:nowrap;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
 
+/* Info banners */
+.info-banner{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:1.25rem;line-height:1.5;border:1px solid}
+.info-banner.warn{background:var(--warn);color:var(--warn-text);border-color:#e8c84a}
+.info-banner.ok{background:#d8f3dc;color:#1a4731;border-color:#74c69d}
+@media(prefers-color-scheme:dark){
+  .info-banner.ok{background:#1a3d2b;color:#74c69d;border-color:#2d6a4f}
+}
+
 /* Protocol box for Ausschlussdiät */
 .protocol-box{background:var(--bg2);border:2px solid var(--border);border-radius:var(--radius);padding:1rem 1rem .25rem;margin-bottom:1.25rem}
 .protocol-box .protocol-title{font-size:11px;color:var(--c2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
@@ -220,7 +227,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <button class="tab" onclick="switchTab('allergen')">⚠️ Allergene</button>
       <button class="tab" onclick="switchTab('tierarzt')">🏥 Tierarzt</button>
       <button class="tab" onclick="switchTab('medikamente')">💊 Medikamente</button>
-      <button class="tab" onclick="switchTab('einst')">⚙️</button>
+      <button class="tab" onclick="switchTab('einst')">⚙️ Einst.</button>
     </div>
 
     <!-- 1. UMWELTTAGEBUCH -->
@@ -245,7 +252,26 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
       <div class="field">
         <label>Wetter <span id="wetter-source" style="font-size:10px;color:var(--c2);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px"></span></label>
-        <input type="text" id="u-wetter" placeholder="z.B. 6–13°C, trocken">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label style="font-size:11px;margin-bottom:3px">Min °C</label>
+            <input type="text" id="u-temp-min" placeholder="z.B. 4">
+          </div>
+          <div>
+            <label style="font-size:11px;margin-bottom:3px">Max °C</label>
+            <input type="text" id="u-temp-max" placeholder="z.B. 15">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label style="font-size:11px;margin-bottom:3px">Rel. Luftfeuchtigkeit %</label>
+            <input type="text" id="u-luftfeuchtig" placeholder="z.B. 65">
+          </div>
+          <div>
+            <label style="font-size:11px;margin-bottom:3px">Regenmenge mm</label>
+            <input type="text" id="u-regen" placeholder="z.B. 3,3">
+          </div>
+        </div>
       </div>
       <div class="field">
         <label>Pollen (stark bis sehr stark) <span id="pollen-source" style="font-size:10px;color:var(--c2);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px"></span></label>
@@ -253,20 +279,22 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
       <div class="field">
         <label>Raumklima</label>
-        <input type="text" id="u-raumklima" placeholder="z.B. 20°C, 50% Luftfeuchtigkeit">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label style="font-size:11px;margin-bottom:3px">Temperatur °C</label>
+            <input type="text" id="u-raumtemp" placeholder="z.B. 20">
+          </div>
+          <div>
+            <label style="font-size:11px;margin-bottom:3px">Rel. Luftfeuchtigkeit %</label>
+            <input type="text" id="u-raumfeuchtig" placeholder="z.B. 50">
+          </div>
+        </div>
       </div>
       <div class="field">
         <label>Bett</label>
         <div class="toggle-grid">
           <div class="tog-btn" onclick="toggleBett(this)">Unverändert</div>
           <div class="tog-btn" onclick="toggleBett(this)">Gewechselt</div>
-        </div>
-      </div>
-      <div class="field">
-        <label>Medikament gegeben</label>
-        <div class="toggle-grid">
-          <div class="tog-btn" id="med-nein" onclick="toggleMed('nein')">Nein</div>
-          <div class="tog-btn" id="med-ja" onclick="toggleMed('ja')">Ja</div>
         </div>
       </div>
       <div class="field">
@@ -357,6 +385,10 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         </div>
         <textarea id="f-futter" placeholder="z.B. Rindermuskelfleisch 300g, Leber 50g, Karotte..."></textarea>
       </div>
+      <div class="field">
+        <label>Produkt</label>
+        <input type="text" id="f-produkt" placeholder="z.B. chewies Känguru, BARF-Mix...">
+      </div>
       <div class="protocol-box">
         <div class="protocol-title">📋 Protokoll Ausschlussdiät</div>
         <div class="field">
@@ -396,15 +428,17 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <!-- 4. AUSSCHLUSSDIÄT -->
     <div id="tab-ausschluss" class="section">
       <p class="section-title">📋 Ausschlussdiät – Zutat</p>
+      <div class="info-banner warn">⚠️ <strong>Verdachtsfälle</strong> – Diese Einträge sind noch nicht bestätigt und dienen der Beobachtung im Rahmen der Ausschlussdiät.</div>
       <div class="field">
         <label>Zutat</label>
         <input type="text" id="a-zutat" placeholder="z.B. Rind, Karotte, Reis...">
       </div>
       <div class="field">
-        <label>Verdacht</label>
-        <div class="toggle-grid">
-          <div class="tog-btn" id="averd-nein" onclick="toggleAVerd('nein')">Kein Verdacht</div>
-          <div class="tog-btn" id="averd-ja" onclick="toggleAVerd('ja')">Verdächtig</div>
+        <label>Verdacht (Stufe)</label>
+        <div class="toggle-grid three">
+          <div class="tog-btn" id="averd-1" onclick="toggleAVerd('1')">1 – leicht</div>
+          <div class="tog-btn" id="averd-2" onclick="toggleAVerd('2')">2 – mittel</div>
+          <div class="tog-btn" id="averd-3" onclick="toggleAVerd('3')">3 – stark</div>
         </div>
       </div>
       <div class="field">
@@ -455,6 +489,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <!-- 5. BEKANNTE ALLERGENE -->
     <div id="tab-allergen" class="section">
       <p class="section-title">⚠️ Bekannte Allergene</p>
+      <div class="info-banner ok">✅ <strong>Bestätigte Allergene</strong> – Nur hier eintragen was durch Bluttest, Hauttest oder eindeutige Reaktion bestätigt wurde.</div>
       <div class="field">
         <label>Allergen</label>
         <input type="text" id="al-allergen" placeholder="z.B. Gräser, Hausstaubmilbe, Rind...">
@@ -483,13 +518,6 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="field">
         <label>Symptome</label>
         <input type="text" id="al-symptome" placeholder="z.B. Juckreiz, Ohren, Pfoten...">
-      </div>
-      <div class="field">
-        <label>Erstmals bemerkt</label>
-        <div class="date-row">
-          <input type="date" id="al-datum">
-          <button class="btn-today" onclick="setToday('al-datum')">Heute</button>
-        </div>
       </div>
       <div class="field">
         <label>Notizen (z.B. Bluttest, Hauttest)</label>
@@ -629,6 +657,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <button class="tab" onclick="switchViewTab('v-allergen')">⚠️ Allergene</button>
       <button class="tab" onclick="switchViewTab('v-tierarzt')">🏥 Tierarzt</button>
       <button class="tab" onclick="switchViewTab('v-medikamente')">💊 Medikamente</button>
+      <button class="tab" style="visibility:hidden;pointer-events:none"></button>
     </div>
 
     <!-- VIEW: Umwelt -->
@@ -781,9 +810,13 @@ function showMain(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-screen').style.display='block';
   document.getElementById('user-email').textContent=userEmail;
-  ['u-datum','s-datum','f-datum','al-datum','t-datum','m-von'].forEach(id=>setToday(id));
-  // Pre-fill last Raumklima
-  if(lastRaumklima) document.getElementById('u-raumklima').value=lastRaumklima;
+  ['u-datum','s-datum','f-datum','t-datum','m-von'].forEach(id=>setToday(id));
+  // Pre-fill last Raumklima (stored as "temp|feuchtig")
+  if(lastRaumklima){
+    const parts=lastRaumklima.split('|');
+    if(document.getElementById('u-raumtemp')) document.getElementById('u-raumtemp').value=parts[0]||'';
+    if(document.getElementById('u-raumfeuchtig')) document.getElementById('u-raumfeuchtig').value=parts[1]||'';
+  }
   // Default Bett to "Unverändert"
   const bettBtns=document.querySelectorAll('#tab-umwelt .tog-btn');
   bettBtns[0].classList.add('sel'); bettState='Unverändert';
@@ -856,11 +889,6 @@ function toggleBett(el){
   if(!was){el.classList.add('sel');bettState=el.textContent;}
   else{bettState='Unverändert';document.querySelectorAll('#tab-umwelt .tog-btn')[0].classList.add('sel');}
 }
-function toggleMed(val){
-  medState=medState===val?'':val;
-  document.getElementById('med-ja').classList.toggle('sel',medState==='ja');
-  document.getElementById('med-nein').classList.toggle('sel',medState==='nein');
-}
 function toggleSymKat(el){
   el.classList.toggle('sel');
   selectedSymKat=Array.from(document.querySelectorAll('#sym-kat-grid .tog-btn.sel')).map(b=>b.textContent);
@@ -893,9 +921,12 @@ function toggleProv(val){
   document.getElementById('prov-nein').classList.toggle('sel',provState==='nein');
 }
 function toggleAVerd(val){
-  aVerdState=aVerdState===val?'':val;
-  document.getElementById('averd-ja').classList.toggle('sel',aVerdState==='ja');
-  document.getElementById('averd-nein').classList.toggle('sel',aVerdState==='nein');
+  const was=aVerdState===val;
+  aVerdState=was?'':val;
+  ['1','2','3'].forEach(v=>{
+    const el=document.getElementById('averd-'+v);
+    if(el) el.classList.toggle('sel', aVerdState===v);
+  });
 }
 
 async function loadFutterDropdown(){
@@ -1029,25 +1060,15 @@ async function fetchWetter(){
   const tMin = Math.round(Math.min(...temps));
   const tMax = Math.round(Math.max(...temps));
   const totalRain = precip.reduce((a,b) => a+b, 0);
-  
-  // Build description
-  const rainPart = totalRain > 0.1
-    ? `, ${totalRain.toFixed(1).replace('.',',')} mm Regen`
-    : ', trocken';
-  
-  // Dominant condition from most recent record
-  const latest = records[records.length - 1];
-  const condMap = {
-    'clear-day':'sonnig','clear-night':'klar','partly-cloudy-day':'teils bewölkt',
-    'partly-cloudy-night':'teils bewölkt','cloudy':'bewölkt','fog':'Nebel',
-    'wind':'windig','rain':'Regen','sleet':'Schneeregen','snow':'Schnee',
-    'hail':'Hagel','thunderstorm':'Gewitter'
-  };
-  const cond = condMap[latest?.icon] || '';
-  const condPart = cond ? `, ${cond}` : '';
+  // Average relative humidity
+  const humids = records.map(r => r.relative_humidity).filter(h => h != null);
+  const avgHumid = humids.length ? Math.round(humids.reduce((a,b)=>a+b,0)/humids.length) : null;
 
-  const wetterText = `${tMin}–${tMax}°C${rainPart}${condPart}`;
-  document.getElementById('u-wetter').value = wetterText;
+  document.getElementById('u-temp-min').value = tMin;
+  document.getElementById('u-temp-max').value = tMax;
+  if(avgHumid !== null) document.getElementById('u-luftfeuchtig').value = avgHumid;
+  if(totalRain > 0.1) document.getElementById('u-regen').value = totalRain.toFixed(1).replace('.',',');
+  else document.getElementById('u-regen').value = '0';
   document.getElementById('wetter-source').textContent = '(DWD via BrightSky)';
 }
 
@@ -1133,22 +1154,23 @@ async function submitUmwelt(){
   try{
     await appendRow(settings.sheetUmwelt,[
       formatDate(datum),
-      document.getElementById('u-wetter').value,
+      document.getElementById('u-temp-min').value,
+      document.getElementById('u-temp-max').value,
+      document.getElementById('u-luftfeuchtig').value,
+      document.getElementById('u-regen').value,
       document.getElementById('u-pollen').value,
-      document.getElementById('u-raumklima').value,
+      document.getElementById('u-raumtemp').value,
+      document.getElementById('u-raumfeuchtig').value,
       bettVal,
-      medState==='ja'?'Ja':medState==='nein'?'Nein':'',
       document.getElementById('u-notizen').value
     ]);
     setStatus('status-u','ok','✓ Gespeichert!');
     // Save Raumklima for next entry
-    lastRaumklima=document.getElementById('u-raumklima').value;
+    lastRaumklima=document.getElementById('u-raumtemp').value+'|'+document.getElementById('u-raumfeuchtig').value;
     try{localStorage.setItem('hund_last_raumklima',lastRaumklima);}catch(e){}
-    ['u-wetter','u-pollen','u-bett','u-notizen'].forEach(id=>document.getElementById(id).value='');
-    // Keep Raumklima pre-filled for next entry
-    medState='';bettState='Unverändert';
+    ['u-temp-min','u-temp-max','u-luftfeuchtig','u-regen','u-pollen','u-notizen'].forEach(id=>document.getElementById(id).value='');
+    bettState='Unverändert';
     document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b=>b.classList.remove('sel'));
-    // Re-select "Unverändert" as default
     document.querySelectorAll('#tab-umwelt .tog-btn')[0].classList.add('sel');
   }catch(e){setStatus('status-u','err','Fehler: '+e.message);}
   btn.disabled=false;
@@ -1188,6 +1210,7 @@ async function submitFutter(){
   try{
     await appendRow(settings.sheetFutter,[
       formatDate(datum),futter,
+      document.getElementById('f-produkt').value,
       ersteGabeState==='ja'?'Ja':'Nein',
       zweiWoState==='ja'?'Ja':'Nein',
       provState==='ja'?'Ja':'Nein',
@@ -1213,7 +1236,8 @@ async function submitAusschluss(){
   setStatus('status-a','loading','Wird gespeichert…');
   try{
     await appendRow(settings.sheetAusschluss,[
-      zutat,aVerdState==='ja'?'Ja':'',
+      zutat,
+      aVerdState==='1'?1:aVerdState==='2'?2:aVerdState==='3'?3:'',
       document.getElementById('a-kategorie').value,
       document.getElementById('a-status').value,
       formatDate(document.getElementById('a-datum').value),
@@ -1225,7 +1249,7 @@ async function submitAusschluss(){
     document.getElementById('a-reaktion').value='';
     document.getElementById('a-notizen').value='';
     aVerdState='';
-    document.querySelectorAll('#tab-ausschluss .tog-btn').forEach(b=>b.classList.remove('sel'));
+    ['1','2','3'].forEach(v=>{const el=document.getElementById('averd-'+v);if(el)el.classList.remove('sel');});
   }catch(e){setStatus('status-a','err','Fehler: '+e.message);}
   btn.disabled=false;
 }
@@ -1241,7 +1265,6 @@ async function submitAllergen(){
       document.getElementById('al-kategorie').value,
       alReaktVal,
       document.getElementById('al-symptome').value,
-      formatDate(document.getElementById('al-datum').value),
       document.getElementById('al-notizen').value
     ]);
     setStatus('status-al','ok','✓ Gespeichert!');
@@ -1403,17 +1426,18 @@ async function loadViewData(which){
 function get(row,i){return(row[i]||'').toString().trim();}
 
 function renderUmwelt(h,rows){
-  // cols: Datum, Wetter, Pollen, Raumklima, Bett, Medikament, Notizen
+  // cols: Datum(0), Min°C(1), Max°C(2), Luftfeuchtigkeit%(3), Regen mm(4), Pollen(5), RaumTemp(6), RaumFeuchtig(7), Bett(8), Notizen(9)
   const sorted=[...rows].reverse();
   return sorted.map(r=>`
     <div class="entry-card">
       <div class="ec-date">📅 ${esc(get(r,0))}</div>
-      ${ecRow('Wetter',get(r,1))}
-      ${ecRow('Pollen',get(r,2))}
-      ${ecRow('Raumklima',get(r,3))}
-      ${ecRow('Bett',get(r,4))}
-      ${get(r,5)?`<div class="ec-row"><span class="ec-key">Medikament</span><span class="ec-val badge ${get(r,5)==='Ja'?'':'badge-warn'}">${esc(get(r,5))}</span></div>`:''}
-      ${ecRow('Notizen',get(r,6))}
+      ${(get(r,1)||get(r,2))?`<div class="ec-row"><span class="ec-key">Temperatur</span><span class="ec-val">${esc(get(r,1))}–${esc(get(r,2))} °C</span></div>`:''}
+      ${get(r,3)?`<div class="ec-row"><span class="ec-key">Luftfeuchtigkeit</span><span class="ec-val">${esc(get(r,3))} %</span></div>`:''}
+      ${get(r,4)?`<div class="ec-row"><span class="ec-key">Regen</span><span class="ec-val">${esc(get(r,4))} mm</span></div>`:''}
+      ${ecRow('Pollen',get(r,5))}
+      ${(get(r,6)||get(r,7))?`<div class="ec-row"><span class="ec-key">Raumklima</span><span class="ec-val">${esc(get(r,6))} °C, ${esc(get(r,7))} % Luftfeuchtigkeit</span></div>`:''}
+      ${ecRow('Bett',get(r,8))}
+      ${ecRow('Notizen',get(r,9))}
     </div>`).join('');
 }
 
@@ -1431,14 +1455,16 @@ function renderSymptom(h,rows){
 }
 
 function renderFutter(h,rows){
+  // cols: Datum(0), Futter(1), Produkt(2), ErsteGabe(3), ZweiWo(4), Provokation(5), Beschreibung(6), Notizen(7)
   const sorted=[...rows].reverse();
   return sorted.map(r=>`
     <div class="entry-card">
-      <div class="ec-date">📅 ${esc(get(r,0))}${get(r,2)==='Ja'?' <span class="ec-val badge" style="margin-left:6px;font-size:11px">Erste Gabe</span>':''}</div>
+      <div class="ec-date">📅 ${esc(get(r,0))}${get(r,3)==='Ja'?' <span class="ec-val badge" style="margin-left:6px;font-size:11px">Erste Gabe</span>':''}</div>
       ${ecRow('Futter',get(r,1))}
-      ${get(r,4)==='Ja'?`<div class="ec-row"><span class="ec-key">Provokation</span><span class="ec-val badge badge-warn">Ja</span></div>`:''}
-      ${ecRow('Reaktion',get(r,5))}
-      ${ecRow('Notizen',get(r,6))}
+      ${ecRow('Produkt',get(r,2))}
+      ${get(r,5)==='Ja'?`<div class="ec-row"><span class="ec-key">Provokation</span><span class="ec-val badge badge-warn">⚠️ Ja</span></div>`:''}
+      ${ecRow('Reaktion',get(r,6))}
+      ${ecRow('Notizen',get(r,7))}
     </div>`).join('');
 }
 
@@ -1499,15 +1525,17 @@ function renderAusschluss(h,rows){
 }
 
 function renderAllergen(h,rows){
-  return rows.map(r=>`
+  // cols: Allergen(0), Kategorie(1), Reaktionsstärke(2), Symptome(3), Notizen(4)
+  let html='<div class="info-banner ok" style="margin-bottom:1rem">✅ <strong>Bestätigte Allergene</strong></div>';
+  html+=rows.map(r=>`
     <div class="entry-card">
       <div class="ec-date">⚠️ ${esc(get(r,0))}</div>
       ${ecRow('Kategorie',get(r,1))}
       ${get(r,2)?`<div class="ec-row"><span class="ec-key">Reaktion</span><span class="ec-val">${severityDots(get(r,2))} ${esc(get(r,2))}/5</span></div>`:''}
       ${ecRow('Symptome',get(r,3))}
-      ${ecRow('Bemerkt',get(r,4))}
-      ${ecRow('Notizen',get(r,5))}
+      ${ecRow('Notizen',get(r,4))}
     </div>`).join('');
+  return html;
 }
 
 function renderTierarzt(h,rows){
