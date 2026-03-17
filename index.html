@@ -9,88 +9,200 @@
 <meta name="apple-mobile-web-app-title" content="Milow Tagebuch">
 <title>Milow Tagebuch</title>
 <style>
+/* =============================================
+   RESET & CSS-VARIABLEN
+   Einheitliche Farben und Abstände für die
+   gesamte App. Dark Mode wird automatisch
+   über prefers-color-scheme erkannt.
+   ============================================= */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --c1:#2d6a4f;--c2:#40916c;--c3:#74c69d;--c4:#d8f3dc;
-  --bg:#ffffff;--bg2:#f5f5f0;--text:#1a1a1a;--sub:#666;
-  --border:#e0e0d8;--radius:12px;--radius-sm:8px;
-  --warn:#fff3cd;--warn-text:#664d03;
-  --danger:#fee2e2;--danger-text:#7f1d1d;
+  --c1:#2d6a4f;   /* dunkelgrün – Hover/Active */
+  --c2:#40916c;   /* grün – Hauptfarbe Buttons, aktive Tabs */
+  --c3:#74c69d;   /* hellgrün – Akzent */
+  --c4:#d8f3dc;   /* sehr hellgrün – Toggle-Hintergrund ausgewählt */
+  --bg:#ffffff;   /* Seitenhintergrund */
+  --bg2:#f5f5f0;  /* Karten- / Feldhintergrund */
+  --text:#1a1a1a; /* Haupttext */
+  --sub:#666;     /* Beschriftungen, sekundärer Text */
+  --border:#e0e0d8; /* Rahmenfarbe */
+  --radius:12px;    /* große Rundung (Karten, Buttons) */
+  --radius-sm:8px;  /* kleine Rundung (Felder, Chips) */
+  --warn:#fff3cd;       /* Warnhintergrund gelb */
+  --warn-text:#664d03;  /* Warntext */
+  --danger:#fee2e2;     /* Fehlerhintergrund rot */
+  --danger-text:#7f1d1d;
 }
 @media(prefers-color-scheme:dark){
-  :root{--bg:#1a1a1a;--bg2:#252520;--text:#f0f0ec;--sub:#999;--border:#333;--c4:#1a3d2b;
-  --warn:#332b00;--warn-text:#ffd97d;--danger:#3d1a1a;--danger-text:#fca5a5}
+  :root{
+    --bg:#1a1a1a;--bg2:#252520;--text:#f0f0ec;--sub:#999;
+    --border:#333;--c4:#1a3d2b;
+    --warn:#332b00;--warn-text:#ffd97d;
+    --danger:#3d1a1a;--danger-text:#fca5a5
+  }
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;
+  -webkit-tap-highlight-color:transparent; /* Kein blaues Aufleuchten beim Tippen auf iOS */
+}
 .app{max-width:520px;margin:0 auto;padding:1rem;padding-bottom:4rem}
 
-/* Login */
-.login-screen{text-align:center;padding:3rem 1.5rem;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* =============================================
+   LOGIN-BILDSCHIRM
+   Wird angezeigt bevor der Nutzer sich mit
+   Google authentifiziert hat.
+   ============================================= */
+.login-screen{
+  text-align:center;padding:3rem 1.5rem;
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center
+}
 .login-screen .icon{font-size:64px;margin-bottom:1.5rem}
 .login-screen h1{font-size:24px;font-weight:600;margin-bottom:.5rem}
 .login-screen p{font-size:15px;color:var(--sub);margin-bottom:2rem;line-height:1.6}
-.google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:280px;padding:14px 20px;font-size:15px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;transition:background .15s}
+.google-btn{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  width:100%;max-width:280px;padding:14px 20px;font-size:15px;font-weight:500;
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--bg);color:var(--text);cursor:pointer;transition:background .15s
+}
 .google-btn:active{background:var(--bg2)}
 
-/* User bar */
-.user-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);margin-bottom:1rem;font-size:13px}
+/* =============================================
+   NUTZERLEISTE (oben nach Login)
+   Zeigt E-Mail-Adresse und Abmelde-Button.
+   ============================================= */
+.user-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;background:var(--bg2);
+  border-radius:var(--radius-sm);margin-bottom:1rem;font-size:13px
+}
 .user-bar span{color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
-.user-bar button{font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--sub);cursor:pointer;flex-shrink:0}
+.user-bar button{
+  font-size:12px;padding:4px 10px;border:1px solid var(--border);
+  border-radius:var(--radius-sm);background:transparent;color:var(--sub);cursor:pointer;flex-shrink:0
+}
 
-/* Mode switcher */
-.mode-bar{display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem;background:var(--bg2)}
-.mode-btn{flex:1;padding:10px 6px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--sub);transition:all .2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}
+/* =============================================
+   MODUS-UMSCHALTER: Eingabe / Ansicht
+   Wechselt zwischen Erfassungsformularen
+   und der Datenansicht aus Google Sheets.
+   ============================================= */
+.mode-bar{
+  display:flex;border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;margin-bottom:1rem;background:var(--bg2)
+}
+.mode-btn{
+  flex:1;padding:10px 6px;font-size:13px;font-weight:500;text-align:center;
+  cursor:pointer;border:none;background:transparent;color:var(--sub);
+  transition:all .2s;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:5px
+}
 .mode-btn.active{background:var(--c2);color:#fff}
 
-/* Nav tabs – 2x4 grid */
+/* =============================================
+   NAVIGATIONS-TABS
+   4-spaltige Grid-Darstellung → 2 Zeilen à 4.
+   Gilt für Eingabe- UND Ansicht-Tabs.
+   ============================================= */
 .tab-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:1.25rem}
-.tab{padding:9px 6px;font-size:12px;text-align:center;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);transition:all .2s;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab{
+  padding:9px 6px;font-size:12px;text-align:center;cursor:pointer;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--bg2);color:var(--sub);transition:all .2s;
+  font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
 .tab.active{background:var(--c2);color:#fff;border-color:var(--c2);font-weight:500}
 
-/* Sections */
-.section{display:none}.section.active{display:block}
+/* =============================================
+   ABSCHNITTS-SICHTBARKEIT
+   Nur der aktive Tab-Inhalt wird angezeigt.
+   ============================================= */
+.section{display:none}
+.section.active{display:block}
 .section-title{font-size:17px;font-weight:600;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
 
-/* Fields */
+/* =============================================
+   FORMULAR-FELDER
+   Einheitliches Styling für alle Eingaben:
+   Text, Datum, Dropdown, Textarea.
+   ============================================= */
 .field{margin-bottom:1.25rem}
-label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:500;letter-spacing:.03em;text-transform:uppercase}
-input[type=text],input[type=date],select,textarea{width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none;appearance:none;transition:border .15s}
-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+label{
+  display:block;font-size:12px;color:var(--sub);
+  margin-bottom:5px;font-weight:500;letter-spacing:.03em;text-transform:uppercase
+}
+input[type=text],input[type=date],select,textarea{
+  width:100%;padding:12px 14px;font-size:16px;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--bg);color:var(--text);font-family:inherit;
+  -webkit-appearance:none;appearance:none;transition:border .15s
+}
+/* Pfeil-Icon für Select-Felder */
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:36px
+}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--c2)}
 textarea{resize:vertical;min-height:80px;line-height:1.5}
+
+/* Datum-Zeile: Feld + "Heute"-Button nebeneinander */
 .date-row{display:flex;align-items:center;gap:8px}
 .date-row input{flex:1}
-.btn-today{padding:10px 14px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0}
+.btn-today{
+  padding:10px 14px;font-size:13px;border:1px solid var(--border);
+  border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);
+  cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0
+}
 .btn-today:active{background:var(--border)}
 
-/* Toggle buttons */
+/* =============================================
+   TOGGLE-BUTTONS (Ja/Nein, Symptome, etc.)
+   Klickbare Kachelfelder als Alternative zu
+   klassischen Checkboxen / Radio-Buttons.
+   ============================================= */
 .toggle-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
 .toggle-grid.three{grid-template-columns:1fr 1fr 1fr}
 .toggle-grid.four{grid-template-columns:1fr 1fr 1fr 1fr}
-.tog-btn{padding:10px 8px;font-size:13px;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:var(--bg);color:var(--text);transition:all .15s;user-select:none;font-family:inherit;line-height:1.3}
+.tog-btn{
+  padding:10px 8px;font-size:13px;text-align:center;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  cursor:pointer;background:var(--bg);color:var(--text);
+  transition:all .15s;user-select:none;font-family:inherit;line-height:1.3
+}
+/* Ausgewählter Zustand */
 .tog-btn.sel{background:var(--c4);border-color:var(--c2);color:#1a4731;font-weight:500}
 .tog-btn:active{transform:scale(.97)}
 @media(prefers-color-scheme:dark){.tog-btn.sel{color:#74c69d}}
 
-/* Prev hint */
-.prev-hint{font-size:13px;color:var(--sub);margin-top:6px;padding:9px 12px;background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;display:none;align-items:center;gap:8px;line-height:1.4}
-.prev-hint b{color:var(--c2)}
-
-/* Submit button */
-.submit-btn{width:100%;padding:15px;font-size:16px;font-weight:600;border:none;border-radius:var(--radius);background:var(--c2);color:#fff;cursor:pointer;margin-top:.5rem;font-family:inherit;transition:background .15s}
+/* =============================================
+   SPEICHERN-BUTTON & VARIANTEN
+   ============================================= */
+.submit-btn{
+  width:100%;padding:15px;font-size:16px;font-weight:600;
+  border:none;border-radius:var(--radius);background:var(--c2);
+  color:#fff;cursor:pointer;margin-top:.5rem;font-family:inherit;transition:background .15s
+}
 .submit-btn:active{background:var(--c1)}
 .submit-btn:disabled{background:var(--border);color:var(--sub);cursor:default}
 .submit-btn.secondary{background:transparent;border:1px solid var(--c2);color:var(--c2);margin-top:.5rem}
 .submit-btn.secondary:active{background:var(--c4)}
 
-/* Status */
+/* =============================================
+   STATUS-MELDUNGEN
+   Feedback nach dem Speichern: ok/err/loading.
+   ============================================= */
 .status{padding:12px 14px;border-radius:var(--radius-sm);font-size:14px;margin-top:.75rem;display:none;line-height:1.5}
 .status.ok{background:#d8f3dc;color:#1a4731;display:block}
 .status.err{background:var(--danger);color:var(--danger-text);display:block}
 .status.loading{background:var(--bg2);color:var(--sub);display:block}
 @media(prefers-color-scheme:dark){.status.ok{background:#1a3d2b;color:#74c69d}}
 
-/* Settings */
+/* =============================================
+   EINSTELLUNGEN-BOX & INSTALL-HINWEIS
+   ============================================= */
 .settings-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
 .settings-box h3{font-size:14px;font-weight:600;margin-bottom:.5rem}
 .settings-box p{font-size:13px;color:var(--sub);line-height:1.6;margin-bottom:1rem}
@@ -99,82 +211,79 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .install-hint{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;font-size:13px;color:var(--sub);line-height:1.7}
 .install-hint b{color:var(--text)}
 
-/* ====== VIEW MODE ====== */
+/* =============================================
+   ANSICHT-MODUS: Lade-Spinner
+   ============================================= */
 .view-loading{text-align:center;padding:3rem 1rem;color:var(--sub);font-size:14px}
-.view-loading .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--c2);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 1rem}
+.view-loading .spinner{
+  width:28px;height:28px;border:3px solid var(--border);
+  border-top-color:var(--c2);border-radius:50%;
+  animation:spin .7s linear infinite;margin:0 auto 1rem
+}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 .view-empty{text-align:center;padding:2.5rem 1rem;color:var(--sub);font-size:14px}
 .view-empty .icon{font-size:40px;margin-bottom:.75rem}
 
-/* Summary cards */
-.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem}
-.summary-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center}
-.summary-card .num{font-size:28px;font-weight:700;color:var(--c2);line-height:1}
-.summary-card .lbl{font-size:11px;color:var(--sub);margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
-
-/* Entry cards */
+/* =============================================
+   ANSICHT-MODUS: Eintrags-Karten
+   Jeder Datensatz aus Google Sheets wird
+   als Karte mit Label–Wert-Zeilen dargestellt.
+   ============================================= */
 .entry-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
 .entry-card .ec-date{font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:500}
 .entry-card .ec-row{display:flex;gap:8px;margin-bottom:5px;font-size:14px;line-height:1.4}
 .entry-card .ec-row:last-child{margin-bottom:0}
 .entry-card .ec-key{color:var(--sub);min-width:100px;flex-shrink:0;font-size:12px;padding-top:1px}
 .entry-card .ec-val{color:var(--text);word-break:break-word}
+/* Badges für Status-Markierungen */
 .entry-card .ec-val.badge{display:inline-block;background:var(--c4);color:#1a4731;border-radius:4px;padding:1px 7px;font-size:12px}
 @media(prefers-color-scheme:dark){.entry-card .ec-val.badge{background:#1a3d2b;color:#74c69d}}
 .entry-card .ec-val.badge-red{background:var(--danger);color:var(--danger-text)}
 .entry-card .ec-val.badge-warn{background:var(--warn);color:var(--warn-text)}
 
-/* Symptom severity dots */
+/* Schweregrad-Punkte (1–5) farbcodiert */
 .severity{display:inline-flex;gap:3px;vertical-align:middle}
 .severity span{width:10px;height:10px;border-radius:50%;background:var(--border)}
 .severity span.on{background:var(--c2)}
-.severity span.high{background:#f59e0b}
-.severity span.vhigh{background:#ef4444}
+.severity span.high{background:#f59e0b}   /* ab Stufe 3 */
+.severity span.vhigh{background:#ef4444}  /* ab Stufe 4 */
 
-/* Table view for static data */
-.data-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:1rem}
-.data-table th{background:var(--bg2);color:var(--sub);font-weight:500;text-transform:uppercase;font-size:11px;letter-spacing:.04em;padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)}
-.data-table td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
-.data-table tr:last-child td{border-bottom:none}
-.data-table tr:hover td{background:var(--bg2)}
-
-/* Allergen badges */
+/* Badge-Liste (z.B. Zutatenliste Ausschlussdiät) */
 .badge-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:.5rem}
 .badge-item{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}
 .badge-ok{background:#d8f3dc;color:#1a4731}
 .badge-warn{background:var(--warn);color:var(--warn-text)}
 .badge-bad{background:var(--danger);color:var(--danger-text)}
-@media(prefers-color-scheme:dark){
-  .badge-ok{background:#1a3d2b;color:#74c69d}
-}
+@media(prefers-color-scheme:dark){.badge-ok{background:#1a3d2b;color:#74c69d}}
 
-/* Filter bar */
-.filter-bar{display:flex;gap:8px;margin-bottom:1rem;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
-.filter-bar::-webkit-scrollbar{display:none}
-.filter-chip{flex-shrink:0;padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:var(--bg);color:var(--sub);font-family:inherit;transition:all .15s}
-.filter-chip.active{background:var(--c2);color:#fff;border-color:var(--c2)}
-
-/* Section divider */
+/* Trennlinie mit Text (z.B. "Übersicht nach Kategorie") */
 .divider{display:flex;align-items:center;gap:10px;margin:1.25rem 0}
 .divider span{font-size:12px;color:var(--sub);white-space:nowrap;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
 
-/* Info banners */
+/* =============================================
+   INFO-BANNER
+   Farbige Hinweis-Boxen (grün = bestätigt,
+   gelb = Verdacht/Hinweis).
+   ============================================= */
 .info-banner{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:1.25rem;line-height:1.5;border:1px solid}
 .info-banner.warn{background:var(--warn);color:var(--warn-text);border-color:#e8c84a}
 .info-banner.ok{background:#d8f3dc;color:#1a4731;border-color:#74c69d}
-@media(prefers-color-scheme:dark){
-  .info-banner.ok{background:#1a3d2b;color:#74c69d;border-color:#2d6a4f}
-}
+@media(prefers-color-scheme:dark){.info-banner.ok{background:#1a3d2b;color:#74c69d;border-color:#2d6a4f}}
 
-/* Protocol box for Ausschlussdiät */
+/* =============================================
+   PROTOKOLL-BOX (Futtertagebuch / Ausschluss)
+   Visuell abgesetzter Bereich für die drei
+   Ausschlussdiät-Felder und das Produkt-Feld.
+   ============================================= */
 .protocol-box{background:var(--bg2);border:2px solid var(--border);border-radius:var(--radius);padding:1rem 1rem .25rem;margin-bottom:1.25rem}
 .protocol-box .protocol-title{font-size:11px;color:var(--c2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
 .protocol-box .field{margin-bottom:.75rem}
 .protocol-box .field:last-child{margin-bottom:.25rem}
+/* Trennlinie innerhalb der Protokoll-Box (zwischen Produkt und den Ja/Nein-Feldern) */
+.protocol-box .protocol-divider{border:none;border-top:1px solid var(--border);margin:.5rem 0 .75rem}
 
-/* Refresh btn */
+/* Aktualisieren-Button (Ansicht-Modus) */
 .refresh-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);cursor:pointer;font-family:inherit;margin-bottom:1rem}
 .refresh-btn:active{background:var(--border)}
 </style>
@@ -182,7 +291,11 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 <body>
 <div class="app">
 
-<!-- Login Screen -->
+<!-- =============================================
+     LOGIN-BILDSCHIRM
+     Sichtbar bis zur erfolgreichen Google-
+     OAuth2-Authentifizierung.
+     ============================================= -->
 <div id="login-screen" class="login-screen">
   <div class="icon">🐕</div>
   <h1>Milow Tagebuch</h1>
@@ -198,14 +311,18 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   </button>
 </div>
 
-<!-- Main Screen -->
+<!-- =============================================
+     HAUPT-BILDSCHIRM (nach Login)
+     ============================================= -->
 <div id="main-screen" style="display:none">
+
+  <!-- Nutzerleiste: E-Mail + Abmelden -->
   <div class="user-bar">
     <span id="user-email">–</span>
     <button onclick="signOut()">Abmelden</button>
   </div>
 
-  <!-- Mode switcher: Eingabe / Ansicht -->
+  <!-- Modus-Umschalter: Eingabe ↔ Ansicht -->
   <div class="mode-bar">
     <button class="mode-btn active" id="mode-eingabe" onclick="switchMode('eingabe')">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 13l2-2 8-8 2 2-8 8-2 0 0-2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
@@ -217,8 +334,13 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     </button>
   </div>
 
-  <!-- ========== EINGABE MODE ========== -->
+  <!-- ==========================================
+       EINGABE-PANEL
+       Enthält alle 7 Tagebuch-Tabs + Einstellungen.
+       ========================================== -->
   <div id="mode-eingabe-panel">
+
+    <!-- Tab-Navigation (4×2 Grid) -->
     <div class="tab-bar" id="eingabe-tabs">
       <button class="tab active" onclick="switchTab('umwelt')">🌿 Umwelt</button>
       <button class="tab" onclick="switchTab('symptom')">🔍 Symptome</button>
@@ -230,17 +352,26 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <button class="tab" onclick="switchTab('einst')">⚙️ Einst.</button>
     </div>
 
-    <!-- 1. UMWELTTAGEBUCH -->
+    <!-- ==========================================
+         TAB 1: UMWELTTAGEBUCH
+         Spalten in Google Sheets:
+         Datum | Min°C | Max°C | Luftfeuchtig% |
+         Regen mm | Pollen | RaumTemp | RaumFeuchtig |
+         Bett | Notizen
+         Wetter & Pollen werden automatisch via
+         BrightSky API (DWD) und DWD Pollen-API geladen.
+         ========================================== -->
     <div id="tab-umwelt" class="section active">
       <p class="section-title">🌿 Umwelttagebuch</p>
 
-      <!-- Auto-load bar -->
-      <div id="autoload-bar" style="display:flex;align-items:center;gap:8px;margin-bottom:1.25rem">
+      <!-- Button zum manuellen Neu-Laden von Wetter & Pollen -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.25rem">
         <button class="refresh-btn" style="margin-bottom:0;flex:1" onclick="loadUmweltData()">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Wetter & Pollen automatisch laden
         </button>
       </div>
+      <!-- Statusmeldung nach API-Abruf (wird nach 5s ausgeblendet) -->
       <div id="autoload-status" style="display:none;font-size:12px;color:var(--sub);margin-top:-1rem;margin-bottom:1rem;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border);line-height:1.6"></div>
 
       <div class="field">
@@ -250,46 +381,55 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <button class="btn-today" onclick="setToday('u-datum')">Heute</button>
         </div>
       </div>
+
+      <!-- Wetter: 4 separate Zahlenfelder (nur Zahl, kein °C oder %) -->
+      <!-- Wird automatisch von BrightSky API befüllt, bleibt editierbar -->
       <div class="field">
         <label>Wetter <span id="wetter-source" style="font-size:10px;color:var(--c2);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px"></span></label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
-            <label style="font-size:11px;margin-bottom:3px">Min °C</label>
-            <input type="text" id="u-temp-min" placeholder="z.B. 4">
+            <label style="font-size:11px;margin-bottom:3px">Min Temperatur</label>
+            <input type="text" id="u-temp-min" placeholder="z.B. 4" inputmode="numeric">
           </div>
           <div>
-            <label style="font-size:11px;margin-bottom:3px">Max °C</label>
-            <input type="text" id="u-temp-max" placeholder="z.B. 15">
+            <label style="font-size:11px;margin-bottom:3px">Max Temperatur</label>
+            <input type="text" id="u-temp-max" placeholder="z.B. 15" inputmode="numeric">
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div>
-            <label style="font-size:11px;margin-bottom:3px">Rel. Luftfeuchtigkeit %</label>
-            <input type="text" id="u-luftfeuchtig" placeholder="z.B. 65">
+            <label style="font-size:11px;margin-bottom:3px">Rel. Luftfeuchtigkeit</label>
+            <input type="text" id="u-luftfeuchtig" placeholder="z.B. 65" inputmode="numeric">
           </div>
           <div>
             <label style="font-size:11px;margin-bottom:3px">Regenmenge mm</label>
-            <input type="text" id="u-regen" placeholder="z.B. 3,3">
+            <input type="text" id="u-regen" placeholder="z.B. 3" inputmode="numeric">
           </div>
         </div>
       </div>
+
+      <!-- Pollen: automatisch von DWD API, nur Stufe 2+ (mittel bis sehr stark) -->
       <div class="field">
         <label>Pollen (stark bis sehr stark) <span id="pollen-source" style="font-size:10px;color:var(--c2);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px"></span></label>
         <input type="text" id="u-pollen" placeholder="z.B. Hasel, Erle">
       </div>
+
+      <!-- Raumklima: nur Zahlen, wird nach dem Speichern für nächsten Tag vorausgefüllt -->
       <div class="field">
         <label>Raumklima</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div>
-            <label style="font-size:11px;margin-bottom:3px">Temperatur °C</label>
-            <input type="text" id="u-raumtemp" placeholder="z.B. 20">
+            <label style="font-size:11px;margin-bottom:3px">Temperatur</label>
+            <input type="text" id="u-raumtemp" placeholder="z.B. 20" inputmode="decimal">
           </div>
           <div>
-            <label style="font-size:11px;margin-bottom:3px">Rel. Luftfeuchtigkeit %</label>
-            <input type="text" id="u-raumfeuchtig" placeholder="z.B. 50">
+            <label style="font-size:11px;margin-bottom:3px">Rel. Luftfeuchtigkeit</label>
+            <input type="text" id="u-raumfeuchtig" placeholder="z.B. 50" inputmode="numeric">
           </div>
         </div>
       </div>
+
+      <!-- Bett: Toggle, "Unverändert" ist Standard und wird nach dem Speichern zurückgesetzt -->
       <div class="field">
         <label>Bett</label>
         <div class="toggle-grid">
@@ -297,15 +437,21 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <div class="tog-btn" onclick="toggleBett(this)">Gewechselt</div>
         </div>
       </div>
+
       <div class="field">
         <label>Notizen</label>
         <textarea id="u-notizen" placeholder="Freitext..."></textarea>
       </div>
       <button class="submit-btn" id="btn-u" onclick="submitUmwelt()">Eintrag speichern</button>
       <div class="status" id="status-u"></div>
-    </div>
+    </div><!-- Ende Tab Umwelt -->
 
-    <!-- 2. SYMPTOMTAGEBUCH -->
+    <!-- ==========================================
+         TAB 2: SYMPTOMTAGEBUCH
+         Spalten: Datum | Symptom-Kategorie |
+         Beschreibung | Schweregrad(1-5) |
+         Körperstelle | Notizen
+         ========================================== -->
     <div id="tab-symptom" class="section">
       <p class="section-title">🔍 Symptomtagebuch</p>
       <div class="field">
@@ -315,6 +461,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <button class="btn-today" onclick="setToday('s-datum')">Heute</button>
         </div>
       </div>
+      <!-- Mehrfachauswahl möglich -->
       <div class="field">
         <label>Symptom-Kategorie</label>
         <div class="toggle-grid three" id="sym-kat-grid">
@@ -333,9 +480,10 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <label>Beschreibung</label>
         <textarea id="s-beschreibung" placeholder="Genauere Beschreibung des Symptoms..."></textarea>
       </div>
+      <!-- Einfachauswahl: nur ein Wert möglich -->
       <div class="field">
         <label>Schweregrad (1–5)</label>
-        <div class="toggle-grid four" style="grid-template-columns:repeat(5,1fr)">
+        <div class="toggle-grid" style="grid-template-columns:repeat(5,1fr)">
           <div class="tog-btn" onclick="toggleSchwere(this)" data-val="1">1</div>
           <div class="tog-btn" onclick="toggleSchwere(this)" data-val="2">2</div>
           <div class="tog-btn" onclick="toggleSchwere(this)" data-val="3">3</div>
@@ -343,6 +491,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <div class="tog-btn" onclick="toggleSchwere(this)" data-val="5">5</div>
         </div>
       </div>
+      <!-- Mehrfachauswahl möglich -->
       <div class="field">
         <label>Betroffene Körperstelle</label>
         <div class="toggle-grid three">
@@ -361,9 +510,16 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
       <button class="submit-btn" id="btn-s" onclick="submitSymptom()">Eintrag speichern</button>
       <div class="status" id="status-s"></div>
-    </div>
+    </div><!-- Ende Tab Symptom -->
 
-    <!-- 3. FUTTERTAGEBUCH -->
+    <!-- ==========================================
+         TAB 3: FUTTERTAGEBUCH
+         Spalten: Datum | Futter | Produkt |
+         erste Gabe | zwei Wochen | Provokation |
+         Beschreibung | Notizen
+         Dropdown lädt bisherige Futter-Einträge
+         aus Google Sheets für schnelle Wiederholung.
+         ========================================== -->
     <div id="tab-futter" class="section">
       <p class="section-title">🥩 Futtertagebuch</p>
       <div class="field">
@@ -373,6 +529,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <button class="btn-today" onclick="setToday('f-datum')">Heute</button>
         </div>
       </div>
+
+      <!-- Dropdown: lädt unique Futter-Einträge aus Sheets, neueste zuerst -->
       <div class="field">
         <label>Futter / Mahlzeit</label>
         <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -385,12 +543,21 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         </div>
         <textarea id="f-futter" placeholder="z.B. Rindermuskelfleisch 300g, Leber 50g, Karotte..."></textarea>
       </div>
-      <div class="field">
-        <label>Produkt</label>
-        <input type="text" id="f-produkt" placeholder="z.B. chewies Känguru, BARF-Mix...">
-      </div>
+
+      <!-- Protokoll-Box: Produkt + Ausschlussdiät-Felder visuell zusammengefasst -->
       <div class="protocol-box">
         <div class="protocol-title">📋 Protokoll Ausschlussdiät</div>
+
+        <!-- Produkt: z.B. Fertigprodukt-Name (innerhalb der Protokoll-Box) -->
+        <div class="field">
+          <label>Produkt</label>
+          <input type="text" id="f-produkt" placeholder="z.B. chewies Känguru, BARF-Mix...">
+        </div>
+
+        <!-- Trennlinie zwischen Produkt und den Ja/Nein-Feldern -->
+        <hr class="protocol-divider">
+
+        <!-- Erste Gabe: wird als "Ja"/"Nein" in Sheets gespeichert -->
         <div class="field">
           <label>Erste Gabe</label>
           <div class="toggle-grid">
@@ -398,6 +565,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
             <div class="tog-btn" id="erstegabe-ja" onclick="toggleErsteGabe('ja')">Ja – neu eingeführt</div>
           </div>
         </div>
+        <!-- Zwei-Wochen-Fütterung abgeschlossen -->
         <div class="field">
           <label>Zwei Wochen Fütterung abgeschlossen</label>
           <div class="toggle-grid">
@@ -405,6 +573,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
             <div class="tog-btn" id="zweiwo-ja" onclick="toggleZweiWo('ja')">Ja ✓</div>
           </div>
         </div>
+        <!-- Provokationstest -->
         <div class="field">
           <label>Provokation</label>
           <div class="toggle-grid">
@@ -412,7 +581,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
             <div class="tog-btn" id="prov-ja" onclick="toggleProv('ja')">Ja ⚠️</div>
           </div>
         </div>
-      </div>
+      </div><!-- Ende protocol-box -->
+
       <div class="field">
         <label>Beschreibung / Reaktion</label>
         <textarea id="f-beschreibung" placeholder="z.B. Reaktion beobachtet..."></textarea>
@@ -423,16 +593,23 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
       <button class="submit-btn" id="btn-f" onclick="submitFutter()">Eintrag speichern</button>
       <div class="status" id="status-f"></div>
-    </div>
+    </div><!-- Ende Tab Futter -->
 
-    <!-- 4. AUSSCHLUSSDIÄT -->
+    <!-- ==========================================
+         TAB 4: AUSSCHLUSSDIÄT
+         Spalten: Zutat | Verdacht(1-3) | Kategorie |
+         Status | Erstmals gegeben | Reaktion | Notizen
+         Verdacht wird als Zahl (1/2/3) gespeichert.
+         ========================================== -->
     <div id="tab-ausschluss" class="section">
       <p class="section-title">📋 Ausschlussdiät – Zutat</p>
+      <!-- Hinweis-Banner: Verdachtsfälle, noch nicht bestätigt -->
       <div class="info-banner warn">⚠️ <strong>Verdachtsfälle</strong> – Diese Einträge sind noch nicht bestätigt und dienen der Beobachtung im Rahmen der Ausschlussdiät.</div>
       <div class="field">
         <label>Zutat</label>
         <input type="text" id="a-zutat" placeholder="z.B. Rind, Karotte, Reis...">
       </div>
+      <!-- Verdacht-Stufe: wird als Zahl 1, 2 oder 3 in Sheets gespeichert -->
       <div class="field">
         <label>Verdacht (Stufe)</label>
         <div class="toggle-grid three">
@@ -445,15 +622,9 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <label>Kategorie</label>
         <select id="a-kategorie">
           <option value="">– wählen –</option>
-          <option>Fleisch</option>
-          <option>Fisch</option>
-          <option>Gemüse</option>
-          <option>Obst</option>
-          <option>Getreide</option>
-          <option>Milchprodukt</option>
-          <option>Öl / Fett</option>
-          <option>Supplement</option>
-          <option>Sonstiges</option>
+          <option>Fleisch</option><option>Fisch</option><option>Gemüse</option>
+          <option>Obst</option><option>Getreide</option><option>Milchprodukt</option>
+          <option>Öl / Fett</option><option>Supplement</option><option>Sonstiges</option>
         </select>
       </div>
       <div class="field">
@@ -484,11 +655,18 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
       <button class="submit-btn" id="btn-a" onclick="submitAusschluss()">Zutat speichern</button>
       <div class="status" id="status-a"></div>
-    </div>
+    </div><!-- Ende Tab Ausschluss -->
 
-    <!-- 5. BEKANNTE ALLERGENE -->
+    <!-- ==========================================
+         TAB 5: BEKANNTE ALLERGENE
+         Spalten: Allergen | Kategorie |
+         Reaktionsstärke(1-5) | Symptome | Notizen
+         Nur bestätigte Allergene (Blut-/Hauttest).
+         "Erstmals bemerkt" wurde entfernt.
+         ========================================== -->
     <div id="tab-allergen" class="section">
       <p class="section-title">⚠️ Bekannte Allergene</p>
+      <!-- Banner: nur bestätigte Einträge -->
       <div class="info-banner ok">✅ <strong>Bestätigte Allergene</strong> – Nur hier eintragen was durch Bluttest, Hauttest oder eindeutige Reaktion bestätigt wurde.</div>
       <div class="field">
         <label>Allergen</label>
@@ -498,16 +676,14 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <label>Kategorie</label>
         <select id="al-kategorie">
           <option value="">– wählen –</option>
-          <option>Umweltallergen</option>
-          <option>Futterallergen</option>
-          <option>Kontaktallergen</option>
-          <option>Insekten</option>
-          <option>Sonstiges</option>
+          <option>Umweltallergen</option><option>Futterallergen</option>
+          <option>Kontaktallergen</option><option>Insekten</option><option>Sonstiges</option>
         </select>
       </div>
+      <!-- Einfachauswahl, Wert wird direkt als Zahl gespeichert -->
       <div class="field">
         <label>Reaktionsstärke (1–5)</label>
-        <div class="toggle-grid four" style="grid-template-columns:repeat(5,1fr)">
+        <div class="toggle-grid" style="grid-template-columns:repeat(5,1fr)">
           <div class="tog-btn" onclick="toggleAlReakt(this)" data-val="1">1</div>
           <div class="tog-btn" onclick="toggleAlReakt(this)" data-val="2">2</div>
           <div class="tog-btn" onclick="toggleAlReakt(this)" data-val="3">3</div>
@@ -525,9 +701,14 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
       <button class="submit-btn" id="btn-al" onclick="submitAllergen()">Allergen speichern</button>
       <div class="status" id="status-al"></div>
-    </div>
+    </div><!-- Ende Tab Allergen -->
 
-    <!-- 6. TIERARZTBESUCHE -->
+    <!-- ==========================================
+         TAB 6: TIERARZTBESUCHE
+         Spalten: Datum | Tierarzt | Anlass |
+         Untersuchungen | Befund | Therapie |
+         Folgebesuch geplant
+         ========================================== -->
     <div id="tab-tierarzt" class="section">
       <p class="section-title">🏥 Tierarztbesuch</p>
       <div class="field">
@@ -537,26 +718,11 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <button class="btn-today" onclick="setToday('t-datum')">Heute</button>
         </div>
       </div>
-      <div class="field">
-        <label>Tierarzt / Klinik</label>
-        <input type="text" id="t-arzt" placeholder="Name der Praxis...">
-      </div>
-      <div class="field">
-        <label>Anlass / Diagnose</label>
-        <textarea id="t-anlass" placeholder="Warum der Besuch, Diagnose..."></textarea>
-      </div>
-      <div class="field">
-        <label>Untersuchungen</label>
-        <textarea id="t-untersuchungen" placeholder="Blutbild, Hauttest, Ohrenabstrich..."></textarea>
-      </div>
-      <div class="field">
-        <label>Ergebnis / Befund</label>
-        <textarea id="t-ergebnis" placeholder="Befund..."></textarea>
-      </div>
-      <div class="field">
-        <label>Empfehlung / Therapie</label>
-        <textarea id="t-therapie" placeholder="Verordnete Behandlung..."></textarea>
-      </div>
+      <div class="field"><label>Tierarzt / Klinik</label><input type="text" id="t-arzt" placeholder="Name der Praxis..."></div>
+      <div class="field"><label>Anlass / Diagnose</label><textarea id="t-anlass" placeholder="Warum der Besuch, Diagnose..."></textarea></div>
+      <div class="field"><label>Untersuchungen</label><textarea id="t-untersuchungen" placeholder="Blutbild, Hauttest, Ohrenabstrich..."></textarea></div>
+      <div class="field"><label>Ergebnis / Befund</label><textarea id="t-ergebnis" placeholder="Befund..."></textarea></div>
+      <div class="field"><label>Empfehlung / Therapie</label><textarea id="t-therapie" placeholder="Verordnete Behandlung..."></textarea></div>
       <div class="field">
         <label>Folgebesuch geplant</label>
         <div class="date-row">
@@ -566,37 +732,28 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
       <button class="submit-btn" id="btn-t" onclick="submitTierarzt()">Besuch speichern</button>
       <div class="status" id="status-t"></div>
-    </div>
+    </div><!-- Ende Tab Tierarzt -->
 
-    <!-- 7. MEDIKAMENTE -->
+    <!-- ==========================================
+         TAB 7: MEDIKAMENTE
+         Spalten: Medikament | Typ | Dosierung |
+         Häufigkeit | Von | Bis | Verordnet | Notizen
+         ========================================== -->
     <div id="tab-medikamente" class="section">
       <p class="section-title">💊 Medikamente & Behandlungen</p>
-      <div class="field">
-        <label>Medikament / Supplement</label>
-        <input type="text" id="m-name" placeholder="z.B. Apoquel, Hexocare Silbergel...">
-      </div>
+      <div class="field"><label>Medikament / Supplement</label><input type="text" id="m-name" placeholder="z.B. Apoquel, Hexocare Silbergel..."></div>
       <div class="field">
         <label>Typ</label>
         <select id="m-typ">
           <option value="">– wählen –</option>
-          <option>Antihistaminikum</option>
-          <option>Antimykotikum</option>
-          <option>Kortikosteroid</option>
-          <option>Antibiotikum</option>
-          <option>Supplement</option>
-          <option>Tropfen</option>
-          <option>Salbe / Gel</option>
-          <option>Sonstiges</option>
+          <option>Antihistaminikum</option><option>Antimykotikum</option>
+          <option>Kortikosteroid</option><option>Antibiotikum</option>
+          <option>Supplement</option><option>Tropfen</option>
+          <option>Salbe / Gel</option><option>Sonstiges</option>
         </select>
       </div>
-      <div class="field">
-        <label>Dosierung</label>
-        <input type="text" id="m-dosierung" placeholder="z.B. 1x täglich 16mg">
-      </div>
-      <div class="field">
-        <label>Häufigkeit</label>
-        <input type="text" id="m-haeufigkeit" placeholder="z.B. täglich, bei Bedarf">
-      </div>
+      <div class="field"><label>Dosierung</label><input type="text" id="m-dosierung" placeholder="z.B. 1x täglich 16mg"></div>
+      <div class="field"><label>Häufigkeit</label><input type="text" id="m-haeufigkeit" placeholder="z.B. täglich, bei Bedarf"></div>
       <div class="field">
         <label>Gegeben von (Datum)</label>
         <div class="date-row">
@@ -611,19 +768,17 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <button class="btn-today" onclick="clearDate('m-bis')">Löschen</button>
         </div>
       </div>
-      <div class="field">
-        <label>Verordnet von</label>
-        <input type="text" id="m-verordnet" placeholder="Tierarzt / selbst">
-      </div>
-      <div class="field">
-        <label>Notizen / Wirkung</label>
-        <textarea id="m-notizen" placeholder="Beobachtete Wirkung, Nebenwirkungen..."></textarea>
-      </div>
+      <div class="field"><label>Verordnet von</label><input type="text" id="m-verordnet" placeholder="Tierarzt / selbst"></div>
+      <div class="field"><label>Notizen / Wirkung</label><textarea id="m-notizen" placeholder="Beobachtete Wirkung, Nebenwirkungen..."></textarea></div>
       <button class="submit-btn" id="btn-m" onclick="submitMedikament()">Medikament speichern</button>
       <div class="status" id="status-m"></div>
-    </div>
+    </div><!-- Ende Tab Medikamente -->
 
-    <!-- EINSTELLUNGEN -->
+    <!-- ==========================================
+         EINSTELLUNGEN
+         Tabellenblatt-Namen müssen exakt mit den
+         Google-Sheets-Reitern übereinstimmen.
+         ========================================== -->
     <div id="tab-einst" class="section">
       <p class="section-title">⚙️ Einstellungen</p>
       <div class="settings-box">
@@ -644,11 +799,19 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
       <div class="status" id="status-einst"></div>
       <button class="submit-btn" onclick="testConnection()">Verbindung testen</button>
-    </div>
-  </div><!-- end eingabe panel -->
+    </div><!-- Ende Tab Einstellungen -->
 
-  <!-- ========== ANSICHT MODE ========== -->
+  </div><!-- Ende Eingabe-Panel -->
+
+  <!-- ==========================================
+       ANSICHT-PANEL
+       Lädt Daten live aus Google Sheets und
+       zeigt sie als Karten an. Jeder Tab hat
+       einen eigenen Aktualisieren-Button.
+       ========================================== -->
   <div id="mode-ansicht-panel" style="display:none">
+
+    <!-- Tab-Navigation (4×2 Grid, 8. Platz leer) -->
     <div class="tab-bar" id="ansicht-tabs">
       <button class="tab active" onclick="switchViewTab('v-umwelt')">🌿 Umwelt</button>
       <button class="tab" onclick="switchViewTab('v-symptom')">🔍 Symptome</button>
@@ -660,275 +823,407 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <button class="tab" style="visibility:hidden;pointer-events:none"></button>
     </div>
 
-    <!-- VIEW: Umwelt -->
     <div id="v-umwelt" class="section active">
-      <button class="refresh-btn" onclick="loadViewData('umwelt')">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Aktualisieren
-      </button>
+      <button class="refresh-btn" onclick="loadViewData('umwelt')"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Aktualisieren</button>
       <div id="v-umwelt-content"><div class="view-empty"><div class="icon">🌿</div>Noch keine Daten geladen.<br>Tippe auf Aktualisieren.</div></div>
     </div>
-
-    <!-- VIEW: Symptome -->
     <div id="v-symptom" class="section">
-      <button class="refresh-btn" onclick="loadViewData('symptom')">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Aktualisieren
-      </button>
+      <button class="refresh-btn" onclick="loadViewData('symptom')"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Aktualisieren</button>
       <div id="v-symptom-content"><div class="view-empty"><div class="icon">🔍</div>Noch keine Daten geladen.</div></div>
     </div>
-
-    <!-- VIEW: Futter -->
     <div id="v-futter" class="section">
-      <button class="refresh-btn" onclick="loadViewData('futter')">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Aktualisieren
-      </button>
+      <button class="refresh-btn" onclick="loadViewData('futter')"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Aktualisieren</button>
       <div id="v-futter-content"><div class="view-empty"><div class="icon">🥩</div>Noch keine Daten geladen.</div></div>
     </div>
-
-    <!-- VIEW: Ausschluss -->
     <div id="v-ausschluss" class="section">
-      <button class="refresh-btn" onclick="loadViewData('ausschluss')">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Aktualisieren
-      </button>
+      <button class="refresh-btn" onclick="loadViewData('ausschluss')"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Aktualisieren</button>
       <div id="v-ausschluss-content"><div class="view-empty"><div class="icon">📋</div>Noch keine Daten geladen.</div></div>
     </div>
-
-    <!-- VIEW: Allergene -->
     <div id="v-allergen" class="section">
-      <button class="refresh-btn" onclick="loadViewData('allergen')">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Aktualisieren
-      </button>
+      <button class="refresh-btn" onclick="loadViewData('allergen')"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Aktualisieren</button>
       <div id="v-allergen-content"><div class="view-empty"><div class="icon">⚠️</div>Noch keine Daten geladen.</div></div>
     </div>
-
-    <!-- VIEW: Tierarzt -->
     <div id="v-tierarzt" class="section">
-      <button class="refresh-btn" onclick="loadViewData('tierarzt')">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Aktualisieren
-      </button>
+      <button class="refresh-btn" onclick="loadViewData('tierarzt')"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Aktualisieren</button>
       <div id="v-tierarzt-content"><div class="view-empty"><div class="icon">🏥</div>Noch keine Einträge.</div></div>
     </div>
-
-    <!-- VIEW: Medikamente -->
     <div id="v-medikamente" class="section">
-      <button class="refresh-btn" onclick="loadViewData('medikamente')">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Aktualisieren
-      </button>
+      <button class="refresh-btn" onclick="loadViewData('medikamente')"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Aktualisieren</button>
       <div id="v-medikamente-content"><div class="view-empty"><div class="icon">💊</div>Noch keine Einträge.</div></div>
     </div>
 
-  </div><!-- end ansicht panel -->
-</div><!-- end main-screen -->
-</div><!-- end app -->
+  </div><!-- Ende Ansicht-Panel -->
+</div><!-- Ende Haupt-Bildschirm -->
+</div><!-- Ende App -->
 
+<!-- Google Identity Services für OAuth2-Login -->
 <script src="https://accounts.google.com/gsi/client"></script>
 <script>
+// =============================================
+// KONSTANTEN
+// =============================================
+
+/** Google Sheets ID der Milow-Tabelle */
 const SPREADSHEET_ID = '1k__ZEMOOTjxvKnGC0gyIrIZDNvLG7TPXAgm0-HZEOS8';
+
+/** OAuth2 Client-ID aus Google Cloud Console */
 const CLIENT_ID = '691155115903-q69fuj564d7kaag2vk3fg2nffk2lhpnf.apps.googleusercontent.com';
+
+/** Benötigte Google API-Berechtigungen */
 const SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email';
 
-let tokenClient, accessToken='', userEmail='', lastRaumklima='';
-let medState='', bettState='', ersteGabeState='', zweiWoState='', provState='', aVerdState='';
-let selectedSymKat=[], selectedKoerper=[], schweregradVal='', alReaktVal='';
-let currentMode='eingabe', currentViewTab='v-umwelt';
+/** Berlin-Koordinaten für Wetter-API (BrightSky/DWD) */
+const BERLIN_LAT = 52.4;
+const BERLIN_LON = 13.4;
 
-let settings={
-  sheetUmwelt:'Umweltagebuch',
-  sheetSymptom:'Symptomtagebuch',
-  sheetFutter:'Futtertagebuch',
-  sheetAusschluss:'Ausschlussdiät',
-  sheetAllergen:'Bekannte Allergene',
-  sheetTierarzt:'Tierarztbesuche',
+/** DWD Pollen-Region: 50 = Brandenburg und Berlin */
+const DWD_REGION_ID = 50;
+
+/**
+ * DWD Pollen-Namen: API-Schlüssel → Anzeigename
+ * Die DWD-API verwendet englische/lateinische Schlüssel,
+ * wir zeigen deutsche Namen an.
+ */
+const POLLEN_NAMES = {
+  Graeser:'Gräser', Roggen:'Roggen', Hasel:'Hasel',
+  Beifuss:'Beifuß', Esche:'Esche', Birke:'Birke',
+  Erle:'Erle', Ambrosia:'Ambrosia'
+};
+
+/**
+ * Minimaler Pollen-Level für Anzeige.
+ * DWD-Skala: 0=keine, 1=gering, 2=mittel, 3=hoch
+ * Wir zeigen ab 2 (mittel) aufwärts an.
+ * Trick: Wir prüfen den MIN-Wert des Bereichs:
+ *   "1-2" → min=1 → nicht anzeigen
+ *   "2"   → min=2 → anzeigen
+ *   "2-3" → min=2 → anzeigen
+ *   "3"   → min=3 → anzeigen
+ */
+const POLLEN_MIN_LEVEL = 2.0;
+
+// =============================================
+// GLOBALE ZUSTANDSVARIABLEN
+// =============================================
+
+let tokenClient;           // Google OAuth Token-Client
+let accessToken = '';      // Aktuelles OAuth-Token
+let userEmail = '';        // E-Mail des angemeldeten Nutzers
+let lastRaumklima = '';    // Gespeichertes Raumklima "temp|feuchtig" für Vorausfüllung
+
+// Toggle-Zustände der Eingabefelder
+let bettState = '';          // "Unverändert" oder "Gewechselt"
+let ersteGabeState = '';     // "ja" oder "nein"
+let zweiWoState = '';        // "ja" oder "nein"
+let provState = '';          // "ja" oder "nein"
+let aVerdState = '';         // Verdacht-Stufe: "1", "2" oder "3"
+
+// Mehrfachauswahl-Arrays (Symptome, Körperstellen)
+let selectedSymKat = [];
+let selectedKoerper = [];
+
+// Einfachauswahl-Werte
+let schweregradVal = '';
+let alReaktVal = '';
+
+// Aktueller Anzeigemodus
+let currentMode = 'eingabe';
+let currentViewTab = 'v-umwelt';
+
+/** Tabellenblatt-Namen – müssen exakt mit Google-Sheets-Reitern übereinstimmen */
+let settings = {
+  sheetUmwelt:     'Umweltagebuch',
+  sheetSymptom:    'Symptomtagebuch',
+  sheetFutter:     'Futtertagebuch',
+  sheetAusschluss: 'Ausschlussdiät',
+  sheetAllergen:   'Bekannte Allergene',
+  sheetTierarzt:   'Tierarztbesuche',
   sheetMedikamente:'Medikamente'
 };
 
-/* ====== AUTH ====== */
+// =============================================
+// INITIALISIERUNG & EINSTELLUNGEN
+// =============================================
+
+/**
+ * Wird beim Seitenstart aufgerufen.
+ * Lädt gespeicherte Einstellungen und Token aus localStorage.
+ * Falls ein gültiger Token vorhanden ist, wird direkt der
+ * Haupt-Bildschirm angezeigt (kein erneuter Login nötig).
+ */
 function loadSettings(){
   try{
-    const s=localStorage.getItem('hund_settings');
-    if(s) settings={...settings,...JSON.parse(s)};
-    const t=localStorage.getItem('hund_token');
-    const e=localStorage.getItem('hund_email');
-    const lr=localStorage.getItem('hund_last_raumklima');
-    if(lr){lastRaumklima=lr;}
-    if(t&&e){accessToken=t;userEmail=e;showMain();}
+    const s = localStorage.getItem('hund_settings');
+    if(s) settings = {...settings, ...JSON.parse(s)};
+
+    const t  = localStorage.getItem('hund_token');
+    const e  = localStorage.getItem('hund_email');
+    const lr = localStorage.getItem('hund_last_raumklima');
+
+    if(lr) lastRaumklima = lr;
+    // Token vorhanden → direkt anmelden ohne Google-Login-Dialog
+    if(t && e){ accessToken = t; userEmail = e; showMain(); }
   }catch(e){}
-  document.getElementById('sheet-umwelt').value=settings.sheetUmwelt;
-  document.getElementById('sheet-symptom').value=settings.sheetSymptom;
-  document.getElementById('sheet-futter').value=settings.sheetFutter;
-  document.getElementById('sheet-ausschluss').value=settings.sheetAusschluss;
-  document.getElementById('sheet-allergen').value=settings.sheetAllergen;
-  document.getElementById('sheet-tierarzt').value=settings.sheetTierarzt;
-  document.getElementById('sheet-medikamente').value=settings.sheetMedikamente;
+
+  // Einstellungsfelder befüllen
+  document.getElementById('sheet-umwelt').value     = settings.sheetUmwelt;
+  document.getElementById('sheet-symptom').value    = settings.sheetSymptom;
+  document.getElementById('sheet-futter').value     = settings.sheetFutter;
+  document.getElementById('sheet-ausschluss').value = settings.sheetAusschluss;
+  document.getElementById('sheet-allergen').value   = settings.sheetAllergen;
+  document.getElementById('sheet-tierarzt').value   = settings.sheetTierarzt;
+  document.getElementById('sheet-medikamente').value= settings.sheetMedikamente;
 }
 
+/** Speichert Tabellenblatt-Namen in localStorage */
 function saveSettings(){
-  settings.sheetUmwelt=document.getElementById('sheet-umwelt').value.trim()||'Umweltagebuch';
-  settings.sheetSymptom=document.getElementById('sheet-symptom').value.trim()||'Symptomtagebuch';
-  settings.sheetFutter=document.getElementById('sheet-futter').value.trim()||'Futtertagebuch';
-  settings.sheetAusschluss=document.getElementById('sheet-ausschluss').value.trim()||'Ausschlussdiät';
-  settings.sheetAllergen=document.getElementById('sheet-allergen').value.trim()||'Bekannte Allergene';
-  settings.sheetTierarzt=document.getElementById('sheet-tierarzt').value.trim()||'Tierarztbesuche';
-  settings.sheetMedikamente=document.getElementById('sheet-medikamente').value.trim()||'Medikamente';
-  try{localStorage.setItem('hund_settings',JSON.stringify(settings));}catch(e){}
+  settings.sheetUmwelt     = document.getElementById('sheet-umwelt').value.trim()     || 'Umweltagebuch';
+  settings.sheetSymptom    = document.getElementById('sheet-symptom').value.trim()    || 'Symptomtagebuch';
+  settings.sheetFutter     = document.getElementById('sheet-futter').value.trim()     || 'Futtertagebuch';
+  settings.sheetAusschluss = document.getElementById('sheet-ausschluss').value.trim() || 'Ausschlussdiät';
+  settings.sheetAllergen   = document.getElementById('sheet-allergen').value.trim()   || 'Bekannte Allergene';
+  settings.sheetTierarzt   = document.getElementById('sheet-tierarzt').value.trim()   || 'Tierarztbesuche';
+  settings.sheetMedikamente= document.getElementById('sheet-medikamente').value.trim()|| 'Medikamente';
+  try{ localStorage.setItem('hund_settings', JSON.stringify(settings)); }catch(e){}
 }
 
+// =============================================
+// GOOGLE OAUTH2 AUTHENTIFIZIERUNG
+// =============================================
+
+/** Startet den Google OAuth2-Login-Flow */
 function signIn(){
-  if(!window.google){setTimeout(signIn,500);return;}
-  tokenClient=google.accounts.oauth2.initTokenClient({
-    client_id:CLIENT_ID,scope:SCOPE,
-    callback:async(resp)=>{
-      if(resp.error){alert('Login fehlgeschlagen: '+resp.error);return;}
-      accessToken=resp.access_token;
+  if(!window.google){ setTimeout(signIn, 500); return; }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPE,
+    callback: async(resp) => {
+      if(resp.error){ alert('Login fehlgeschlagen: ' + resp.error); return; }
+      accessToken = resp.access_token;
       try{
-        const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+accessToken}});
-        const d=await r.json();
-        userEmail=d.email||'Angemeldet';
-        try{localStorage.setItem('hund_token',accessToken);localStorage.setItem('hund_email',userEmail);}catch(e){}
-      }catch(e){userEmail='Angemeldet';}
+        // E-Mail des Nutzers abrufen
+        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+          {headers:{'Authorization':'Bearer ' + accessToken}});
+        const d = await r.json();
+        userEmail = d.email || 'Angemeldet';
+        try{
+          localStorage.setItem('hund_token', accessToken);
+          localStorage.setItem('hund_email', userEmail);
+        }catch(e){}
+      }catch(e){ userEmail = 'Angemeldet'; }
       showMain();
     }
   });
   tokenClient.requestAccessToken({prompt:'consent'});
 }
 
+/** Meldet den Nutzer ab und widerruft das OAuth-Token */
 function signOut(){
-  if(window.google&&accessToken) google.accounts.oauth2.revoke(accessToken);
-  accessToken='';userEmail='';
-  try{localStorage.removeItem('hund_token');localStorage.removeItem('hund_email');}catch(e){}
-  document.getElementById('main-screen').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
+  if(window.google && accessToken) google.accounts.oauth2.revoke(accessToken);
+  accessToken = ''; userEmail = '';
+  try{
+    localStorage.removeItem('hund_token');
+    localStorage.removeItem('hund_email');
+  }catch(e){}
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
 }
 
+// =============================================
+// BILDSCHIRM-VERWALTUNG
+// =============================================
+
+/**
+ * Wechselt vom Login- zum Haupt-Bildschirm.
+ * Befüllt Standardwerte und startet API-Abruf.
+ */
 function showMain(){
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('main-screen').style.display='block';
-  document.getElementById('user-email').textContent=userEmail;
-  ['u-datum','s-datum','f-datum','t-datum','m-von'].forEach(id=>setToday(id));
-  // Pre-fill last Raumklima (stored as "temp|feuchtig")
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display  = 'block';
+  document.getElementById('user-email').textContent = userEmail;
+
+  // Heutiges Datum in alle Datumsfelder eintragen
+  ['u-datum','s-datum','f-datum','t-datum','m-von'].forEach(id => setToday(id));
+
+  // Letztes Raumklima vorausfüllen (Format: "temp|feuchtig")
   if(lastRaumklima){
-    const parts=lastRaumklima.split('|');
-    if(document.getElementById('u-raumtemp')) document.getElementById('u-raumtemp').value=parts[0]||'';
-    if(document.getElementById('u-raumfeuchtig')) document.getElementById('u-raumfeuchtig').value=parts[1]||'';
+    const parts = lastRaumklima.split('|');
+    const rt = document.getElementById('u-raumtemp');
+    const rf = document.getElementById('u-raumfeuchtig');
+    if(rt) rt.value = parts[0] || '';
+    if(rf) rf.value = parts[1] || '';
   }
-  // Default Bett to "Unverändert"
-  const bettBtns=document.querySelectorAll('#tab-umwelt .tog-btn');
-  bettBtns[0].classList.add('sel'); bettState='Unverändert';
-  // Auto-load weather & pollen
+
+  // "Unverändert" als Standard für Bett vorauswählen
+  const bettBtns = document.querySelectorAll('#tab-umwelt .tog-btn');
+  bettBtns[0].classList.add('sel');
+  bettState = 'Unverändert';
+
+  // Wetter & Pollen automatisch laden (kurze Verzögerung für DOM-Bereitschaft)
   setTimeout(loadUmweltData, 300);
 }
 
+/** Wechselt zwischen Eingabe- und Ansicht-Modus */
+function switchMode(mode){
+  currentMode = mode;
+  document.getElementById('mode-eingabe').classList.toggle('active', mode === 'eingabe');
+  document.getElementById('mode-ansicht').classList.toggle('active', mode === 'ansicht');
+  document.getElementById('mode-eingabe-panel').style.display = mode === 'eingabe' ? 'block' : 'none';
+  document.getElementById('mode-ansicht-panel').style.display = mode === 'ansicht' ? 'block' : 'none';
+}
+
+/**
+ * Wechselt den aktiven Eingabe-Tab.
+ * Beim Wechsel zum Futter-Tab wird das Dropdown
+ * automatisch geladen, falls noch leer.
+ */
 function switchTab(tab){
-  const tabs=['umwelt','symptom','futter','ausschluss','allergen','tierarzt','medikamente','einst'];
-  const tabEls=document.querySelectorAll('#eingabe-tabs .tab');
-  tabs.forEach((t,i)=>{
-    if(tabEls[i]) tabEls[i].classList.toggle('active',t===tab);
-    const s=document.getElementById('tab-'+t);
-    if(s){s.classList.toggle('active',t===tab);s.style.display=t===tab?'block':'none';}
+  const tabs   = ['umwelt','symptom','futter','ausschluss','allergen','tierarzt','medikamente','einst'];
+  const tabEls = document.querySelectorAll('#eingabe-tabs .tab');
+  tabs.forEach((t, i) => {
+    if(tabEls[i]) tabEls[i].classList.toggle('active', t === tab);
+    const s = document.getElementById('tab-' + t);
+    if(s){ s.classList.toggle('active', t === tab); s.style.display = t === tab ? 'block' : 'none'; }
   });
-  // Auto-load futter dropdown when switching to futter tab
-  if(tab==='futter'){
-    const sel=document.getElementById('f-futter-select');
+  // Futter-Dropdown beim ersten Öffnen automatisch laden
+  if(tab === 'futter'){
+    const sel = document.getElementById('f-futter-select');
     if(sel.options.length <= 1) loadFutterDropdown();
   }
 }
 
-/* ====== HELPERS ====== */
-function setToday(id){
-  const d=new Date();
-  const el=document.getElementById(id);
-  if(el) el.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-function clearDate(id){document.getElementById(id).value='';}
-
-function formatDate(iso){
-  if(!iso)return'';
-  const[y,m,d]=iso.split('-');
-  return d+'.'+m+'.'+y;
-}
-
-function setStatus(id,type,msg){
-  const el=document.getElementById(id);
-  el.className='status '+type;
-  el.textContent=msg;
-}
-
-function esc(s){return String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-/* ====== MODE & TAB SWITCHING ====== */
-function switchMode(mode){
-  currentMode=mode;
-  document.getElementById('mode-eingabe').classList.toggle('active',mode==='eingabe');
-  document.getElementById('mode-ansicht').classList.toggle('active',mode==='ansicht');
-  document.getElementById('mode-eingabe-panel').style.display=mode==='eingabe'?'block':'none';
-  document.getElementById('mode-ansicht-panel').style.display=mode==='ansicht'?'block':'none';
-}
-
-
+/** Wechselt den aktiven Ansicht-Tab */
 function switchViewTab(tab){
-  currentViewTab=tab;
-  const tabs=['v-umwelt','v-symptom','v-futter','v-ausschluss','v-allergen','v-tierarzt','v-medikamente'];
-  const tabEls=document.querySelectorAll('#ansicht-tabs .tab');
-  tabs.forEach((t,i)=>{
-    if(tabEls[i]) tabEls[i].classList.toggle('active',t===tab);
-    const s=document.getElementById(t);
-    if(s){s.classList.toggle('active',t===tab);s.style.display=t===tab?'block':'none';}
+  currentViewTab = tab;
+  const tabs   = ['v-umwelt','v-symptom','v-futter','v-ausschluss','v-allergen','v-tierarzt','v-medikamente'];
+  const tabEls = document.querySelectorAll('#ansicht-tabs .tab');
+  tabs.forEach((t, i) => {
+    if(tabEls[i]) tabEls[i].classList.toggle('active', t === tab);
+    const s = document.getElementById(t);
+    if(s){ s.classList.toggle('active', t === tab); s.style.display = t === tab ? 'block' : 'none'; }
   });
 }
 
-/* ====== TOGGLE HELPERS ====== */
-function toggleBett(el){
-  const was=el.classList.contains('sel');
-  document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b=>b.classList.remove('sel'));
-  if(!was){el.classList.add('sel');bettState=el.textContent;}
-  else{bettState='Unverändert';document.querySelectorAll('#tab-umwelt .tog-btn')[0].classList.add('sel');}
+// =============================================
+// HILFSFUNKTIONEN
+// =============================================
+
+/** Setzt ein Datumsfeld auf das heutige Datum (YYYY-MM-DD) */
+function setToday(id){
+  const d  = new Date();
+  const el = document.getElementById(id);
+  if(el) el.value = d.getFullYear() + '-'
+    + String(d.getMonth()+1).padStart(2,'0') + '-'
+    + String(d.getDate()).padStart(2,'0');
 }
+
+/** Leert ein Datumsfeld */
+function clearDate(id){ document.getElementById(id).value = ''; }
+
+/** Konvertiert YYYY-MM-DD → DD.MM.YYYY für Google Sheets */
+function formatDate(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return d + '.' + m + '.' + y;
+}
+
+/** Setzt eine Status-Meldung (ok / err / loading) */
+function setStatus(id, type, msg){
+  const el = document.getElementById(id);
+  el.className = 'status ' + type;
+  el.textContent = msg;
+}
+
+/** Escaped HTML-Sonderzeichen für sichere DOM-Ausgabe */
+function esc(s){ return String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// =============================================
+// TOGGLE-HELFER (Eingabefelder)
+// =============================================
+
+/**
+ * Bett-Toggle: Einfachauswahl.
+ * Beim Abwählen springt es zurück auf "Unverändert".
+ */
+function toggleBett(el){
+  const was = el.classList.contains('sel');
+  document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b => b.classList.remove('sel'));
+  if(!was){ el.classList.add('sel'); bettState = el.textContent; }
+  else{ bettState = 'Unverändert'; document.querySelectorAll('#tab-umwelt .tog-btn')[0].classList.add('sel'); }
+}
+
+/** Symptom-Kategorie: Mehrfachauswahl */
 function toggleSymKat(el){
   el.classList.toggle('sel');
-  selectedSymKat=Array.from(document.querySelectorAll('#sym-kat-grid .tog-btn.sel')).map(b=>b.textContent);
+  selectedSymKat = Array.from(document.querySelectorAll('#sym-kat-grid .tog-btn.sel')).map(b => b.textContent);
 }
+
+/** Schweregrad: Einfachauswahl (1–5) */
 function toggleSchwere(el){
-  document.querySelectorAll('#tab-symptom .tog-btn[data-val]').forEach(b=>b.classList.remove('sel'));
-  el.classList.add('sel');schweregradVal=el.dataset.val;
+  document.querySelectorAll('#tab-symptom .tog-btn[data-val]').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  schweregradVal = el.dataset.val;
 }
+
+/** Körperstelle: Mehrfachauswahl */
 function toggleKoerper(el){
   el.classList.toggle('sel');
-  selectedKoerper=Array.from(document.querySelectorAll('#tab-symptom .field:nth-child(5) .tog-btn.sel')).map(b=>b.textContent);
+  selectedKoerper = Array.from(
+    document.querySelectorAll('#tab-symptom .field:nth-child(5) .tog-btn.sel')
+  ).map(b => b.textContent);
 }
+
+/** Reaktionsstärke Allergen: Einfachauswahl (1–5) */
 function toggleAlReakt(el){
-  document.querySelectorAll('#tab-allergen .tog-btn[data-val]').forEach(b=>b.classList.remove('sel'));
-  el.classList.add('sel');alReaktVal=el.dataset.val;
+  document.querySelectorAll('#tab-allergen .tog-btn[data-val]').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  alReaktVal = el.dataset.val;
 }
+
+/** Erste Gabe: Ja/Nein Toggle */
 function toggleErsteGabe(val){
-  ersteGabeState=ersteGabeState===val?'':val;
-  document.getElementById('erstegabe-ja').classList.toggle('sel',ersteGabeState==='ja');
-  document.getElementById('erstegabe-nein').classList.toggle('sel',ersteGabeState==='nein');
+  ersteGabeState = ersteGabeState === val ? '' : val;
+  document.getElementById('erstegabe-ja').classList.toggle('sel',  ersteGabeState === 'ja');
+  document.getElementById('erstegabe-nein').classList.toggle('sel', ersteGabeState === 'nein');
 }
+
+/** Zwei-Wochen-Fütterung: Ja/Nein Toggle */
 function toggleZweiWo(val){
-  zweiWoState=zweiWoState===val?'':val;
-  document.getElementById('zweiwo-ja').classList.toggle('sel',zweiWoState==='ja');
-  document.getElementById('zweiwo-nein').classList.toggle('sel',zweiWoState==='nein');
+  zweiWoState = zweiWoState === val ? '' : val;
+  document.getElementById('zweiwo-ja').classList.toggle('sel',  zweiWoState === 'ja');
+  document.getElementById('zweiwo-nein').classList.toggle('sel', zweiWoState === 'nein');
 }
+
+/** Provokation: Ja/Nein Toggle */
 function toggleProv(val){
-  provState=provState===val?'':val;
-  document.getElementById('prov-ja').classList.toggle('sel',provState==='ja');
-  document.getElementById('prov-nein').classList.toggle('sel',provState==='nein');
+  provState = provState === val ? '' : val;
+  document.getElementById('prov-ja').classList.toggle('sel',  provState === 'ja');
+  document.getElementById('prov-nein').classList.toggle('sel', provState === 'nein');
 }
+
+/**
+ * Verdacht-Stufe: Einfachauswahl 1/2/3.
+ * Wird als Zahl (nicht als Text) in Google Sheets gespeichert.
+ */
 function toggleAVerd(val){
-  const was=aVerdState===val;
-  aVerdState=was?'':val;
-  ['1','2','3'].forEach(v=>{
-    const el=document.getElementById('averd-'+v);
-    if(el) el.classList.toggle('sel', aVerdState===v);
+  const was = aVerdState === val;
+  aVerdState = was ? '' : val;
+  ['1','2','3'].forEach(v => {
+    const el = document.getElementById('averd-' + v);
+    if(el) el.classList.toggle('sel', aVerdState === v);
   });
 }
 
+// =============================================
+// FUTTER-DROPDOWN
+// =============================================
+
+/**
+ * Lädt unique Futter-Einträge aus Google Sheets
+ * in das Dropdown (neueste zuerst, Duplikate entfernt).
+ * Wird automatisch beim ersten Öffnen des Futter-Tabs
+ * aufgerufen und nach jedem Speichern aktualisiert.
+ */
 async function loadFutterDropdown(){
   const sel = document.getElementById('f-futter-select');
   const btn = document.getElementById('btn-futter-reload');
@@ -937,19 +1232,19 @@ async function loadFutterDropdown(){
   try{
     const rows = await readSheet(settings.sheetFutter);
     const {dataRows} = findDataRows(rows, 'futter');
-    // Collect unique futter values, most recent first
-    const seen = new Set();
+    const seen   = new Set();
     const unique = [];
+    // Rückwärts iterieren: neueste Einträge zuerst
     for(const r of [...dataRows].reverse()){
       const val = (r[1]||'').toString().trim();
       if(val && !seen.has(val)){ seen.add(val); unique.push(val); }
     }
     sel.innerHTML = '<option value="">– Eintrag wählen –</option>';
-    unique.forEach(v=>{
+    unique.forEach(v => {
       const opt = document.createElement('option');
       opt.value = v;
       opt.textContent = v.length > 60 ? v.slice(0,60)+'…' : v;
-      opt.title = v; // full text on hover
+      opt.title = v; // Volltext als Tooltip
       sel.appendChild(opt);
     });
     if(unique.length === 0) sel.innerHTML = '<option value="">Noch keine Einträge</option>';
@@ -959,76 +1254,78 @@ async function loadFutterDropdown(){
   btn.disabled = false;
 }
 
+/** Überträgt den gewählten Dropdown-Wert ins Textarea */
 function futterSelectChanged(){
   const val = document.getElementById('f-futter-select').value;
   if(val) document.getElementById('f-futter').value = val;
 }
 
-/* ====== SHEETS API ====== */
-async function appendRow(sheet,values){
+// =============================================
+// GOOGLE SHEETS API
+// =============================================
+
+/**
+ * Fügt eine Zeile am Ende eines Tabellenblatts ein.
+ * Bei abgelaufenem Token wird der Nutzer automatisch
+ * zum Login weitergeleitet.
+ * @param {string} sheet - Name des Tabellenblatts
+ * @param {Array}  values - Zellenwerte als Array
+ */
+async function appendRow(sheet, values){
   if(!accessToken) throw new Error('Nicht angemeldet');
-  const range=encodeURIComponent(sheet+'!A:Z');
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-  const res=await fetch(url,{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
-    body:JSON.stringify({values:[values]})
+  const range = encodeURIComponent(sheet + '!A:Z');
+  const url   = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const res   = await fetch(url, {
+    method: 'POST',
+    headers: {'Authorization':'Bearer '+accessToken, 'Content-Type':'application/json'},
+    body: JSON.stringify({values:[values]})
   });
-  if(res.status===401){handleExpired();throw new Error('Sitzung abgelaufen – bitte neu anmelden.');}
-  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||'HTTP '+res.status);}
+  if(res.status === 401){ handleExpired(); throw new Error('Sitzung abgelaufen – bitte neu anmelden.'); }
+  if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || 'HTTP '+res.status); }
   return res.json();
 }
 
+/**
+ * Liest alle Zeilen eines Tabellenblatts.
+ * Wichtige Parameter:
+ * - FORMATTED_VALUE: Zahlen als Text (keine Seriennummern)
+ * - FORMATTED_STRING: Daten als lesbares Datum (nicht Seriennummer)
+ * @param {string} sheet - Name des Tabellenblatts
+ * @returns {Array} - 2D-Array aller Zellen
+ */
 async function readSheet(sheet){
   if(!accessToken) throw new Error('Nicht angemeldet');
-  // Use A1:Z1000 explicitly to get all rows
-  const range=encodeURIComponent(sheet+'!A1:Z1000');
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
-  const res=await fetch(url,{headers:{'Authorization':'Bearer '+accessToken}});
-  if(res.status===401){handleExpired();throw new Error('Sitzung abgelaufen.');}
-  if(!res.ok){
-    const e=await res.json().catch(()=>({}));
-    throw new Error(e?.error?.message||'HTTP '+res.status);
-  }
-  const data=await res.json();
-  return data.values||[];
+  const range = encodeURIComponent(sheet + '!A1:Z1000');
+  const url   = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
+  const res   = await fetch(url, {headers:{'Authorization':'Bearer '+accessToken}});
+  if(res.status === 401){ handleExpired(); throw new Error('Sitzung abgelaufen.'); }
+  if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || 'HTTP '+res.status); }
+  const data = await res.json();
+  return data.values || [];
 }
 
+/** Behandelt abgelaufene Sessions: Token löschen, Login anzeigen */
 function handleExpired(){
-  accessToken='';
-  try{localStorage.removeItem('hund_token');}catch(e){}
-  document.getElementById('main-screen').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
+  accessToken = '';
+  try{ localStorage.removeItem('hund_token'); }catch(e){}
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
 }
 
-/* ====== AUTO-LOAD WETTER & POLLEN ====== */
-// Berlin Blankenfelde coords (matching wetter.com location)
-const BERLIN_LAT = 52.4; 
-const BERLIN_LON = 13.4;
-// DWD region 50 = Brandenburg und Berlin
-const DWD_REGION_ID = 50;
+// =============================================
+// WETTER & POLLEN AUTO-LOAD
+// =============================================
 
-// Pollen name mapping DWD → German display name
-const POLLEN_NAMES = {
-  Graeser:'Gräser', Roggen:'Roggen', Hasel:'Hasel',
-  Beifuss:'Beifuß', Esche:'Esche', Birke:'Birke',
-  Erle:'Erle', Ambrosia:'Ambrosia'
-};
-// DWD value scale: 0=keine, 0-1=keine-gering, 1=gering, 1-2=gering-mittel,
-// 2=mittel, 2-3=stark, 3=sehr stark
-// We want: "2" (mittel), "2-3" (stark), "3" (sehr stark) — exclude "1-2" (gering-mittel)
-// "1-2" has max=2 but MIN=1, "2" has min=max=2 — distinguish by checking raw value directly
-const POLLEN_MIN_LEVEL = 2.0;
-
+/**
+ * Startet Wetter- und Pollen-Abruf parallel.
+ * Zeigt Statusmeldung und blendet sie nach 5s aus.
+ */
 async function loadUmweltData(){
   const bar = document.getElementById('autoload-status');
   bar.style.display = 'block';
-  bar.textContent = '⏳ Lade Wetter und Pollen…';
+  bar.textContent   = '⏳ Lade Wetter und Pollen…';
 
-  const results = await Promise.allSettled([
-    fetchWetter(),
-    fetchPollen()
-  ]);
+  const results = await Promise.allSettled([fetchWetter(), fetchPollen()]);
 
   const msgs = [];
   if(results[0].status === 'fulfilled') msgs.push('✅ Wetter geladen');
@@ -1037,98 +1334,106 @@ async function loadUmweltData(){
   else msgs.push('⚠️ Pollen: ' + results[1].reason);
 
   bar.textContent = msgs.join('  ·  ');
-  setTimeout(()=>{ bar.style.display='none'; }, 5000);
+  setTimeout(() => { bar.style.display = 'none'; }, 5000);
 }
 
+/**
+ * Ruft Wetterdaten von BrightSky (DWD-Daten, CORS-frei) ab.
+ * Füllt Min/Max-Temperatur, Luftfeuchtigkeit und Regen
+ * als reine Zahlen (ohne Einheiten) in die Eingabefelder.
+ */
 async function fetchWetter(){
-  // BrightSky API – current weather for Berlin, CORS-free, no key needed
-  const today = new Date();
+  const today   = new Date();
   const dateStr = today.toISOString().slice(0,10);
-  const url = `https://api.brightsky.dev/weather?lat=${BERLIN_LAT}&lon=${BERLIN_LON}&date=${dateStr}&tz=Europe/Berlin`;
-  
+  const url     = `https://api.brightsky.dev/weather?lat=${BERLIN_LAT}&lon=${BERLIN_LON}&date=${dateStr}&tz=Europe/Berlin`;
+
   const res = await fetch(url);
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
-  
+
   const records = data.weather || [];
   if(!records.length) throw new Error('Keine Daten');
 
-  // Get min/max temperature for today
-  const temps = records.map(r => r.temperature).filter(t => t != null);
+  // Tages-Min/Max aus stündlichen Werten berechnen
+  const temps  = records.map(r => r.temperature).filter(t => t != null);
   const precip = records.map(r => r.precipitation || 0);
-  
-  const tMin = Math.round(Math.min(...temps));
-  const tMax = Math.round(Math.max(...temps));
-  const totalRain = precip.reduce((a,b) => a+b, 0);
-  // Average relative humidity
   const humids = records.map(r => r.relative_humidity).filter(h => h != null);
+
+  const tMin     = Math.round(Math.min(...temps));
+  const tMax     = Math.round(Math.max(...temps));
+  const totalRain= precip.reduce((a,b) => a+b, 0);
   const avgHumid = humids.length ? Math.round(humids.reduce((a,b)=>a+b,0)/humids.length) : null;
 
-  document.getElementById('u-temp-min').value = tMin;
-  document.getElementById('u-temp-max').value = tMax;
+  // Nur reine Zahlen eintragen (kein °C, kein %)
+  document.getElementById('u-temp-min').value    = tMin;
+  document.getElementById('u-temp-max').value    = tMax;
   if(avgHumid !== null) document.getElementById('u-luftfeuchtig').value = avgHumid;
-  if(totalRain > 0.1) document.getElementById('u-regen').value = totalRain.toFixed(1).replace('.',',');
-  else document.getElementById('u-regen').value = '0';
+  // Regen auf 1 Dezimalstelle, 0 wenn trocken
+  document.getElementById('u-regen').value       = totalRain > 0.1 ? Math.round(totalRain * 10) / 10 : 0;
   document.getElementById('wetter-source').textContent = '(DWD via BrightSky)';
 }
 
+/**
+ * Ruft Pollen-Daten vom DWD über CORS-Proxies ab.
+ * DWD blockiert direkte Browser-Anfragen, daher
+ * werden 3 Proxies nacheinander probiert.
+ * Zeigt nur Pollen ab Stufe "mittel" (2) aufwärts an.
+ */
 async function fetchPollen(){
-  const dwdUrl = 'https://opendata.dwd.de/climate_environment/health/alerts/s31fg.json';
-  // Multiple proxies as fallback – DWD blocks direct browser requests
+  const dwdUrl   = 'https://opendata.dwd.de/climate_environment/health/alerts/s31fg.json';
   const proxyUrls = [
     'https://api.allorigins.win/raw?url=' + encodeURIComponent(dwdUrl),
     'https://corsproxy.io/?' + encodeURIComponent(dwdUrl),
     'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(dwdUrl),
   ];
 
-  let data = null;
-  let lastErr = '';
+  let data = null, lastErr = '';
   for(const url of proxyUrls){
     try{
-      const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
+      const res  = await fetch(url, {signal: AbortSignal.timeout(8000)});
       if(!res.ok) throw new Error('HTTP ' + res.status);
       const text = await res.text();
-      // allorigins sometimes wraps in {contents:...}
       const parsed = JSON.parse(text);
+      // allorigins.win wraps response in {contents: "..."}
       data = parsed.contents ? JSON.parse(parsed.contents) : parsed;
-      if(data && data.content) break; // success
+      if(data && data.content) break; // Erfolg
       data = null;
       throw new Error('Unbekanntes Format');
     }catch(e){ lastErr = e.message; data = null; }
   }
   if(!data) throw new Error('Alle Proxies fehlgeschlagen: ' + lastErr);
 
-  // Find region 50 (Brandenburg und Berlin)
+  // Region 50 = Brandenburg und Berlin
   const region = (data.content || []).find(r => r.region_id === DWD_REGION_ID);
   if(!region) throw new Error('Region nicht gefunden');
 
-  // Get today's date key (DWD uses "today" / "tomorrow" keys)
   const pollenData = region.Pollen;
-  
-  // Collect pollen at level >= POLLEN_MIN_LEVEL for "today"
   const highPollen = [];
+
   for(const [key, displayName] of Object.entries(POLLEN_NAMES)){
     if(!pollenData[key]) continue;
     const todayRaw = pollenData[key].today;
-    // Parse value: "0", "1", "2", "3", "0-1", "1-2", "2-3"
-    const level = parsePollenLevel(todayRaw);
+    const level    = parsePollenLevel(todayRaw);
     if(level >= POLLEN_MIN_LEVEL){
-      const levelLabel = formatPollenLevel(todayRaw);
-      highPollen.push(`${displayName} (${levelLabel})`);
+      highPollen.push(`${displayName} (${formatPollenLevel(todayRaw)})`);
     }
   }
 
-  const pollenText = highPollen.length > 0
+  document.getElementById('u-pollen').value = highPollen.length > 0
     ? highPollen.join(', ')
     : 'keine erhöhte Belastung';
-
-  document.getElementById('u-pollen').value = pollenText;
   document.getElementById('pollen-source').textContent = '(DWD)';
 }
 
+/**
+ * Berechnet den Minimalwert eines DWD-Pollen-Bereichs.
+ * Wir nutzen den MIN-Wert um "1-2" (gering-mittel) auszuschließen,
+ * während "2-3" (mittel-hoch) und "2" (mittel) eingeschlossen werden.
+ * @param {string} raw - DWD-Rohwert z.B. "2-3", "1", "-1"
+ * @returns {number} Minimalwert des Bereichs
+ */
 function parsePollenLevel(raw){
   if(!raw || raw === '-1') return -1;
-  // Use MINIMUM of range: "1-2" → 1 (excluded), "2" → 2 (included), "2-3" → 2 (included), "3" → 3 (included)
   if(raw.includes('-')){
     const parts = raw.split('-').map(Number);
     return Math.min(...parts);
@@ -1136,6 +1441,11 @@ function parsePollenLevel(raw){
   return parseFloat(raw) || 0;
 }
 
+/**
+ * Übersetzt DWD-Rohwerte in lesbare deutsche Labels.
+ * @param {string} raw - DWD-Rohwert
+ * @returns {string} Anzeigename
+ */
 function formatPollenLevel(raw){
   const map = {
     '0':'keine','0-1':'keine–gering','1':'gering','1-2':'gering–mittel',
@@ -1144,100 +1454,133 @@ function formatPollenLevel(raw){
   return map[raw] || raw;
 }
 
-/* ====== SUBMIT FUNCTIONS ====== */
+// =============================================
+// SPEICHER-FUNKTIONEN (Submit)
+// =============================================
+
+/**
+ * Speichert einen Umwelt-Eintrag.
+ * Spalten-Reihenfolge in Google Sheets:
+ * Datum | Min°C | Max°C | Luftfeuchtig% | Regen mm |
+ * Pollen | RaumTemp | RaumFeuchtig | Bett | Notizen
+ * Alle Wetter/Klima-Werte werden als reine Zahlen gespeichert.
+ */
 async function submitUmwelt(){
-  const datum=document.getElementById('u-datum').value;
-  if(!datum){setStatus('status-u','err','Bitte Datum auswählen.');return;}
-  const btn=document.getElementById('btn-u');btn.disabled=true;
+  const datum = document.getElementById('u-datum').value;
+  if(!datum){ setStatus('status-u','err','Bitte Datum auswählen.'); return; }
+  const btn = document.getElementById('btn-u');
+  btn.disabled = true;
   setStatus('status-u','loading','Wird gespeichert…');
-  const bettVal=bettState||'Unverändert';
+  const bettVal = bettState || 'Unverändert';
   try{
-    await appendRow(settings.sheetUmwelt,[
+    await appendRow(settings.sheetUmwelt, [
       formatDate(datum),
-      document.getElementById('u-temp-min').value,
-      document.getElementById('u-temp-max').value,
-      document.getElementById('u-luftfeuchtig').value,
-      document.getElementById('u-regen').value,
-      document.getElementById('u-pollen').value,
-      document.getElementById('u-raumtemp').value,
-      document.getElementById('u-raumfeuchtig').value,
-      bettVal,
-      document.getElementById('u-notizen').value
+      document.getElementById('u-temp-min').value,      // Spalte B: Min Temperatur
+      document.getElementById('u-temp-max').value,      // Spalte C: Max Temperatur
+      document.getElementById('u-luftfeuchtig').value,  // Spalte D: Rel. Luftfeuchtigkeit
+      document.getElementById('u-regen').value,         // Spalte E: Regenmenge mm
+      document.getElementById('u-pollen').value,        // Spalte F: Pollen
+      document.getElementById('u-raumtemp').value,      // Spalte G: Raumklima Temperatur
+      document.getElementById('u-raumfeuchtig').value,  // Spalte H: Raumklima Luftfeuchtigkeit
+      bettVal,                                          // Spalte I: Bett
+      document.getElementById('u-notizen').value        // Spalte J: Notizen
     ]);
     setStatus('status-u','ok','✓ Gespeichert!');
-    // Save Raumklima for next entry
-    lastRaumklima=document.getElementById('u-raumtemp').value+'|'+document.getElementById('u-raumfeuchtig').value;
-    try{localStorage.setItem('hund_last_raumklima',lastRaumklima);}catch(e){}
-    ['u-temp-min','u-temp-max','u-luftfeuchtig','u-regen','u-pollen','u-notizen'].forEach(id=>document.getElementById(id).value='');
-    bettState='Unverändert';
-    document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b=>b.classList.remove('sel'));
+    // Raumklima für nächsten Tag merken (Format: "temp|feuchtig")
+    lastRaumklima = document.getElementById('u-raumtemp').value + '|'
+                  + document.getElementById('u-raumfeuchtig').value;
+    try{ localStorage.setItem('hund_last_raumklima', lastRaumklima); }catch(e){}
+    // Wetter/Pollen-Felder leeren, Raumklima bleibt vorausgefüllt
+    ['u-temp-min','u-temp-max','u-luftfeuchtig','u-regen','u-pollen','u-notizen']
+      .forEach(id => document.getElementById(id).value = '');
+    bettState = 'Unverändert';
+    document.querySelectorAll('#tab-umwelt .tog-btn').forEach(b => b.classList.remove('sel'));
     document.querySelectorAll('#tab-umwelt .tog-btn')[0].classList.add('sel');
-  }catch(e){setStatus('status-u','err','Fehler: '+e.message);}
-  btn.disabled=false;
+  }catch(e){ setStatus('status-u','err','Fehler: ' + e.message); }
+  btn.disabled = false;
 }
 
+/**
+ * Speichert einen Symptom-Eintrag.
+ * Spalten: Datum | Symptom-Kategorie | Beschreibung |
+ * Schweregrad | Körperstelle | Notizen
+ */
 async function submitSymptom(){
-  const datum=document.getElementById('s-datum').value;
-  if(!datum){setStatus('status-s','err','Bitte Datum auswählen.');return;}
-  const btn=document.getElementById('btn-s');btn.disabled=true;
+  const datum = document.getElementById('s-datum').value;
+  if(!datum){ setStatus('status-s','err','Bitte Datum auswählen.'); return; }
+  const btn = document.getElementById('btn-s');
+  btn.disabled = true;
   setStatus('status-s','loading','Wird gespeichert…');
-  const katExtra=document.getElementById('s-kat-extra').value;
-  const katAll=[...selectedSymKat,katExtra].filter(Boolean).join(', ');
-  const koerperExtra=document.getElementById('s-koerper-extra').value;
-  const koerperAll=[...selectedKoerper,koerperExtra].filter(Boolean).join(', ');
+  const katExtra   = document.getElementById('s-kat-extra').value;
+  const katAll     = [...selectedSymKat, katExtra].filter(Boolean).join(', ');
+  const koerperExtra= document.getElementById('s-koerper-extra').value;
+  const koerperAll = [...selectedKoerper, koerperExtra].filter(Boolean).join(', ');
   try{
-    await appendRow(settings.sheetSymptom,[
-      formatDate(datum),katAll,
+    await appendRow(settings.sheetSymptom, [
+      formatDate(datum), katAll,
       document.getElementById('s-beschreibung').value,
-      schweregradVal,koerperAll,
+      schweregradVal, koerperAll,
       document.getElementById('s-notizen').value
     ]);
     setStatus('status-s','ok','✓ Gespeichert!');
-    ['s-beschreibung','s-notizen','s-kat-extra','s-koerper-extra'].forEach(id=>document.getElementById(id).value='');
-    selectedSymKat=[];selectedKoerper=[];schweregradVal='';
-    document.querySelectorAll('#tab-symptom .tog-btn').forEach(b=>b.classList.remove('sel'));
-  }catch(e){setStatus('status-s','err','Fehler: '+e.message);}
-  btn.disabled=false;
+    ['s-beschreibung','s-notizen','s-kat-extra','s-koerper-extra'].forEach(id => document.getElementById(id).value = '');
+    selectedSymKat = []; selectedKoerper = []; schweregradVal = '';
+    document.querySelectorAll('#tab-symptom .tog-btn').forEach(b => b.classList.remove('sel'));
+  }catch(e){ setStatus('status-s','err','Fehler: ' + e.message); }
+  btn.disabled = false;
 }
 
+/**
+ * Speichert einen Futter-Eintrag.
+ * Spalten: Datum | Futter | Produkt | erste Gabe |
+ * zwei Wochen | Provokation | Beschreibung | Notizen
+ * Das Futter-Feld bleibt nach dem Speichern vorausgefüllt.
+ */
 async function submitFutter(){
-  const datum=document.getElementById('f-datum').value;
-  const futter=document.getElementById('f-futter').value.trim();
-  if(!datum){setStatus('status-f','err','Bitte Datum auswählen.');return;}
-  if(!futter){setStatus('status-f','err','Bitte Futter eintragen.');return;}
-  const btn=document.getElementById('btn-f');btn.disabled=true;
+  const datum  = document.getElementById('f-datum').value;
+  const futter = document.getElementById('f-futter').value.trim();
+  if(!datum){ setStatus('status-f','err','Bitte Datum auswählen.'); return; }
+  if(!futter){ setStatus('status-f','err','Bitte Futter eintragen.'); return; }
+  const btn = document.getElementById('btn-f');
+  btn.disabled = true;
   setStatus('status-f','loading','Wird gespeichert…');
   try{
-    await appendRow(settings.sheetFutter,[
-      formatDate(datum),futter,
-      document.getElementById('f-produkt').value,
-      ersteGabeState==='ja'?'Ja':'Nein',
-      zweiWoState==='ja'?'Ja':'Nein',
-      provState==='ja'?'Ja':'Nein',
-      document.getElementById('f-beschreibung').value,
-      document.getElementById('f-notizen').value
+    await appendRow(settings.sheetFutter, [
+      formatDate(datum), futter,
+      document.getElementById('f-produkt').value,       // Spalte C: Produkt
+      ersteGabeState === 'ja' ? 'Ja' : 'Nein',          // Spalte D: erste Gabe
+      zweiWoState    === 'ja' ? 'Ja' : 'Nein',          // Spalte E: zwei Wochen
+      provState      === 'ja' ? 'Ja' : 'Nein',          // Spalte F: Provokation
+      document.getElementById('f-beschreibung').value,  // Spalte G: Beschreibung
+      document.getElementById('f-notizen').value        // Spalte H: Notizen
     ]);
     setStatus('status-f','ok','✓ Gespeichert!');
-    // Keep futter pre-filled, only clear the extra fields
-    document.getElementById('f-beschreibung').value='';
-    document.getElementById('f-notizen').value='';
-    ersteGabeState='';zweiWoState='';provState='';
-    document.querySelectorAll('#tab-futter .tog-btn').forEach(b=>b.classList.remove('sel'));
-    // Refresh dropdown so new entry appears
-    loadFutterDropdown();
-  }catch(e){setStatus('status-f','err','Fehler: '+e.message);}
-  btn.disabled=false;
+    // Nur Zusatzfelder leeren; Futter-Text bleibt für nächsten Eintrag
+    document.getElementById('f-beschreibung').value = '';
+    document.getElementById('f-notizen').value      = '';
+    ersteGabeState = ''; zweiWoState = ''; provState = '';
+    document.querySelectorAll('#tab-futter .tog-btn').forEach(b => b.classList.remove('sel'));
+    loadFutterDropdown(); // Dropdown mit neuem Eintrag aktualisieren
+  }catch(e){ setStatus('status-f','err','Fehler: ' + e.message); }
+  btn.disabled = false;
 }
 
+/**
+ * Speichert einen Ausschlussdiät-Eintrag.
+ * Spalten: Zutat | Verdacht(1-3) | Kategorie |
+ * Status | Erstmals gegeben | Reaktion | Notizen
+ * Verdacht wird als Zahl gespeichert (passend zur Sheets-Tabelle).
+ */
 async function submitAusschluss(){
-  const zutat=document.getElementById('a-zutat').value.trim();
-  if(!zutat){setStatus('status-a','err','Bitte Zutat eingeben.');return;}
-  const btn=document.getElementById('btn-a');btn.disabled=true;
+  const zutat = document.getElementById('a-zutat').value.trim();
+  if(!zutat){ setStatus('status-a','err','Bitte Zutat eingeben.'); return; }
+  const btn = document.getElementById('btn-a');
+  btn.disabled = true;
   setStatus('status-a','loading','Wird gespeichert…');
   try{
-    await appendRow(settings.sheetAusschluss,[
+    await appendRow(settings.sheetAusschluss, [
       zutat,
-      aVerdState==='1'?1:aVerdState==='2'?2:aVerdState==='3'?3:'',
+      aVerdState==='1' ? 1 : aVerdState==='2' ? 2 : aVerdState==='3' ? 3 : '', // Zahl!
       document.getElementById('a-kategorie').value,
       document.getElementById('a-status').value,
       formatDate(document.getElementById('a-datum').value),
@@ -1245,22 +1588,29 @@ async function submitAusschluss(){
       document.getElementById('a-notizen').value
     ]);
     setStatus('status-a','ok','✓ Gespeichert!');
-    document.getElementById('a-zutat').value='';
-    document.getElementById('a-reaktion').value='';
-    document.getElementById('a-notizen').value='';
-    aVerdState='';
-    ['1','2','3'].forEach(v=>{const el=document.getElementById('averd-'+v);if(el)el.classList.remove('sel');});
-  }catch(e){setStatus('status-a','err','Fehler: '+e.message);}
-  btn.disabled=false;
+    document.getElementById('a-zutat').value   = '';
+    document.getElementById('a-reaktion').value= '';
+    document.getElementById('a-notizen').value = '';
+    aVerdState = '';
+    ['1','2','3'].forEach(v => { const el = document.getElementById('averd-'+v); if(el) el.classList.remove('sel'); });
+  }catch(e){ setStatus('status-a','err','Fehler: ' + e.message); }
+  btn.disabled = false;
 }
 
+/**
+ * Speichert ein bestätigtes Allergen.
+ * Spalten: Allergen | Kategorie | Reaktionsstärke |
+ * Symptome | Notizen
+ * ("Erstmals bemerkt" wurde aus der Tabelle entfernt)
+ */
 async function submitAllergen(){
-  const allergen=document.getElementById('al-allergen').value.trim();
-  if(!allergen){setStatus('status-al','err','Bitte Allergen eingeben.');return;}
-  const btn=document.getElementById('btn-al');btn.disabled=true;
+  const allergen = document.getElementById('al-allergen').value.trim();
+  if(!allergen){ setStatus('status-al','err','Bitte Allergen eingeben.'); return; }
+  const btn = document.getElementById('btn-al');
+  btn.disabled = true;
   setStatus('status-al','loading','Wird gespeichert…');
   try{
-    await appendRow(settings.sheetAllergen,[
+    await appendRow(settings.sheetAllergen, [
       allergen,
       document.getElementById('al-kategorie').value,
       alReaktVal,
@@ -1268,20 +1618,26 @@ async function submitAllergen(){
       document.getElementById('al-notizen').value
     ]);
     setStatus('status-al','ok','✓ Gespeichert!');
-    ['al-allergen','al-symptome','al-notizen'].forEach(id=>document.getElementById(id).value='');
-    alReaktVal='';
-    document.querySelectorAll('#tab-allergen .tog-btn').forEach(b=>b.classList.remove('sel'));
-  }catch(e){setStatus('status-al','err','Fehler: '+e.message);}
-  btn.disabled=false;
+    ['al-allergen','al-symptome','al-notizen'].forEach(id => document.getElementById(id).value = '');
+    alReaktVal = '';
+    document.querySelectorAll('#tab-allergen .tog-btn').forEach(b => b.classList.remove('sel'));
+  }catch(e){ setStatus('status-al','err','Fehler: ' + e.message); }
+  btn.disabled = false;
 }
 
+/**
+ * Speichert einen Tierarztbesuch.
+ * Spalten: Datum | Tierarzt | Anlass | Untersuchungen |
+ * Befund | Therapie | Folgebesuch
+ */
 async function submitTierarzt(){
-  const datum=document.getElementById('t-datum').value;
-  if(!datum){setStatus('status-t','err','Bitte Datum auswählen.');return;}
-  const btn=document.getElementById('btn-t');btn.disabled=true;
+  const datum = document.getElementById('t-datum').value;
+  if(!datum){ setStatus('status-t','err','Bitte Datum auswählen.'); return; }
+  const btn = document.getElementById('btn-t');
+  btn.disabled = true;
   setStatus('status-t','loading','Wird gespeichert…');
   try{
-    await appendRow(settings.sheetTierarzt,[
+    await appendRow(settings.sheetTierarzt, [
       formatDate(datum),
       document.getElementById('t-arzt').value,
       document.getElementById('t-anlass').value,
@@ -1291,19 +1647,25 @@ async function submitTierarzt(){
       formatDate(document.getElementById('t-folge').value)
     ]);
     setStatus('status-t','ok','✓ Gespeichert!');
-    ['t-arzt','t-anlass','t-untersuchungen','t-ergebnis','t-therapie'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('t-folge').value='';
-  }catch(e){setStatus('status-t','err','Fehler: '+e.message);}
-  btn.disabled=false;
+    ['t-arzt','t-anlass','t-untersuchungen','t-ergebnis','t-therapie'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('t-folge').value = '';
+  }catch(e){ setStatus('status-t','err','Fehler: ' + e.message); }
+  btn.disabled = false;
 }
 
+/**
+ * Speichert ein Medikament/Supplement.
+ * Spalten: Name | Typ | Dosierung | Häufigkeit |
+ * Von | Bis | Verordnet | Notizen
+ */
 async function submitMedikament(){
-  const name=document.getElementById('m-name').value.trim();
-  if(!name){setStatus('status-m','err','Bitte Medikament eingeben.');return;}
-  const btn=document.getElementById('btn-m');btn.disabled=true;
+  const name = document.getElementById('m-name').value.trim();
+  if(!name){ setStatus('status-m','err','Bitte Medikament eingeben.'); return; }
+  const btn = document.getElementById('btn-m');
+  btn.disabled = true;
   setStatus('status-m','loading','Wird gespeichert…');
   try{
-    await appendRow(settings.sheetMedikamente,[
+    await appendRow(settings.sheetMedikamente, [
       name,
       document.getElementById('m-typ').value,
       document.getElementById('m-dosierung').value,
@@ -1314,259 +1676,307 @@ async function submitMedikament(){
       document.getElementById('m-notizen').value
     ]);
     setStatus('status-m','ok','✓ Gespeichert!');
-    ['m-name','m-dosierung','m-haeufigkeit','m-verordnet','m-notizen'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('m-bis').value='';
-  }catch(e){setStatus('status-m','err','Fehler: '+e.message);}
-  btn.disabled=false;
+    ['m-name','m-dosierung','m-haeufigkeit','m-verordnet','m-notizen'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('m-bis').value = '';
+  }catch(e){ setStatus('status-m','err','Fehler: ' + e.message); }
+  btn.disabled = false;
 }
 
+/** Testet die Verbindung zur Google Sheets Tabelle */
 async function testConnection(){
   saveSettings();
-  if(!accessToken){setStatus('status-einst','err','Bitte zuerst anmelden.');return;}
+  if(!accessToken){ setStatus('status-einst','err','Bitte zuerst anmelden.'); return; }
   setStatus('status-einst','loading','Verbindung wird getestet…');
   try{
-    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?fields=sheets.properties.title`,{headers:{'Authorization':'Bearer '+accessToken}});
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?fields=sheets.properties.title`,
+      {headers:{'Authorization':'Bearer '+accessToken}}
+    );
     if(!res.ok) throw new Error('HTTP '+res.status);
-    const data=await res.json();
-    const sheets=data.sheets.map(s=>s.properties.title).join(', ');
+    const data   = await res.json();
+    const sheets = data.sheets.map(s => s.properties.title).join(', ');
     setStatus('status-einst','ok','✓ Verbunden! Blätter: '+sheets);
-  }catch(e){setStatus('status-einst','err','Fehler: '+e.message);}
+  }catch(e){ setStatus('status-einst','err','Fehler: '+e.message); }
 }
 
-/* ====== VIEW DATA LOADING ====== */
-function severityDots(val,max=5){
-  const n=parseInt(val)||0;
-  let h='<span class="severity">';
-  for(let i=1;i<=max;i++){
-    const cls=i<=n?(n>=4?'on vhigh':n>=3?'on high':'on'):'';
-    h+=`<span class="${cls}"></span>`;
+// =============================================
+// ANSICHT-MODUS: DATEN LADEN & RENDERN
+// =============================================
+
+/**
+ * Zeichnet Schweregrad-Punkte (1–5) farbcodiert.
+ * Grün bis Stufe 2, Orange ab 3, Rot ab 4.
+ */
+function severityDots(val, max=5){
+  const n = parseInt(val) || 0;
+  let h = '<span class="severity">';
+  for(let i=1; i<=max; i++){
+    const cls = i<=n ? (n>=4 ? 'on vhigh' : n>=3 ? 'on high' : 'on') : '';
+    h += `<span class="${cls}"></span>`;
   }
-  return h+'</span>';
+  return h + '</span>';
 }
 
-function ecRow(key,val){
-  if(!val&&val!==0)return'';
-  return`<div class="ec-row"><span class="ec-key">${esc(key)}</span><span class="ec-val">${esc(String(val))}</span></div>`;
+/** Rendert eine Label-Wert-Zeile; leer wenn kein Wert vorhanden */
+function ecRow(key, val){
+  if(!val && val !== 0) return '';
+  return `<div class="ec-row"><span class="ec-key">${esc(key)}</span><span class="ec-val">${esc(String(val))}</span></div>`;
 }
 
-// Known first-column header values that mark the real column header row
-const HEADER_MARKERS={
-  umwelt:'Datum',
-  symptom:'Datum',
-  futter:'Datum',
-  ausschluss:'Zutat',
-  allergen:'Allergen',
-  tierarzt:'Datum',
-  medikamente:'Medikament'
+/**
+ * Mapping: Welches erste Feld markiert die Header-Zeile?
+ * Wird genutzt um Titelzeilen (z.B. "UMWELTTAGEBUCH")
+ * von echten Spaltenköpfen zu unterscheiden.
+ */
+const HEADER_MARKERS = {
+  umwelt:'Datum', symptom:'Datum', futter:'Datum',
+  ausschluss:'Zutat', allergen:'Allergen',
+  tierarzt:'Datum', medikamente:'Medikament'
 };
 
+/**
+ * Findet die echte Header-Zeile und gibt Datenzeilen zurück.
+ * Google Sheets-Tabellen haben oft eine Titelzeile (Zeile 0)
+ * vor den eigentlichen Spaltenköpfen (Zeile 1).
+ * @param {Array}  rows  - Alle Zeilen aus der API
+ * @param {string} which - Sheet-Schlüssel (z.B. 'umwelt')
+ * @returns {{headers: Array, dataRows: Array}}
+ */
 function findDataRows(rows, which){
-  // Find the row where real column headers start, then return everything after
-  const marker=(HEADER_MARKERS[which]||'').toLowerCase();
-  let headerIdx=0;
-  for(let i=0;i<Math.min(rows.length,5);i++){
-    const first=(rows[i][0]||'').toString().toLowerCase().trim();
-    if(marker && first.includes(marker)){headerIdx=i;break;}
+  const marker    = (HEADER_MARKERS[which]||'').toLowerCase();
+  let headerIdx   = 0;
+  for(let i=0; i<Math.min(rows.length,5); i++){
+    const first = (rows[i][0]||'').toString().toLowerCase().trim();
+    if(marker && first.includes(marker)){ headerIdx = i; break; }
   }
-  const headers=rows[headerIdx]||[];
-  const dataRows=rows.slice(headerIdx+1).filter(r=>
-    r && r.length>0 && r.some(c=>c!==null&&c!==undefined&&String(c).trim()!=='')
+  const headers  = rows[headerIdx] || [];
+  const dataRows = rows.slice(headerIdx+1).filter(r =>
+    r && r.length>0 && r.some(c => c!==null && c!==undefined && String(c).trim()!=='')
   );
   return {headers, dataRows};
 }
 
+/**
+ * Lädt Daten für einen Ansicht-Tab aus Google Sheets
+ * und ruft die entsprechende Render-Funktion auf.
+ * @param {string} which - Tab-Schlüssel (z.B. 'umwelt')
+ */
 async function loadViewData(which){
-  const mapId={
-    umwelt:'v-umwelt',symptom:'v-symptom',futter:'v-futter',
-    ausschluss:'v-ausschluss',allergen:'v-allergen',
-    tierarzt:'v-tierarzt',medikamente:'v-medikamente'
+  const mapId = {
+    umwelt:'v-umwelt', symptom:'v-symptom', futter:'v-futter',
+    ausschluss:'v-ausschluss', allergen:'v-allergen',
+    tierarzt:'v-tierarzt', medikamente:'v-medikamente'
   };
-  const contentId=mapId[which]+'-content';
-  const el=document.getElementById(contentId);
-  el.innerHTML='<div class="view-loading"><div class="spinner"></div>Daten werden geladen…</div>';
-
+  const contentId = mapId[which]+'-content';
+  const el        = document.getElementById(contentId);
+  el.innerHTML    = '<div class="view-loading"><div class="spinner"></div>Daten werden geladen…</div>';
   try{
-    const sheetMap={
-      umwelt:settings.sheetUmwelt, symptom:settings.sheetSymptom,
-      futter:settings.sheetFutter, ausschluss:settings.sheetAusschluss,
+    const sheetMap = {
+      umwelt:settings.sheetUmwelt,     symptom:settings.sheetSymptom,
+      futter:settings.sheetFutter,     ausschluss:settings.sheetAusschluss,
       allergen:settings.sheetAllergen, tierarzt:settings.sheetTierarzt,
       medikamente:settings.sheetMedikamente
     };
-    const sheetName=sheetMap[which];
-    const rows=await readSheet(sheetName);
-
-    if(!rows||rows.length===0){
-      el.innerHTML='<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge.</div>';
+    const rows = await readSheet(sheetMap[which]);
+    if(!rows || rows.length===0){
+      el.innerHTML = '<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge.</div>';
       return;
     }
-
-    const {headers, dataRows}=findDataRows(rows, which);
-
+    const {headers, dataRows} = findDataRows(rows, which);
     if(dataRows.length===0){
-      el.innerHTML='<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge vorhanden.</div>';
+      el.innerHTML = '<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge vorhanden.</div>';
       return;
     }
-
-    let html='';
-    if(which==='umwelt') html=renderUmwelt(headers,dataRows);
-    else if(which==='symptom') html=renderSymptom(headers,dataRows);
-    else if(which==='futter') html=renderFutter(headers,dataRows);
-    else if(which==='ausschluss') html=renderAusschluss(headers,dataRows);
-    else if(which==='allergen') html=renderAllergen(headers,dataRows);
-    else if(which==='tierarzt') html=renderTierarzt(headers,dataRows);
-    else if(which==='medikamente') html=renderMedikamente(headers,dataRows);
-
-    el.innerHTML=html||'<div class="view-empty"><div class="icon">📭</div>Keine Daten gefunden.</div>';
-
+    let html = '';
+    if(which==='umwelt')      html = renderUmwelt(headers,dataRows);
+    else if(which==='symptom')    html = renderSymptom(headers,dataRows);
+    else if(which==='futter')     html = renderFutter(headers,dataRows);
+    else if(which==='ausschluss') html = renderAusschluss(headers,dataRows);
+    else if(which==='allergen')   html = renderAllergen(headers,dataRows);
+    else if(which==='tierarzt')   html = renderTierarzt(headers,dataRows);
+    else if(which==='medikamente')html = renderMedikamente(headers,dataRows);
+    el.innerHTML = html || '<div class="view-empty"><div class="icon">📭</div>Keine Daten gefunden.</div>';
   }catch(e){
-    el.innerHTML=`<div class="status err" style="display:block">Fehler beim Laden: ${esc(e.message)}<br><small>Prüfe den Tabellenblatt-Namen in den Einstellungen.</small></div>`;
+    el.innerHTML = `<div class="status err" style="display:block">Fehler beim Laden: ${esc(e.message)}<br><small>Prüfe den Tabellenblatt-Namen in den Einstellungen.</small></div>`;
   }
 }
 
-function get(row,i){return(row[i]||'').toString().trim();}
+/** Hilfsfunktion: Zellenwert sicher als String (leer wenn null) */
+function get(row, i){ return (row[i]||'').toString().trim(); }
 
-function renderUmwelt(h,rows){
-  // cols: Datum(0), Min°C(1), Max°C(2), Luftfeuchtigkeit%(3), Regen mm(4), Pollen(5), RaumTemp(6), RaumFeuchtig(7), Bett(8), Notizen(9)
-  const sorted=[...rows].reverse();
-  return sorted.map(r=>`
+/**
+ * Rendert Umwelt-Einträge.
+ * Spalten: Datum(0) | Min°C(1) | Max°C(2) | Luftfeuchtig%(3) |
+ * Regen mm(4) | Pollen(5) | RaumTemp(6) | RaumFeuchtig(7) |
+ * Bett(8) | Notizen(9)
+ * Neueste Einträge zuerst (reverse).
+ */
+function renderUmwelt(h, rows){
+  return [...rows].reverse().map(r => `
     <div class="entry-card">
       <div class="ec-date">📅 ${esc(get(r,0))}</div>
-      ${(get(r,1)||get(r,2))?`<div class="ec-row"><span class="ec-key">Temperatur</span><span class="ec-val">${esc(get(r,1))}–${esc(get(r,2))} °C</span></div>`:''}
-      ${get(r,3)?`<div class="ec-row"><span class="ec-key">Luftfeuchtigkeit</span><span class="ec-val">${esc(get(r,3))} %</span></div>`:''}
-      ${get(r,4)?`<div class="ec-row"><span class="ec-key">Regen</span><span class="ec-val">${esc(get(r,4))} mm</span></div>`:''}
-      ${ecRow('Pollen',get(r,5))}
-      ${(get(r,6)||get(r,7))?`<div class="ec-row"><span class="ec-key">Raumklima</span><span class="ec-val">${esc(get(r,6))} °C, ${esc(get(r,7))} % Luftfeuchtigkeit</span></div>`:''}
-      ${ecRow('Bett',get(r,8))}
-      ${ecRow('Notizen',get(r,9))}
+      ${(get(r,1)||get(r,2)) ? `<div class="ec-row"><span class="ec-key">Temperatur</span><span class="ec-val">${esc(get(r,1))}–${esc(get(r,2))} °C</span></div>` : ''}
+      ${get(r,3) ? `<div class="ec-row"><span class="ec-key">Luftfeuchtigkeit</span><span class="ec-val">${esc(get(r,3))} %</span></div>` : ''}
+      ${get(r,4) ? `<div class="ec-row"><span class="ec-key">Regen</span><span class="ec-val">${esc(get(r,4))} mm</span></div>` : ''}
+      ${ecRow('Pollen', get(r,5))}
+      ${(get(r,6)||get(r,7)) ? `<div class="ec-row"><span class="ec-key">Raumklima</span><span class="ec-val">${esc(get(r,6))} °C, ${esc(get(r,7))} %</span></div>` : ''}
+      ${ecRow('Bett', get(r,8))}
+      ${ecRow('Notizen', get(r,9))}
     </div>`).join('');
 }
 
-function renderSymptom(h,rows){
-  const sorted=[...rows].reverse();
-  return sorted.map(r=>`
+/**
+ * Rendert Symptom-Einträge.
+ * Spalten: Datum(0) | Symptom(1) | Beschreibung(2) |
+ * Schweregrad(3) | Körperstelle(4) | Notizen(5)
+ */
+function renderSymptom(h, rows){
+  return [...rows].reverse().map(r => `
     <div class="entry-card">
       <div class="ec-date">📅 ${esc(get(r,0))}</div>
       <div class="ec-row"><span class="ec-key">Symptom</span><span class="ec-val badge badge-warn">${esc(get(r,1))}</span></div>
-      ${ecRow('Beschreibung',get(r,2))}
-      ${get(r,3)?`<div class="ec-row"><span class="ec-key">Schweregrad</span><span class="ec-val">${severityDots(get(r,3))} ${esc(get(r,3))}/5</span></div>`:''}
-      ${ecRow('Körperstelle',get(r,4))}
-      ${ecRow('Notizen',get(r,5))}
+      ${ecRow('Beschreibung', get(r,2))}
+      ${get(r,3) ? `<div class="ec-row"><span class="ec-key">Schweregrad</span><span class="ec-val">${severityDots(get(r,3))} ${esc(get(r,3))}/5</span></div>` : ''}
+      ${ecRow('Körperstelle', get(r,4))}
+      ${ecRow('Notizen', get(r,5))}
     </div>`).join('');
 }
 
-function renderFutter(h,rows){
-  // cols: Datum(0), Futter(1), Produkt(2), ErsteGabe(3), ZweiWo(4), Provokation(5), Beschreibung(6), Notizen(7)
-  const sorted=[...rows].reverse();
-  return sorted.map(r=>`
+/**
+ * Rendert Futter-Einträge.
+ * Spalten: Datum(0) | Futter(1) | Produkt(2) | ErsteGabe(3) |
+ * ZweiWo(4) | Provokation(5) | Reaktion(6) | Notizen(7)
+ */
+function renderFutter(h, rows){
+  return [...rows].reverse().map(r => `
     <div class="entry-card">
-      <div class="ec-date">📅 ${esc(get(r,0))}${get(r,3)==='Ja'?' <span class="ec-val badge" style="margin-left:6px;font-size:11px">Erste Gabe</span>':''}</div>
-      ${ecRow('Futter',get(r,1))}
-      ${ecRow('Produkt',get(r,2))}
-      ${get(r,5)==='Ja'?`<div class="ec-row"><span class="ec-key">Provokation</span><span class="ec-val badge badge-warn">⚠️ Ja</span></div>`:''}
-      ${ecRow('Reaktion',get(r,6))}
-      ${ecRow('Notizen',get(r,7))}
+      <div class="ec-date">📅 ${esc(get(r,0))}${get(r,3)==='Ja' ? ' <span class="ec-val badge" style="margin-left:6px;font-size:11px">Erste Gabe</span>' : ''}</div>
+      ${ecRow('Futter',   get(r,1))}
+      ${ecRow('Produkt',  get(r,2))}
+      ${get(r,5)==='Ja' ? `<div class="ec-row"><span class="ec-key">Provokation</span><span class="ec-val badge badge-warn">⚠️ Ja</span></div>` : ''}
+      ${ecRow('Reaktion', get(r,6))}
+      ${ecRow('Notizen',  get(r,7))}
     </div>`).join('');
 }
 
-function renderAusschluss(h,rows){
-  // cols: Zutat(0), Verdacht(1)=number, Kategorie(2), Status(3), Erstmals(4), Reaktion(5), Notizen(6)
-  // Verdacht is stored as a number (1-3 = priority/suspicion level), not Ja/Nein
-  
-  // Quick overview: badge list by category
-  const cats={};
-  rows.forEach(r=>{
-    const kat=get(r,2)||'Sonstiges';
-    if(!cats[kat]) cats[kat]=[];
-    cats[kat].push(r);
-  });
-  
-  // Status-based color
+/**
+ * Rendert Ausschlussdiät-Einträge.
+ * Zeigt zuerst eine Badge-Übersicht nach Kategorie,
+ * dann Detailkarten aller Einträge.
+ * Spalten: Zutat(0) | Verdacht(1) | Kategorie(2) |
+ * Status(3) | Erstmals(4) | Reaktion(5) | Notizen(6)
+ */
+function renderAusschluss(h, rows){
+  // Status-Farbe bestimmen
   function statusCls(st){
     if(!st) return 'badge-warn';
-    const s=st.toLowerCase();
-    if(s.includes('vertr')) return 'badge-ok';
+    const s = st.toLowerCase();
+    if(s.includes('vertr'))                            return 'badge-ok';
     if(s.includes('reaktion')||s.includes('gesperrt')) return 'badge-bad';
     return 'badge-warn';
   }
 
-  // Badge overview
-  let html=`<div class="divider"><span>Übersicht nach Kategorie</span></div>`;
-  Object.keys(cats).sort().forEach(kat=>{
-    html+=`<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">${esc(kat)}</div><div class="badge-list">`;
-    cats[kat].forEach(r=>{
-      const verdacht=get(r,1);
-      const hasVerdacht=verdacht&&verdacht!=='0'&&verdacht!=='';
-      html+=`<span class="badge-item ${statusCls(get(r,3))}">${esc(get(r,0))}${hasVerdacht?' ⚠️':''}</span>`;
-    });
-    html+='</div></div>';
+  // Zutaten nach Kategorie gruppieren
+  const cats = {};
+  rows.forEach(r => {
+    const kat = get(r,2) || 'Sonstiges';
+    if(!cats[kat]) cats[kat] = [];
+    cats[kat].push(r);
   });
 
-  // Detailed cards – only show rows with noteworthy info
-  html+=`<div class="divider"><span>Alle Zutaten (${rows.length})</span></div>`;
-  rows.forEach(r=>{
-    const zutat=get(r,0);
+  // Badge-Übersicht
+  let html = `<div class="divider"><span>Übersicht nach Kategorie</span></div>`;
+  Object.keys(cats).sort().forEach(kat => {
+    html += `<div style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">${esc(kat)}</div>
+      <div class="badge-list">`;
+    cats[kat].forEach(r => {
+      const verdacht    = get(r,1);
+      const hasVerdacht = verdacht && verdacht!=='0' && verdacht!=='';
+      html += `<span class="badge-item ${statusCls(get(r,3))}">${esc(get(r,0))}${hasVerdacht?' ⚠️':''}</span>`;
+    });
+    html += `</div></div>`;
+  });
+
+  // Detailkarten
+  html += `<div class="divider"><span>Alle Zutaten (${rows.length})</span></div>`;
+  rows.forEach(r => {
+    const zutat     = get(r,0);
     if(!zutat) return;
-    const verdacht=get(r,1);
-    const hasVerdacht=verdacht&&verdacht!=='0'&&verdacht!=='';
-    const status=get(r,3);
-    const reaktion=get(r,5);
-    const notizen=get(r,6);
-    // Only show full card if there's meaningful data beyond just the name
-    html+=`<div class="entry-card">
-      <div class="ec-date">${esc(zutat)}${get(r,4)?' – seit '+esc(get(r,4)):''}</div>
-      ${status?`<div class="ec-row"><span class="ec-key">Status</span><span class="ec-val badge ${statusCls(status)}">${esc(status)}</span></div>`:''}
-      ${ecRow('Kategorie',get(r,2))}
-      ${hasVerdacht?`<div class="ec-row"><span class="ec-key">Verdacht</span><span class="ec-val badge badge-warn">⚠️ Stufe ${esc(verdacht)}</span></div>`:''}
-      ${ecRow('Reaktion',reaktion)}
-      ${ecRow('Notizen',notizen)}
+    const verdacht    = get(r,1);
+    const hasVerdacht = verdacht && verdacht!=='0' && verdacht!=='';
+    const status      = get(r,3);
+    html += `<div class="entry-card">
+      <div class="ec-date">${esc(zutat)}${get(r,4) ? ' – seit '+esc(get(r,4)) : ''}</div>
+      ${status ? `<div class="ec-row"><span class="ec-key">Status</span><span class="ec-val badge ${statusCls(status)}">${esc(status)}</span></div>` : ''}
+      ${ecRow('Kategorie', get(r,2))}
+      ${hasVerdacht ? `<div class="ec-row"><span class="ec-key">Verdacht</span><span class="ec-val badge badge-warn">⚠️ Stufe ${esc(verdacht)}</span></div>` : ''}
+      ${ecRow('Reaktion', get(r,5))}
+      ${ecRow('Notizen',  get(r,6))}
     </div>`;
   });
   return html;
 }
 
-function renderAllergen(h,rows){
-  // cols: Allergen(0), Kategorie(1), Reaktionsstärke(2), Symptome(3), Notizen(4)
-  let html='<div class="info-banner ok" style="margin-bottom:1rem">✅ <strong>Bestätigte Allergene</strong></div>';
-  html+=rows.map(r=>`
+/**
+ * Rendert bestätigte Allergene.
+ * Spalten: Allergen(0) | Kategorie(1) | Reaktionsstärke(2) |
+ * Symptome(3) | Notizen(4)
+ * ("Erstmals bemerkt" wurde aus Tabelle und Ansicht entfernt)
+ */
+function renderAllergen(h, rows){
+  let html = '<div class="info-banner ok" style="margin-bottom:1rem">✅ <strong>Bestätigte Allergene</strong></div>';
+  html += rows.map(r => `
     <div class="entry-card">
       <div class="ec-date">⚠️ ${esc(get(r,0))}</div>
-      ${ecRow('Kategorie',get(r,1))}
-      ${get(r,2)?`<div class="ec-row"><span class="ec-key">Reaktion</span><span class="ec-val">${severityDots(get(r,2))} ${esc(get(r,2))}/5</span></div>`:''}
-      ${ecRow('Symptome',get(r,3))}
-      ${ecRow('Notizen',get(r,4))}
+      ${ecRow('Kategorie', get(r,1))}
+      ${get(r,2) ? `<div class="ec-row"><span class="ec-key">Reaktion</span><span class="ec-val">${severityDots(get(r,2))} ${esc(get(r,2))}/5</span></div>` : ''}
+      ${ecRow('Symptome', get(r,3))}
+      ${ecRow('Notizen',  get(r,4))}
     </div>`).join('');
   return html;
 }
 
-function renderTierarzt(h,rows){
+/**
+ * Rendert Tierarztbesuche.
+ * Spalten: Datum(0) | Praxis(1) | Anlass(2) |
+ * Untersuchungen(3) | Befund(4) | Therapie(5) | Folgebesuch(6)
+ */
+function renderTierarzt(h, rows){
   if(!rows.length) return '<div class="view-empty"><div class="icon">🏥</div>Noch keine Besuche eingetragen.</div>';
-  return [...rows].reverse().map(r=>`
+  return [...rows].reverse().map(r => `
     <div class="entry-card">
       <div class="ec-date">📅 ${esc(get(r,0))}</div>
-      ${ecRow('Praxis',get(r,1))}
-      ${ecRow('Anlass',get(r,2))}
-      ${ecRow('Untersuchungen',get(r,3))}
-      ${ecRow('Befund',get(r,4))}
-      ${ecRow('Therapie',get(r,5))}
-      ${get(r,6)?`<div class="ec-row"><span class="ec-key">Folgebesuch</span><span class="ec-val badge">${esc(get(r,6))}</span></div>`:''}
+      ${ecRow('Praxis',         get(r,1))}
+      ${ecRow('Anlass',         get(r,2))}
+      ${ecRow('Untersuchungen', get(r,3))}
+      ${ecRow('Befund',         get(r,4))}
+      ${ecRow('Therapie',       get(r,5))}
+      ${get(r,6) ? `<div class="ec-row"><span class="ec-key">Folgebesuch</span><span class="ec-val badge">${esc(get(r,6))}</span></div>` : ''}
     </div>`).join('');
 }
 
-function renderMedikamente(h,rows){
-  return rows.map(r=>`
+/**
+ * Rendert Medikamente.
+ * Spalten: Name(0) | Typ(1) | Dosierung(2) | Häufigkeit(3) |
+ * Von(4) | Bis(5) | Verordnet(6) | Wirkung(7)
+ */
+function renderMedikamente(h, rows){
+  return rows.map(r => `
     <div class="entry-card">
       <div class="ec-date">💊 ${esc(get(r,0))}</div>
-      ${ecRow('Typ',get(r,1))}
-      ${ecRow('Dosierung',get(r,2))}
-      ${ecRow('Häufigkeit',get(r,3))}
-      ${ecRow('Von',get(r,4))}
-      ${ecRow('Bis',get(r,5))}
-      ${ecRow('Verordnet',get(r,6))}
-      ${ecRow('Wirkung',get(r,7))}
+      ${ecRow('Typ',        get(r,1))}
+      ${ecRow('Dosierung',  get(r,2))}
+      ${ecRow('Häufigkeit', get(r,3))}
+      ${ecRow('Von',        get(r,4))}
+      ${ecRow('Bis',        get(r,5))}
+      ${ecRow('Verordnet',  get(r,6))}
+      ${ecRow('Wirkung',    get(r,7))}
     </div>`).join('');
 }
 
-window.addEventListener('load',loadSettings);
+// App starten: Einstellungen laden und ggf. direkt einloggen
+window.addEventListener('load', loadSettings);
 </script>
 </body>
 </html>
