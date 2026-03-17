@@ -342,10 +342,29 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <div class="bedarf-info">Metabol. KG: <strong><span id="fr-mkg2">--</span></strong></div>
       </div>
 
+      <!-- Skalierung -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px">
+        <span style="font-size:13px;font-weight:600;white-space:nowrap">⚖️ Skalierung</span>
+        <div style="display:flex;gap:6px;flex:1;align-items:center">
+          <button onclick="frSetScale(0.25)" style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--sub);cursor:pointer">×0.25</button>
+          <button onclick="frSetScale(0.5)"  style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--sub);cursor:pointer">×0.5</button>
+          <button onclick="frSetScale(1)"    style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--c2);color:#fff;cursor:pointer" id="fr-scale-1x">×1</button>
+          <button onclick="frSetScale(2)"    style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--sub);cursor:pointer">×2</button>
+          <input type="number" id="fr-scale-input" value="1" min="0.01" max="100" step="0.01"
+            style="width:70px;padding:5px 8px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);text-align:center"
+            oninput="frApplyScale()" title="Eigener Faktor">
+        </div>
+      </div>
+
       <!-- Portionsinfo -->
       <div class="fr-portions" id="fr-portions">
         <div class="po-item"><span class="po-val" id="fr-total-g">0</span><span class="po-label">g Tagesration</span></div>
         <div class="po-item"><span class="po-val" id="fr-portion-g">0</span><span class="po-label">g je Portion (÷2)</span></div>
+        <div class="po-item"><span class="po-val" id="fr-kcal-ist" style="color:var(--text)">0</span><span class="po-label">kcal Ist</span></div>
+        <div class="po-item"><span class="po-val" id="fr-kcal-bedarf" style="color:var(--sub)">0</span><span class="po-label">kcal Bedarf</span></div>
+      </div>
+      <div id="fr-kcal-bar-wrap" style="margin:-8px 0 1rem;background:var(--border);border-radius:4px;height:6px;overflow:hidden;display:none">
+        <div id="fr-kcal-bar" style="height:100%;border-radius:4px;background:var(--fr-ok);transition:width .3s,background .3s"></div>
       </div>
 
       <!-- Kennzahlen -->
@@ -389,9 +408,22 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
             </div>
             <span class="fr-custom-toggle" onclick="frToggleCustomForm()">✏️ Neue Zutat manuell erfassen</span>
             <div class="fr-custom-form" id="fr-custom-form">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                <div class="field" style="margin-bottom:0">
+                  <label>Name der neuen Zutat</label>
+                  <input type="text" id="fr-custom-name" placeholder="z.B. Pferdefleisch roh">
+                </div>
+                <div class="field" style="margin-bottom:0">
+                  <label>Hersteller / Marke</label>
+                  <input type="text" id="fr-custom-hersteller" placeholder="z.B. barfers">
+                </div>
+              </div>
               <div class="field" style="margin-bottom:8px">
-                <label>Name der neuen Zutat</label>
-                <input type="text" id="fr-custom-name" placeholder="z.B. Pferdefleisch roh">
+                <label>Kategorie</label>
+                <select id="fr-custom-kategorie">
+                  <option value="">— wählen —</option>
+                  ${INGREDIENT_CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('')}
+                </select>
               </div>
               <div class="fr-custom-grid" id="fr-custom-nutr-grid">
                 <!-- filled by JS -->
@@ -520,10 +552,10 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <div class="field">
           <label>Futter / Mahlzeit</label>
           <div style="display:flex;gap:8px;margin-bottom:8px">
-            <select id="f-futter-select" style="flex:1" onchange="futterSelectChanged()"><option value="">– bisherige Einträge laden –</option></select>
-            <button class="btn-today" onclick="loadFutterDropdown()" id="btn-futter-reload" title="Aktualisieren"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <select id="f-rezept-select" style="flex:1" onchange="futterRezeptChanged()"><option value="">— Gespeichertes Rezept wählen —</option></select>
+            <button class="btn-today" onclick="loadRezepteDropdown()" id="btn-rezept-reload" title="Rezepte neu laden"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           </div>
-          <textarea id="f-futter" placeholder="z.B. Rindermuskelfleisch 300g, Leber 50g, Karotte..."></textarea>
+          <textarea id="f-futter" placeholder="z.B. Rezeptname, Menge oder freie Beschreibung..."></textarea>
         </div>
         <div class="protocol-box">
           <div class="protocol-title">📋 Protokoll Ausschlussdiät</div>
@@ -724,6 +756,55 @@ const BEDARF_PRO_MKG = {
 // B-Vitamine mit Kochverlust (30%)
 const COOKING_LOSS_NUTRIENTS = new Set(["Vitamin B1","Vitamin B2","Vitamin B6","Vitamin B12","Vitamin B3","Vitamin B5","Vitamin B9"]);
 
+// Kategorien für Zutaten
+const INGREDIENT_CATEGORIES = ['Fleisch/Innereien/Fisch','Gemüse/Obst/Getreide','Öl/Fett','Supplement/Mineral/Vitamin','Sonstiges'];
+
+// Kategorie + Hersteller Metadaten (ergänzbar)
+const INGREDIENT_META = {
+  "Knochenmehl (Pferd)":             {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "Seealgenmehl":                    {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "Muskelfleisch (kanguruh, Keule)": {kategorie:"Fleisch/Innereien/Fisch",   hersteller:""},
+  "Innereien (Lamm, Barfers)":       {kategorie:"Fleisch/Innereien/Fisch",   hersteller:"barfers"},
+  "Eierschale":                      {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "Gemuese":                         {kategorie:"Gemüse/Obst/Getreide",       hersteller:""},
+  "Obst":                            {kategorie:"Gemüse/Obst/Getreide",       hersteller:""},
+  "Salz":                            {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "3-6-9 Oel":                       {kategorie:"Öl/Fett",                    hersteller:""},
+  "Dorschlebertran":                 {kategorie:"Öl/Fett",                    hersteller:""},
+  "Muskelfleisch (Lamm, gewolft, barfers)":{kategorie:"Fleisch/Innereien/Fisch",hersteller:"barfers"},
+  "Fett (Pferd) gewolft":            {kategorie:"Fleisch/Innereien/Fisch",   hersteller:""},
+  "Kernobst":                        {kategorie:"Gemüse/Obst/Getreide",       hersteller:""},
+  "Ei":                              {kategorie:"Fleisch/Innereien/Fisch",   hersteller:""},
+  "Leinsamen":                       {kategorie:"Gemüse/Obst/Getreide",       hersteller:""},
+  "Kuerbiskerne":                    {kategorie:"Gemüse/Obst/Getreide",       hersteller:""},
+  "Bierhefe":                        {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "Spurenelemente plus (pahema)":    {kategorie:"Supplement/Mineral/Vitamin", hersteller:"pahema"},
+  "Krilloel (pahema)":               {kategorie:"Öl/Fett",                    hersteller:"pahema"},
+  "Magnesiumcitrat 105 mg/g":        {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "Zinkbisglycinat 25 mg/ Tablette": {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "Selen 200 µg/ Tablette":          {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "3-6-9 Oel+Vitamin E":             {kategorie:"Öl/Fett",                    hersteller:""},
+  "Muskelfleisch (Lammstuecke, Haustierkost)":{kategorie:"Fleisch/Innereien/Fisch",hersteller:"Haustierkost"},
+  "Innereien (Lamm, Haustierkost)":  {kategorie:"Fleisch/Innereien/Fisch",   hersteller:"Haustierkost"},
+  "Vitamin E Tropfen (Aura Herbalis)":{kategorie:"Supplement/Mineral/Vitamin",hersteller:"Aura Herbalis"},
+  "Reis (gekocht)":                  {kategorie:"Gemüse/Obst/Getreide",       hersteller:""},
+  "Muskelfleisch (kanguruh,Stückig Meisterbarf)":{kategorie:"Fleisch/Innereien/Fisch",hersteller:"Meisterbarf"},
+  "Vitamin B Komplex Kochen für Hunde":{kategorie:"Supplement/Mineral/Vitamin",hersteller:""},
+  "Natriumchlorid":                  {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "Leinöl":                          {kategorie:"Öl/Fett",                    hersteller:""},
+  "Distelöl":                        {kategorie:"Öl/Fett",                    hersteller:""},
+  "Algenöl":                         {kategorie:"Öl/Fett",                    hersteller:""},
+  "Kokosfett":                       {kategorie:"Öl/Fett",                    hersteller:""},
+  "Lammfett":                        {kategorie:"Fleisch/Innereien/Fisch",   hersteller:""},
+  "Vitamin Optimix Cani Cooking":    {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+  "Walnussöl":                       {kategorie:"Öl/Fett",                    hersteller:""},
+  "Hanföl":                          {kategorie:"Öl/Fett",                    hersteller:""},
+  "Rinder-Muskelfleisch gewolft (barfers)":{kategorie:"Fleisch/Innereien/Fisch",hersteller:"barfers"},
+  "Vitamin Optimix Cani Cooking Calcium":{kategorie:"Supplement/Mineral/Vitamin",hersteller:""},
+  "Hühnermuskelfleisch gewolft (barfers)":{kategorie:"Fleisch/Innereien/Fisch",hersteller:"barfers"},
+  "Algenkalk":                       {kategorie:"Supplement/Mineral/Vitamin", hersteller:""},
+};
+
 // Zutaten-Datenbank (aus Inhaltstoffe-Blatt extrahiert, alle Werte per 100g)
 const INGREDIENTS_DB = {"Knochenmehl (Pferd)":{"Rohprotein":43.0,"Fett":12.0,"Calcium":10.6,"Phosphor":4.96,"Magnesium":150.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Seealgenmehl":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.8,"Phosphor":0.05,"Magnesium":1000.0,"Natrium":4.0,"Kalium":2.0,"Eisen":30.0,"Kupfer":0.0,"Zink":2.0,"Mangan":5.0,"Selen":700.0,"Jod":60000.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Muskelfleisch (kanguruh, Keule)":{"Rohprotein":21.6,"Fett":4.2,"Calcium":0.005,"Phosphor":0.203,"Magnesium":30.0,"Natrium":50.0,"Kalium":0.332,"Eisen":4.0,"Kupfer":0.1,"Zink":2.9,"Mangan":0.0,"Selen":1.0,"Jod":0.0,"Vitamin A":66.67,"Vitamin D":0.3,"Vitamin E":0.0,"Vitamin B1":0.13,"Vitamin B2":0.1,"Vitamin B6":0.38,"Vitamin B12":3.0,"Vitamin B3":9.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":80.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":1600.0,"Histidin":650.0,"Isoleucin":850.0,"Leucin":1800.0,"Lysin":1700.0,"Methionin/Cystin":650.0,"Phenylalanin/Tyrosin":1400.0,"Threonin":900.0,"Tryptophan":200.0,"Valin":900.0,"Vitamin C":0.0},"Innereien (Lamm, Barfers)":{"Rohprotein":17.906,"Fett":4.388,"Calcium":0.05132,"Phosphor":0.23625,"Magnesium":18.37,"Natrium":113.81,"Kalium":0.30811,"Eisen":12.4474,"Kupfer":2.53144,"Zink":2.8106,"Mangan":8.81506,"Selen":25.95,"Jod":5.738,"Vitamin A":21902.09,"Vitamin D":31.76,"Vitamin E":0.38820,"Vitamin B1":0.18893,"Vitamin B2":1.23977,"Vitamin B6":0.19152,"Vitamin B12":28.2583,"Vitamin B3":0.0,"Vitamin B5":4.3311,"Vitamin B9":84.29,"Vitamin B4 (Cholin)":229.26,"Linolsäure":0.1162,"α-Linolensäure":0.01415,"EPA + DHA":0.125,"Arginin":988.7,"Histidin":428.0,"Isoleucin":744.3,"Leucin":1310.5,"Lysin":1215.6,"Methionin/Cystin":646.0,"Phenylalanin/Tyrosin":1207.2,"Threonin":742.6,"Tryptophan":198.95,"Valin":865.8,"Vitamin C":0.158},"Eierschale":{"Rohprotein":0.0,"Fett":0.0,"Calcium":35.5,"Phosphor":0.1,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Gemuese":{"Rohprotein":1.5,"Fett":0.3,"Calcium":0.022,"Phosphor":0.03,"Magnesium":10.0,"Natrium":15.0,"Kalium":0.25,"Eisen":0.4,"Kupfer":0.03,"Zink":0.2,"Mangan":0.15,"Selen":0.4,"Jod":0.5,"Vitamin A":716.0,"Vitamin D":40.0,"Vitamin E":0.2,"Vitamin B1":0.04,"Vitamin B2":0.03,"Vitamin B6":0.07,"Vitamin B12":0.0,"Vitamin B3":0.4,"Vitamin B5":0.15,"Vitamin B9":10.0,"Vitamin B4 (Cholin)":6.0,"Linolsäure":0.05,"α-Linolensäure":0.01,"EPA + DHA":0.0,"Arginin":50.0,"Histidin":20.0,"Isoleucin":40.0,"Leucin":60.0,"Lysin":50.0,"Methionin/Cystin":20.0,"Phenylalanin/Tyrosin":60.0,"Threonin":30.0,"Tryptophan":10.0,"Valin":50.0,"Vitamin C":12.0},"Obst":{"Rohprotein":0.4,"Fett":0.2,"Calcium":0.007,"Phosphor":0.015,"Magnesium":0.008,"Natrium":1.0,"Kalium":0.115,"Eisen":0.3,"Kupfer":0.05,"Zink":0.1,"Mangan":0.2,"Selen":0.1,"Jod":0.0,"Vitamin A":16.0,"Vitamin D":0.0,"Vitamin E":0.3,"Vitamin B1":0.03,"Vitamin B2":0.03,"Vitamin B6":0.03,"Vitamin B12":0.0,"Vitamin B3":0.2,"Vitamin B5":0.07,"Vitamin B9":5.0,"Vitamin B4 (Cholin)":3.0,"Linolsäure":0.02,"α-Linolensäure":0.01,"EPA + DHA":0.0,"Arginin":5.0,"Histidin":4.0,"Isoleucin":4.0,"Leucin":4.0,"Lysin":5.0,"Methionin/Cystin":2.0,"Phenylalanin/Tyrosin":8.0,"Threonin":3.0,"Tryptophan":1.0,"Valin":5.0,"Vitamin C":15.0},"Salz":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"3-6-9 Oel":{"Rohprotein":0.0,"Fett":100.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":100.0,"Vitamin B1":12.0,"Vitamin B2":0.1,"Vitamin B6":0.1,"Vitamin B12":0.2,"Vitamin B3":0.1,"Vitamin B5":0.5,"Vitamin B9":0.3,"Vitamin B4 (Cholin)":7.0,"Linolsäure":50.0,"α-Linolensäure":15.5,"EPA + DHA":20.5,"Arginin":35.0,"Histidin":35.0,"Isoleucin":35.0,"Leucin":45.0,"Lysin":45.0,"Methionin/Cystin":15.0,"Phenylalanin/Tyrosin":25.0,"Threonin":15.0,"Tryptophan":5.0,"Valin":35.0,"Vitamin C":39.3},"Dorschlebertran":{"Rohprotein":20.0,"Fett":85.0,"Calcium":0.025,"Phosphor":0.3,"Magnesium":30.0,"Natrium":40.0,"Kalium":0.25,"Eisen":1.0,"Kupfer":0.1,"Zink":0.3,"Mangan":0.01,"Selen":0.3,"Jod":12.0,"Vitamin A":125000.0,"Vitamin D":9600.0,"Vitamin E":1.0,"Vitamin B1":0.1,"Vitamin B2":0.2,"Vitamin B6":0.3,"Vitamin B12":80.0,"Vitamin B3":2.5,"Vitamin B5":1.0,"Vitamin B9":50.0,"Vitamin B4 (Cholin)":200.0,"Linolsäure":10.0,"α-Linolensäure":0.5,"EPA + DHA":22.0,"Arginin":1150.0,"Histidin":700.0,"Isoleucin":1250.0,"Leucin":1950.0,"Lysin":2000.0,"Methionin/Cystin":600.0,"Phenylalanin/Tyrosin":1000.0,"Threonin":900.0,"Tryptophan":150.0,"Valin":1200.0,"Vitamin C":0.0},"Muskelfleisch (Lamm, gewolft, barfers)":{"Rohprotein":12.0,"Fett":35.5,"Calcium":0.0057,"Phosphor":0.119,"Magnesium":22.0,"Natrium":65.0,"Kalium":0.225,"Eisen":2.5,"Kupfer":0.08,"Zink":4.0,"Mangan":0.0,"Selen":1.0,"Jod":1.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.2,"Vitamin B2":0.37,"Vitamin B6":0.13,"Vitamin B12":0.13,"Vitamin B3":2.7,"Vitamin B5":6.0,"Vitamin B9":0.8,"Vitamin B4 (Cholin)":9.0,"Linolsäure":60.0,"α-Linolensäure":2.0,"EPA + DHA":0.1,"Arginin":1500.0,"Histidin":800.0,"Isoleucin":1000.0,"Leucin":1600.0,"Lysin":1500.0,"Methionin/Cystin":700.0,"Phenylalanin/Tyrosin":1500.0,"Threonin":900.0,"Tryptophan":200.0,"Valin":1100.0,"Vitamin C":0.0},"Fett (Pferd) gewolft":{"Rohprotein":3.3,"Fett":74.5,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Kernobst":{"Rohprotein":0.34,"Fett":0.05,"Calcium":0.005,"Phosphor":0.0011,"Magnesium":5.0,"Natrium":1.0,"Kalium":0.119,"Eisen":0.25,"Kupfer":0.052,"Zink":0.04,"Mangan":0.0043,"Selen":0.0,"Jod":0.8,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.49,"Vitamin B1":0.01,"Vitamin B2":0.01,"Vitamin B6":0.01,"Vitamin B12":4.0,"Vitamin B3":0.0,"Vitamin B5":0.35,"Vitamin B9":100.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":12.0},"Ei":{"Rohprotein":11.85,"Fett":9.32,"Calcium":0.051,"Phosphor":0.21,"Magnesium":0.011,"Natrium":0.144,"Kalium":0.147,"Eisen":1.83,"Kupfer":0.065,"Zink":1.49,"Mangan":0.071,"Selen":0.0,"Jod":9.4,"Vitamin A":933.0,"Vitamin D":117.0,"Vitamin E":1.96,"Vitamin B1":0.1,"Vitamin B2":0.41,"Vitamin B6":0.08,"Vitamin B12":1.9,"Vitamin B3":3.116,"Vitamin B5":1.6,"Vitamin B9":74.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Leinsamen":{"Rohprotein":20.0,"Fett":39.0,"Calcium":0.26,"Phosphor":0.64,"Magnesium":390.0,"Natrium":30.0,"Kalium":0.81,"Eisen":5.73,"Kupfer":1.22,"Zink":4.34,"Mangan":2.48,"Selen":25.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":20.6,"Vitamin B1":1.64,"Vitamin B2":0.16,"Vitamin B6":0.47,"Vitamin B12":0.0,"Vitamin B3":3.08,"Vitamin B5":0.99,"Vitamin B9":87.0,"Vitamin B4 (Cholin)":78.7,"Linolsäure":5.3,"α-Linolensäure":21.0,"EPA + DHA":0.0,"Arginin":1930.0,"Histidin":470.0,"Isoleucin":0.9,"Leucin":1300.0,"Lysin":890.0,"Methionin/Cystin":710.0,"Phenylalanin/Tyrosin":1450.0,"Threonin":0.8,"Tryptophan":0.35,"Valin":1100.0,"Vitamin C":0.0},"Kuerbiskerne":{"Rohprotein":31.0,"Fett":50.0,"Calcium":0.078,"Phosphor":0.516,"Magnesium":530.0,"Natrium":9.9,"Kalium":0.95,"Eisen":9.1,"Kupfer":0.0,"Zink":8.2,"Mangan":7.0,"Selen":0.0,"Jod":12.0,"Vitamin A":19.0,"Vitamin D":0.0,"Vitamin E":56.0,"Vitamin B1":0.21,"Vitamin B2":0.32,"Vitamin B6":0.22,"Vitamin B12":0.0,"Vitamin B3":1.7,"Vitamin B5":0.34,"Vitamin B9":58.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":18.96,"α-Linolensäure":0.23,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":1570.0,"Leucin":2639.0,"Lysin":2283.0,"Methionin/Cystin":677.0,"Phenylalanin/Tyrosin":1534.0,"Threonin":1100.0,"Tryptophan":535.0,"Valin":2461.0,"Vitamin C":2.0},"Bierhefe":{"Rohprotein":45.0,"Fett":4.5,"Calcium":0.1,"Phosphor":1.4,"Magnesium":150.0,"Natrium":100.0,"Kalium":1.75,"Eisen":7.0,"Kupfer":1.0,"Zink":7.0,"Mangan":0.6,"Selen":30.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":2.0,"Vitamin B1":12.0,"Vitamin B2":3.0,"Vitamin B6":3.0,"Vitamin B12":1.0,"Vitamin B3":35.0,"Vitamin B5":7.0,"Vitamin B9":1250.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Spurenelemente plus (pahema)":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":2500.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":50.0,"Zink":600.0,"Mangan":50.0,"Selen":1500.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":500.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Krilloel (pahema)":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":8.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Magnesiumcitrat 105 mg/g":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":10500.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Zinkbisglycinat 25 mg/ Tablette":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":2500.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Selen 200 µg/ Tablette":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Vitamin E Tropfen (Aura Herbalis)":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":240.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Reis (gekocht)":{"Rohprotein":5.0,"Fett":0.5,"Calcium":0.036,"Phosphor":0.06,"Magnesium":21.0,"Natrium":0.01,"Kalium":0.048,"Eisen":0.2,"Kupfer":0.1,"Zink":1.4,"Mangan":0.4,"Selen":7.0,"Jod":2.2,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.05,"Vitamin B1":0.05,"Vitamin B2":0.0,"Vitamin B6":0.05,"Vitamin B12":0.0,"Vitamin B3":1.5,"Vitamin B5":0.3,"Vitamin B9":0.05,"Vitamin B4 (Cholin)":0.05,"Linolsäure":0.2,"α-Linolensäure":0.1,"EPA + DHA":0.0,"Arginin":0.2,"Histidin":0.1,"Isoleucin":0.1,"Leucin":0.2,"Lysin":0.1,"Methionin/Cystin":0.2,"Phenylalanin/Tyrosin":0.0,"Threonin":0.1,"Tryptophan":0.0,"Valin":0.2,"Vitamin C":0.0},"Muskelfleisch (kanguruh,Stückig Meisterbarf)":{"Rohprotein":18.8,"Fett":6.7,"Calcium":0.005,"Phosphor":0.203,"Magnesium":30.0,"Natrium":50.0,"Kalium":0.332,"Eisen":4.0,"Kupfer":0.1,"Zink":2.9,"Mangan":0.0,"Selen":1.0,"Jod":0.0,"Vitamin A":66.67,"Vitamin D":0.3,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.13,"Vitamin B6":0.1,"Vitamin B12":0.38,"Vitamin B3":3.0,"Vitamin B5":9.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":50.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":1600.0,"Histidin":650.0,"Isoleucin":850.0,"Leucin":1800.0,"Lysin":1700.0,"Methionin/Cystin":650.0,"Phenylalanin/Tyrosin":1400.0,"Threonin":900.0,"Tryptophan":200.0,"Valin":900.0,"Vitamin C":0.0},"Vitamin B Komplex Kochen für Hunde":{"Rohprotein":20.8,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":105.0,"Vitamin B2":210.0,"Vitamin B6":100.0,"Vitamin B12":1700.0,"Vitamin B3":1000.0,"Vitamin B5":630.0,"Vitamin B9":15.0,"Vitamin B4 (Cholin)":30000.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Natriumchlorid":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":39500.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Leinöl":{"Rohprotein":0.0,"Fett":100.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":20.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":18.0,"α-Linolensäure":53.4,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Distelöl":{"Rohprotein":0.0,"Fett":100.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":40.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":65.0,"α-Linolensäure":0.3,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Algenöl":{"Rohprotein":0.0,"Fett":0.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":45.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Kokosfett":{"Rohprotein":0.0,"Fett":99.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":2.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Lammfett":{"Rohprotein":6.3,"Fett":69.0,"Calcium":0.019,"Phosphor":0.01,"Magnesium":0.0,"Natrium":33.0,"Kalium":0.112,"Eisen":0.63,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Vitamin Optimix Cani Cooking":{"Rohprotein":0.0,"Fett":0.0,"Calcium":19.0,"Phosphor":5.0,"Magnesium":2900.0,"Natrium":1000.0,"Kalium":5.0,"Eisen":85.0,"Kupfer":35.0,"Zink":250.0,"Mangan":18.0,"Selen":0.0,"Jod":5000.0,"Vitamin A":25000.0,"Vitamin D":30000.0,"Vitamin E":170.0,"Vitamin B1":17.0,"Vitamin B2":25.0,"Vitamin B6":17.0,"Vitamin B12":170.0,"Vitamin B3":85.0,"Vitamin B5":1200.0,"Vitamin B9":1500.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Walnussöl":{"Rohprotein":0.0,"Fett":100.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":30.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":52.0,"α-Linolensäure":11.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Hanföl":{"Rohprotein":0.0,"Fett":100.0,"Calcium":0.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":80.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":56.0,"α-Linolensäure":17.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Rinder-Muskelfleisch gewolft (barfers)":{"Rohprotein":14.8,"Fett":24.2,"Calcium":0.06,"Phosphor":0.11,"Magnesium":19.0,"Natrium":60.0,"Kalium":310.0,"Eisen":1.92,"Kupfer":90.0,"Zink":3.731,"Mangan":0.0,"Selen":0.0,"Jod":0.3,"Vitamin A":57.0,"Vitamin D":0.0,"Vitamin E":0.398,"Vitamin B1":0.198,"Vitamin B2":0.228,"Vitamin B6":0.158,"Vitamin B12":4.4,"Vitamin B3":6.466,"Vitamin B5":2.0,"Vitamin B9":80.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":1766.0,"Histidin":973.0,"Isoleucin":1466.0,"Leucin":2378.0,"Lysin":2463.0,"Methionin/Cystin":733.0,"Phenylalanin/Tyrosin":1202.0,"Threonin":1334.0,"Tryptophan":324.0,"Valin":1598.0,"Vitamin C":0.0},"Vitamin Optimix Cani Cooking Calcium":{"Rohprotein":0.0,"Fett":0.0,"Calcium":19.0,"Phosphor":5.0,"Magnesium":2900.0,"Natrium":1000.0,"Kalium":5.0,"Eisen":85.0,"Kupfer":35.0,"Zink":250.0,"Mangan":18.0,"Selen":0.0,"Jod":5000.0,"Vitamin A":250000.0,"Vitamin D":30000.0,"Vitamin E":1700.0,"Vitamin B1":170.0,"Vitamin B2":250.0,"Vitamin B6":170.0,"Vitamin B12":170.0,"Vitamin B3":850.0,"Vitamin B5":1200.0,"Vitamin B9":1500.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Hühnermuskelfleisch gewolft (barfers)":{"Rohprotein":18.1,"Fett":6.3,"Calcium":0.02,"Phosphor":0.18,"Magnesium":21.0,"Natrium":60.0,"Kalium":0.52,"Eisen":0.8,"Kupfer":0.065,"Zink":1.5,"Mangan":0.01,"Selen":10.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.27,"Vitamin B1":0.08,"Vitamin B2":0.1,"Vitamin B6":0.5,"Vitamin B12":0.3,"Vitamin B3":6.0,"Vitamin B5":0.0,"Vitamin B9":5.0,"Vitamin B4 (Cholin)":60.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":2065.0,"Histidin":1138.0,"Isoleucin":1498.0,"Leucin":2527.0,"Lysin":2936.0,"Methionin/Cystin":794.0,"Phenylalanin/Tyrosin":1233.0,"Threonin":1320.0,"Tryptophan":384.0,"Valin":1581.0,"Vitamin C":0.0},"Algenkalk":{"Rohprotein":0.0,"Fett":0.0,"Calcium":33.0,"Phosphor":0.0,"Magnesium":0.0,"Natrium":0.0,"Kalium":0.0,"Eisen":0.0,"Kupfer":0.0,"Zink":0.0,"Mangan":0.0,"Selen":0.0,"Jod":0.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.0,"Vitamin B2":0.0,"Vitamin B6":0.0,"Vitamin B12":0.0,"Vitamin B3":0.0,"Vitamin B5":0.0,"Vitamin B9":0.0,"Vitamin B4 (Cholin)":0.0,"Linolsäure":0.0,"α-Linolensäure":0.0,"EPA + DHA":0.0,"Arginin":0.0,"Histidin":0.0,"Isoleucin":0.0,"Leucin":0.0,"Lysin":0.0,"Methionin/Cystin":0.0,"Phenylalanin/Tyrosin":0.0,"Threonin":0.0,"Tryptophan":0.0,"Valin":0.0,"Vitamin C":0.0},"Muskelfleisch (Lammstuecke, Haustierkost)":{"Rohprotein":17.0,"Fett":15.0,"Calcium":0.0057,"Phosphor":0.119,"Magnesium":22.0,"Natrium":65.0,"Kalium":225.0,"Eisen":2.5,"Kupfer":0.08,"Zink":4.0,"Mangan":0.0,"Selen":1.0,"Jod":1.0,"Vitamin A":0.0,"Vitamin D":0.0,"Vitamin E":0.0,"Vitamin B1":0.2,"Vitamin B2":0.37,"Vitamin B6":0.13,"Vitamin B12":0.13,"Vitamin B3":2.7,"Vitamin B5":6.0,"Vitamin B9":0.8,"Vitamin B4 (Cholin)":9.0,"Linolsäure":60.0,"α-Linolensäure":2.0,"EPA + DHA":0.1,"Arginin":1500.0,"Histidin":800.0,"Isoleucin":1000.0,"Leucin":1600.0,"Lysin":1500.0,"Methionin/Cystin":700.0,"Phenylalanin/Tyrosin":1500.0,"Threonin":900.0,"Tryptophan":200.0,"Valin":1100.0,"Vitamin C":0.0},"Innereien (Lamm, Haustierkost)":{"Rohprotein":17.67,"Fett":4.92,"Calcium":0.052,"Phosphor":0.253,"Magnesium":19.2,"Natrium":105.2,"Kalium":0.2869,"Eisen":5.871,"Kupfer":2.4277,"Zink":2.642,"Mangan":0.1394,"Selen":29.0,"Jod":6.82,"Vitamin A":19897.9,"Vitamin D":65.2,"Vitamin E":0.421,"Vitamin B1":0.2653,"Vitamin B2":1.449,"Vitamin B6":0.2324,"Vitamin B12":31.43,"Vitamin B3":0.0,"Vitamin B5":4.802,"Vitamin B9":78.3,"Vitamin B4 (Cholin)":224.0,"Linolsäure":0.115,"α-Linolensäure":0.014,"EPA + DHA":0.135,"Arginin":970.0,"Histidin":421.0,"Isoleucin":727.0,"Leucin":1285.0,"Lysin":1197.0,"Methionin/Cystin":637.0,"Phenylalanin/Tyrosin":1185.0,"Threonin":724.0,"Tryptophan":194.0,"Valin":846.0,"Vitamin C":0.165}};
 
@@ -744,6 +825,8 @@ let settings = {
 // Futterrechner State
 let frCurrentRecipe = null; // {name, ingredients: [{name, grams, cooked}]}
 let frRecipes = []; // loaded from Sheets index
+let frBaseIngredients = []; // original unscaled ingredients for scaling
+let frScaleFactor = 1.0;
 
 // =============================================
 // INIT
@@ -853,7 +936,7 @@ function switchTab(tab){
     const s=document.getElementById('tab-'+t);
     if(s){s.classList.toggle('active',t===tab);s.style.display=t===tab?'block':'none';}
   });
-  if(tab==='futter'){const sel=document.getElementById('f-futter-select');if(sel.options.length<=1)loadFutterDropdown();}
+  if(tab==='futter'){const sel=document.getElementById('f-rezept-select');if(sel&&sel.options.length<=1)loadRezepteDropdown();}
 }
 
 function switchViewTab(tab){
@@ -892,23 +975,54 @@ function toggleAVerd(val){const was=aVerdState===val;aVerdState=was?'':val;['1',
 // =============================================
 // FUTTER DROPDOWN
 // =============================================
-async function loadFutterDropdown(){
-  const sel=document.getElementById('f-futter-select');
-  const btn=document.getElementById('btn-futter-reload');
-  btn.disabled=true;
+async function loadRezepteDropdown(){
+  const sel=document.getElementById('f-rezept-select');
+  const btn=document.getElementById('btn-rezept-reload');
+  if(btn) btn.disabled=true;
   sel.innerHTML='<option value="">⏳ Wird geladen…</option>';
   try{
-    const rows=await readSheet(settings.sheetFutter);
-    const{dataRows}=findDataRows(rows,'futter');
-    const seen=new Set(),unique=[];
-    for(const r of [...dataRows].reverse()){const val=(r[1]||'').toString().trim();if(val&&!seen.has(val)){seen.add(val);unique.push(val);}}
-    sel.innerHTML='<option value="">– Eintrag wählen –</option>';
-    unique.forEach(v=>{const opt=document.createElement('option');opt.value=v;opt.textContent=v.length>60?v.slice(0,60)+'…':v;opt.title=v;sel.appendChild(opt);});
-    if(unique.length===0) sel.innerHTML='<option value="">Noch keine Einträge</option>';
+    const sheets=await getSheetsList(FUTTER_SPREADSHEET_ID);
+    const systemSheets=['Rezepte','Notizen','Rechner','Inhaltstoffe','Futterwerte','Lamm Mix Innereien','Layla','Rezept Dr. Kröger'];
+    const recipeSheets=sheets.filter(s=>!systemSheets.includes(s));
+    sel.innerHTML='<option value="">— Gespeichertes Rezept wählen —</option>';
+    recipeSheets.forEach(name=>{
+      const opt=document.createElement('option');
+      opt.value=name;opt.textContent=name;
+      sel.appendChild(opt);
+    });
+    if(recipeSheets.length===0) sel.innerHTML='<option value="">Noch keine Rezepte gespeichert</option>';
   }catch(e){sel.innerHTML=`<option value="">Fehler: ${e.message}</option>`;}
-  btn.disabled=false;
+  if(btn) btn.disabled=false;
 }
-function futterSelectChanged(){const val=document.getElementById('f-futter-select').value;if(val)document.getElementById('f-futter').value=val;}
+function futterRezeptChanged(){
+  const val=document.getElementById('f-rezept-select').value;
+  if(!val) return;
+  const textarea=document.getElementById('f-futter');
+  textarea.value='⏳ Lade Rezept…';
+  // Load sheet and build composition string
+  readSheet(val,FUTTER_SPREADSHEET_ID).then(rows=>{
+    // rows: first is meta/header, then ingredients: col0=name, col1=grams
+    const parts=[];
+    for(const row of rows.slice(1)){
+      if(!row||!row[0]||!row[0].toString().trim()) continue;
+      const ingName=row[0].toString().trim();
+      // skip summary rows
+      if(ingName.startsWith('Gesamtbedarf')||ingName.startsWith('SUMME')||ingName.startsWith('Versorgung')||ingName.startsWith('Körpergewicht')) continue;
+      const grams=parseFloat(row[1])||0;
+      if(grams<=0) continue;
+      // Format: "250 g Känguru" — round to 1 decimal if needed
+      const gramsStr=Number.isInteger(grams)?grams:parseFloat(grams.toFixed(1));
+      parts.push(`${gramsStr} g ${ingName}`);
+    }
+    textarea.value=parts.length>0?parts.join(', '):`${val} (keine Zutaten gefunden)`;
+  }).catch(e=>{
+    textarea.value=val+' (Fehler beim Laden: '+e.message+')';
+  });
+}
+// Legacy - kept for compatibility
+async function loadFutterDropdown(){return loadRezepteDropdown();}
+function futterSelectChanged(){}
+
 
 // =============================================
 // GOOGLE SHEETS API
@@ -994,11 +1108,27 @@ function frUpdateWeight2(){
 function frInitIngredientSelect(){
   const sel=document.getElementById('fr-ing-select');
   sel.innerHTML='<option value="">— Zutat wählen —</option>';
-  Object.keys(INGREDIENTS_DB).sort((a,b)=>a.localeCompare(b)).forEach(name=>{
-    const opt=document.createElement('option');
-    opt.value=name;
-    opt.textContent=name;
-    sel.appendChild(opt);
+  // Group by category
+  const groups={};
+  INGREDIENT_CATEGORIES.forEach(c=>groups[c]=[]);
+  Object.keys(INGREDIENTS_DB).sort((a,b)=>a.localeCompare(b,'de')).forEach(name=>{
+    const kat=(INGREDIENT_META[name]||{}).kategorie||'Sonstiges';
+    if(!groups[kat]) groups[kat]=[];
+    groups[kat].push(name);
+  });
+  INGREDIENT_CATEGORIES.forEach(kat=>{
+    const items=groups[kat]||[];
+    if(!items.length) return;
+    const grp=document.createElement('optgroup');
+    grp.label=kat;
+    items.forEach(name=>{
+      const opt=document.createElement('option');
+      opt.value=name;
+      const her=(INGREDIENT_META[name]||{}).hersteller;
+      opt.textContent=name+(her?' ('+her+')':'');
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
   });
 }
 
@@ -1019,6 +1149,8 @@ function frToggleCustomForm(){
 function frSaveCustomIngredient(){
   const name=document.getElementById('fr-custom-name').value.trim();
   if(!name){alert('Bitte Name eingeben.');return;}
+  const hersteller=document.getElementById('fr-custom-hersteller').value.trim();
+  const kategorie=document.getElementById('fr-custom-kategorie').value||'Sonstiges';
   const nutr={};
   NUTRIENTS_META.forEach(m=>{
     const id='cfn-'+m.key.replace(/[^a-zA-Z0-9]/g,'_');
@@ -1026,13 +1158,13 @@ function frSaveCustomIngredient(){
     nutr[m.key]=el?parseFloat(el.value)||0:0;
   });
   INGREDIENTS_DB[name]=nutr;
-  // Add to select
-  const sel=document.getElementById('fr-ing-select');
-  const opt=document.createElement('option');
-  opt.value=name;opt.textContent=name;
-  sel.appendChild(opt);
-  sel.value=name;
+  INGREDIENT_META[name]={kategorie,hersteller};
+  // Rebuild select to pick up new grouping
+  frInitIngredientSelect();
+  document.getElementById('fr-ing-select').value=name;
   document.getElementById('fr-custom-name').value='';
+  document.getElementById('fr-custom-hersteller').value='';
+  document.getElementById('fr-custom-kategorie').value='';
   document.getElementById('fr-custom-form').classList.remove('open');
   frAddIngredient();
 }
@@ -1049,6 +1181,8 @@ function frAddIngredient(){
     return;
   }
   frCurrentRecipe.ingredients.push({name,grams:100,cooked:false});
+  // Keep base in sync (unscaled)
+  frBaseIngredients=frCurrentRecipe.ingredients.map(i=>({...i,grams:i.grams/frScaleFactor}));
   frRenderIngredients();
   frRecalc();
   sel.value='';
@@ -1079,6 +1213,8 @@ function frRenderIngredients(){
 function frUpdateGrams(i,val){
   if(!frCurrentRecipe) return;
   frCurrentRecipe.ingredients[i].grams=parseFloat(val)||0;
+  // Update base so future scaling uses edited value as the new 1× base
+  frBaseIngredients[i]={...frCurrentRecipe.ingredients[i],grams:(parseFloat(val)||0)/frScaleFactor};
   frRecalc();
 }
 
@@ -1121,9 +1257,23 @@ function frRecalc(){
     });
   });
 
+  // Calculate calories: 1g Protein=3.5kcal, 1g Fat=8.5kcal, 1g Carbs=3.5kcal (NRC)
+  // Simplified: kcal = Protein*3.5 + Fett*8.5
+  const kcalIst=totals['Rohprotein']*3.5 + totals['Fett']*8.5;
+  const kcalBedarf=100*mkg; // 100 kcal per kg^0.75
+
   // Update portions display
   document.getElementById('fr-total-g').textContent=Math.round(totalGrams);
   document.getElementById('fr-portion-g').textContent=Math.round(totalGrams/2);
+  document.getElementById('fr-kcal-ist').textContent=Math.round(kcalIst);
+  document.getElementById('fr-kcal-ist').style.color=kcalBedarf>0&&(kcalIst/kcalBedarf)>=0.9&&(kcalIst/kcalBedarf)<=1.2?'var(--fr-ok)':kcalBedarf>0?'var(--fr-warn)':'var(--text)';
+  document.getElementById('fr-kcal-bedarf').textContent=Math.round(kcalBedarf);
+  const kcalPct=kcalBedarf>0?Math.min(kcalIst/kcalBedarf*100,200):0;
+  const kcalBar=document.getElementById('fr-kcal-bar-wrap');
+  const kcalBarFill=document.getElementById('fr-kcal-bar');
+  kcalBar.style.display=totalGrams>0?'block':'none';
+  kcalBarFill.style.width=Math.min(kcalPct,100)+'%';
+  kcalBarFill.style.background=kcalPct>=90&&kcalPct<=120?'var(--fr-ok)':kcalPct>120?'var(--fr-warn)':'#f59e0b';
 
   // Calculate ratios
   const ca=totals['Calcium'], p=totals['Phosphor'];
@@ -1192,6 +1342,26 @@ function frRecalc(){
   rowsEl.innerHTML=html;
 }
 
+function frSetScale(factor){
+  frScaleFactor=factor;
+  document.getElementById('fr-scale-input').value=factor;
+  frApplyScale();
+}
+
+function frApplyScale(){
+  const input=document.getElementById('fr-scale-input');
+  const factor=parseFloat(input.value)||1;
+  frScaleFactor=factor;
+  if(!frCurrentRecipe||!frBaseIngredients.length) return;
+  // Apply factor to base amounts
+  frCurrentRecipe.ingredients=frBaseIngredients.map(ing=>({
+    ...ing,
+    grams: Math.round(ing.grams*factor*10)/10
+  }));
+  frRenderIngredients();
+  frRecalc();
+}
+
 function frToggleSection(id,el){
   el.classList.toggle('open');
   const body=document.getElementById('fr-sec-'+id);
@@ -1214,12 +1384,13 @@ async function frLoadRecipeList(){
       el.innerHTML='<div class="view-empty"><div class="icon">📋</div>Noch keine Rezepte gespeichert.<br>Erstelle dein erstes Rezept!</div>';
     } else {
       el.innerHTML=recipeSheets.map(name=>`
-        <div class="fr-recipe-card" onclick="frOpenRecipe('${esc(name)}')">
-          <div class="rc-info">
+        <div class="fr-recipe-card">
+          <div class="rc-info" onclick="frOpenRecipe('${esc(name)}')" style="flex:1;cursor:pointer">
             <h3>${esc(name)}</h3>
             <p>Tippe zum Öffnen und Bearbeiten</p>
           </div>
-          <span class="rc-arrow">›</span>
+          <button onclick="frDeleteRecipe('${esc(name)}')" style="background:none;border:none;padding:8px 10px;cursor:pointer;color:var(--danger-text);font-size:18px;flex-shrink:0" title="Rezept löschen">🗑</button>
+          <span class="rc-arrow" onclick="frOpenRecipe('${esc(name)}')" style="cursor:pointer">›</span>
         </div>
       `).join('');
     }
@@ -1235,6 +1406,8 @@ async function frOpenRecipe(name){
   statusEl.style.display='block';
   frShowEditor();
   document.getElementById('fr-recipe-name').value=name;
+  // Reset scale
+  frScaleFactor=1; document.getElementById('fr-scale-input').value=1;
   try{
     const rows=await readSheet(name,FUTTER_SPREADSHEET_ID);
     // Parse: row[0]=Zutat, row[1]=Menge g, row[2]=Gekocht
@@ -1247,13 +1420,12 @@ async function frOpenRecipe(name){
       // Ensure in DB (may be custom)
       if(!INGREDIENTS_DB[ingName]){
         INGREDIENTS_DB[ingName]={}; // empty placeholder
-        const sel=document.getElementById('fr-ing-select');
-        const opt=document.createElement('option');
-        opt.value=ingName;opt.textContent=ingName+' (aus Rezept)';
-        sel.appendChild(opt);
+        frInitIngredientSelect();
       }
       frCurrentRecipe.ingredients.push({name:ingName,grams,cooked});
     }
+    // Save base for scaling
+    frBaseIngredients=frCurrentRecipe.ingredients.map(i=>({...i}));
     frRenderIngredients();
     frRecalc();
     statusEl.style.display='none';
@@ -1265,6 +1437,8 @@ async function frOpenRecipe(name){
 
 function frNewRecipe(){
   frCurrentRecipe={name:'',ingredients:[]};
+  frBaseIngredients=[];
+  frScaleFactor=1; document.getElementById('fr-scale-input').value=1;
   document.getElementById('fr-recipe-name').value='';
   frRenderIngredients();
   frRecalc();
@@ -1281,6 +1455,28 @@ function frShowList(){
   document.getElementById('fr-editor').classList.remove('active');
   frCurrentRecipe=null;
   frLoadRecipeList();
+}
+
+async function frDeleteRecipe(name){
+  if(!confirm(`Rezept "${name}" wirklich löschen?\n\nDas Tabellenblatt wird dauerhaft aus der Milow_Futter_Check Datei entfernt.`)) return;
+  const el=document.getElementById('fr-recipe-cards');
+  el.innerHTML='<div class="view-loading"><div class="spinner"></div>Wird gelöscht…</div>';
+  try{
+    // Get sheet ID first
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${FUTTER_SPREADSHEET_ID}?fields=sheets.properties`;
+    const res=await fetch(url,{headers:{'Authorization':'Bearer '+accessToken}});
+    const data=await res.json();
+    const sheet=(data.sheets||[]).find(s=>s.properties.title===name);
+    if(!sheet) throw new Error('Blatt nicht gefunden');
+    const sheetId=sheet.properties.sheetId;
+    const delUrl=`https://sheets.googleapis.com/v4/spreadsheets/${FUTTER_SPREADSHEET_ID}:batchUpdate`;
+    const delRes=await fetch(delUrl,{method:'POST',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({requests:[{deleteSheet:{sheetId}}]})});
+    if(!delRes.ok){const e=await delRes.json().catch(()=>({}));throw new Error(e?.error?.message||'HTTP '+delRes.status);}
+    frLoadRecipeList();
+  }catch(e){
+    el.innerHTML=`<div class="status err" style="display:block">Fehler beim Löschen: ${esc(e.message)}</div>`;
+    setTimeout(frLoadRecipeList,2000);
+  }
 }
 
 async function frSaveRecipe(){
@@ -1482,7 +1678,6 @@ async function submitFutter(){
     setStatus('status-f','ok','✓ Gespeichert!');
     document.getElementById('f-beschreibung').value='';document.getElementById('f-notizen').value='';
     ersteGabeState='';zweiWoState='';provState='';document.querySelectorAll('#tab-futter .tog-btn').forEach(b=>b.classList.remove('sel'));
-    loadFutterDropdown();
   }catch(e){setStatus('status-f','err','Fehler: '+e.message);}
   btn.disabled=false;
 }
