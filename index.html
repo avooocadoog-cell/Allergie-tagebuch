@@ -905,7 +905,7 @@ const STORE = (() => {
     hunde = parseRows(rHunde,['hund_id','name','rasse','geburtsdatum','geschlecht','kastriert','aktiv','notizen'],2)
       .map(r=>({...r,hund_id:parseInt(r.hund_id)||0})).filter(r=>r.name);
     parameter={};
-    parseRows(rParam,['parameter','wert','einheit','beschreibung'],2).filter(r=>r.parameter).forEach(r=>{parameter[r.parameter]=parseFloat(r.wert)||r.wert;});
+    parseRows(rParam,['parameter','wert','einheit','beschreibung'],2).filter(r=>r.parameter).forEach(r=>{parameter[r.parameter]=parseFloat(String(r.wert).replace(',','.'))||r.wert;});
     naehrstoffe=parseRows(rNaehr,['naehrstoff_id','name','einheit','gruppe','beschreibung','funktion','mangel_symptome','quellen','obergrenze_info'],2)
       .map(r=>({...r,naehrstoff_id:parseInt(r.naehrstoff_id)||0})).filter(r=>r.name);
     toleranzen=parseRows(rTol,['hund_id','naehrstoff_id','naehrstoff_name','min_pct','max_pct','anmerkung'],2)
