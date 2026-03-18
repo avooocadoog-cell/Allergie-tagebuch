@@ -1282,8 +1282,13 @@ const ANSICHT = (() => {
       if(!dataRows.length){el.innerHTML='<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge.<br><small style="font-size:11px;color:var(--sub)">Sheet: '+sheet+' · Zeilen: '+rows.length+'</small></div>';return;}
       const hundId=String(parseInt(document.getElementById('tb-hund-select')?.value)||1);
       // Trim auf beiden Seiten für robuste hund_id Filterung
-      const filtered=dataRows.filter(r=>!r[0]||String(r[0]).trim()===hundId);
-      if(!filtered.length){el.innerHTML='<div class="view-empty"><div class="icon">📭</div>Keine Einträge für Hund '+hundId+'.<br><small style="font-size:11px;color:var(--sub)">Gefundene IDs: '+[...new Set(dataRows.map(r=>String(r[0]).trim()))].join(", ")+'</small></div>';return;}
+     const filtered = dataRows.filter(r => {
+        const col0 = String(r[0] || '').trim();
+        if (!col0) return true;
+        if (col0.includes('.') || col0.includes('-')) return true;
+        return col0 === hundId;
+      });
+      if(!filtered.length){el.innerHTML='<div class="view-empty"><div class="icon">📭</div>Keine Einträge für Hund '+hundId+'.</div>';return;}
       el.innerHTML=renderRows(which,filtered);
     } catch(e){
       el.innerHTML=`<div class="status err" style="display:block">Fehler: ${UI.esc(e.message)}</div>`;
