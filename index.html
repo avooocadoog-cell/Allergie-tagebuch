@@ -2182,7 +2182,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-u','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Umwelt', [
+      await SHEETS.appendRow('Umweltagebuch', [
         getHundId(), fd(datum),
         document.getElementById('u-temp-min').value,
         document.getElementById('u-temp-max').value,
@@ -2211,7 +2211,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-s','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Symptome', [
+      await SHEETS.appendRow('Symptomtagebuch', [
         getHundId(), fd(datum),
         FORM.getSymKat(document.getElementById('s-kat-extra').value),
         document.getElementById('s-beschreibung').value,
@@ -2237,7 +2237,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-f','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Futter', [
+      await SHEETS.appendRow('Futtertagebuch', [
         getHundId(), fd(datum), futter,
         document.getElementById('f-produkt').value,
         FORM.getErsteGabe(), FORM.getZweiWo(), FORM.getProv(),
@@ -2259,7 +2259,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-a','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Ausschluss', [
+      await SHEETS.appendRow('Ausschlussdiät', [
         getHundId(), zutat, FORM.getAVerd(),
         document.getElementById('a-kategorie').value,
         document.getElementById('a-status').value,
@@ -2282,7 +2282,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-al','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Allergene', [
+      await SHEETS.appendRow('Bekannte Allergene', [
         getHundId(), allergen,
         document.getElementById('al-kategorie').value,
         FORM.getAlReakt(),
@@ -2304,7 +2304,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-t','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Tierarzt', [
+      await SHEETS.appendRow('Tierarztbesuche', [
         getHundId(), fd(datum),
         document.getElementById('t-arzt').value,
         document.getElementById('t-anlass').value,
@@ -2398,9 +2398,9 @@ const ANSICHT = (() => {
 
   // Tabellenblatt-Mapping: Tab-Name → Sheet-Name
   const SHEET_MAP = {
-    umwelt: 'Umwelt', symptom: 'Symptome', futter: 'Futter',
-    ausschluss: 'Ausschluss', allergen: 'Allergene',
-    tierarzt: 'Tierarzt', medikamente: 'Medikamente',
+    umwelt: 'Umweltagebuch', symptom: 'Symptomtagebuch', futter: 'Futtertagebuch',
+    ausschluss: 'Ausschlussdiät', allergen: 'Bekannte Allergene',
+    tierarzt: 'Tierarztbesuche', medikamente: 'Medikamente',
   };
 
   // Daten laden und rendern
