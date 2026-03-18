@@ -1086,13 +1086,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <input type="number" id="cfg-pollen-region" placeholder="50 (Berlin)" oninput="CONFIG.save()">
         <div style="font-size:11px;color:var(--sub);margin-top:4px">Berlin=50 · Hamburg=10 · München=91 · Frankfurt=82</div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:.5rem">
-        <button class="btn-primary" style="flex:1" onclick="CONFIG.testConnection()">🔌 Verbindung testen</button>
-        <button class="btn-secondary" style="margin-top:0;flex:1" onclick="AUTH.reAuth()">🔑 Neu anmelden (Scope)</button>
-      </div>
-      <div style="font-size:12px;color:var(--sub);margin-top:.5rem">
-        Bei "insufficient authentication scopes": auf "Neu anmelden" klicken und Google-Zugriff neu genehmigen.
-      </div>
+      <button class="btn-primary" onclick="CONFIG.testConnection()">🔌 Verbindung testen</button>
       <div class="status" id="status-conn"></div>
     </div>
 
@@ -1283,46 +1277,15 @@ const SHEETS = (() => {
     return res.json();
   }
 
-  // Cache für Blatt-Namen pro Spreadsheet
-  // Promise-basiert: verhindert parallele Duplikat-Requests beim gleichzeitigen Laden
-  const _sheetNameCache = {};   // spreadsheetId → string[]
-  const _sheetNamePending = {}; // spreadsheetId → Promise (läuft gerade)
-
-  // Metadata einmalig vorladen (aufrufen BEVOR parallele readSheet-Calls starten)
-  async function prefetchSheetNames(spreadsheetId) {
-    if (_sheetNameCache[spreadsheetId]) return; // schon gecacht
-    if (!_sheetNamePending[spreadsheetId]) {
-      const token = AUTH.getToken();
-      _sheetNamePending[spreadsheetId] = fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`,
-        { headers: { 'Authorization': 'Bearer ' + token } }
-      ).then(r => r.json()).then(meta => {
-        _sheetNameCache[spreadsheetId] = (meta.sheets||[]).map(s => s.properties.title);
-        delete _sheetNamePending[spreadsheetId];
-      });
-    }
-    await _sheetNamePending[spreadsheetId];
-  }
-
-  // Blatt lesen
+  // Blatt lesen (gibt alle Zeilen zurück)
   async function readSheet(sheet, spreadsheetId) {
     const token = AUTH.getToken();
     if (!token) throw new Error('Nicht angemeldet');
-
-    // Metadata sicherstellen (gecacht oder warten bis laufender Fetch fertig)
-    await prefetchSheetNames(spreadsheetId);
-
-    // Exakten Namen suchen (case-insensitive Fallback)
-    const names = _sheetNameCache[spreadsheetId] || [];
-    const exact = names.find(s => s === sheet)
-               || names.find(s => s.toLowerCase() === sheet.toLowerCase())
-               || sheet; // letzter Fallback: Namen so wie er ist
-
-    const range = encodeURIComponent(exact);
+    const range = encodeURIComponent(sheet);
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
     const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     if (res.status === 401) { AUTH.handleExpired(); throw new Error('Sitzung abgelaufen.'); }
-    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || 'HTTP '+res.status); }
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || 'HTTP ' + res.status); }
     const data = await res.json();
     return data.values || [];
   }
@@ -1395,7 +1358,7 @@ const SHEETS = (() => {
     }));
   }
 
-  return { appendRow, readSheet, writeRange, createSheet, deleteSheet, getSheetsList, getSheetsWithIds, prefetchSheetNames, _sheetNameCache };
+  return { appendRow, readSheet, writeRange, createSheet, deleteSheet, getSheetsList, getSheetsWithIds };
 })();
 
 
@@ -1446,15 +1409,13 @@ const AUTH = (() => {
         APP.onLogin();
       }
     });
-    tokenClient.requestAccessToken({ prompt: 'consent', hint: AUTH.getEmail()||'' });
+    tokenClient.requestAccessToken({ prompt: 'consent' });
   }
 
   // Abmelden
   function signOut() {
     if (window.google && accessToken) google.accounts.oauth2.revoke(accessToken);
     accessToken = ''; userEmail = '';
-    // Sheet-Name-Cache leeren
-    Object.keys(SHEETS._sheetNameCache||{}).forEach(k => delete SHEETS._sheetNameCache[k]);
     try {
       localStorage.removeItem('hundapp_token');
       localStorage.removeItem('hundapp_email');
@@ -1475,42 +1436,7 @@ const AUTH = (() => {
   function getEmail()    { return userEmail; }
   function isLoggedIn()  { return !!accessToken; }
 
-  // Neu anmelden mit erzwungenem Consent (löscht alten Token, holt neuen mit vollem Scope)
-  function reAuth() {
-    // Alten Token invalidieren
-    if (window.google && accessToken) {
-      try { google.accounts.oauth2.revoke(accessToken); } catch(e) {}
-    }
-    accessToken = '';
-    try {
-      localStorage.removeItem('hundapp_token');
-      localStorage.removeItem('hundapp_email');
-    } catch(e) {}
-    // Neu anmelden mit consent-Prompt (erzwingt Scope-Auswahl)
-    if (!window.google) { alert('Google noch nicht geladen. Bitte Seite neu laden.'); return; }
-    const cfg = CONFIG.get();
-    if (!cfg.clientId) { alert('Bitte zuerst Client-ID eintragen.'); return; }
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: cfg.clientId,
-      scope: SCOPE,
-      callback: async (resp) => {
-        if (resp.error) { alert('Login fehlgeschlagen: ' + resp.error); return; }
-        accessToken = resp.access_token;
-        try {
-          const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
-            { headers: { 'Authorization': 'Bearer ' + accessToken } });
-          const d = await r.json();
-          userEmail = d.email || 'Angemeldet';
-          localStorage.setItem('hundapp_token', accessToken);
-          localStorage.setItem('hundapp_email', userEmail);
-        } catch(e) { userEmail = 'Angemeldet'; }
-        APP.onLogin();
-      }
-    });
-    tokenClient.requestAccessToken({ prompt: 'consent' });
-  }
-
-  return { loadSaved, signIn, signOut, handleExpired, reAuth, getToken, getEmail, isLoggedIn };
+  return { loadSaved, signIn, signOut, handleExpired, getToken, getEmail, isLoggedIn };
 })();
 
 
@@ -1541,17 +1467,10 @@ const STORE = (() => {
 
     UI.setLoaderMsg('Lade Stammdaten…');
 
-    // Metadata beider Spreadsheets vorab laden (1 Call je Datei, nicht 10)
-    // Danach können alle Sheets parallel gelesen werden ohne Duplikat-Metadata-Calls
-    UI.setLoaderMsg('Verbindung wird geprüft…');
-    await Promise.allSettled([
-      SHEETS.prefetchSheetNames(sid),
-      SHEETS.prefetchSheetNames(CONFIG.get().tagebuchId),
-    ]);
-
-    // Jedes Blatt einzeln mit Fehlertoleranz laden
-    UI.setLoaderMsg('Lade Stammdaten…');
-    const settled = await Promise.allSettled([
+    const [
+      rHunde, rParam, rNaehr, rTol, rBedarf,
+      rZutaten, rZutatNutr, rRezepte, rRezZut, rKal
+    ] = await Promise.all([
       SHEETS.readSheet('Hunde',              sid),
       SHEETS.readSheet('Parameter',          sid),
       SHEETS.readSheet('Naehrstoffe',        sid),
@@ -1563,20 +1482,6 @@ const STORE = (() => {
       SHEETS.readSheet('Rezept_Zutaten',     sid),
       SHEETS.readSheet('Hund_Kalorienbedarf',sid),
     ]);
-    // Ergebnisse extrahieren – bei Fehler leeres Array
-    const safeRows = (r) => r.status === 'fulfilled' ? (r.value || []) : [];
-    const [
-      rHunde, rParam, rNaehr, rTol, rBedarf,
-      rZutaten, rZutatNutr, rRezepte, rRezZut, rKal
-    ] = settled.map(safeRows);
-    // Fehler loggen
-    settled.forEach((r, i) => {
-      if (r.status === 'rejected') {
-        const names = ['Hunde','Parameter','Naehrstoffe','Toleranzen','Bedarf',
-                       'Zutaten','Zutaten_Naehrstoffe','Rezepte','Rezept_Zutaten','Hund_Kalorienbedarf'];
-        console.warn('Sheet-Ladefehler:', names[i], r.reason?.message || r.reason);
-      }
-    });
 
     // Hunde parsen (Header Zeile 2, Daten ab Zeile 3)
     hunde = parseRows(rHunde, ['hund_id','name','rasse','geburtsdatum','geschlecht','kastriert','aktiv','notizen'], 2)
@@ -1672,19 +1577,9 @@ const STORE = (() => {
 
   // ── Hilfsfunktionen ─────────────────────────────────────────────
 
-  // Sheets-Zeilen in Objekte umwandeln
-  // Findet den Header dynamisch: erste Zeile deren erste Spalte dem ersten cols-Eintrag entspricht
-  // Fallback: skipRows (hardcoded) wenn kein Header gefunden wird
+  // Sheets-Zeilen in Objekte umwandeln (überspringt Header-Zeilen)
   function parseRows(rawRows, cols, skipRows) {
-    if (!rawRows || !rawRows.length) return [];
-    // Header-Zeile suchen: erste Zelle muss dem ersten Spaltenname entsprechen
-    const firstCol = cols[0].toLowerCase();
-    let headerIdx = skipRows - 1; // Standard-Fallback
-    for (let i = 0; i < Math.min(rawRows.length, 6); i++) {
-      const cell = String(rawRows[i]?.[0] || '').toLowerCase().trim();
-      if (cell === firstCol) { headerIdx = i; break; }
-    }
-    return rawRows.slice(headerIdx + 1)
+    return rawRows.slice(skipRows)
       .filter(row => row && row.some(v => v !== null && v !== undefined && String(v).trim() !== ''))
       .map(row => {
         const obj = {};
@@ -2211,7 +2106,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-u','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Umweltagebuch', [
+      await SHEETS.appendRow('Umwelt', [
         getHundId(), fd(datum),
         document.getElementById('u-temp-min').value,
         document.getElementById('u-temp-max').value,
@@ -2240,7 +2135,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-s','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Symptomtagebuch', [
+      await SHEETS.appendRow('Symptome', [
         getHundId(), fd(datum),
         FORM.getSymKat(document.getElementById('s-kat-extra').value),
         document.getElementById('s-beschreibung').value,
@@ -2266,7 +2161,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-f','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Futtertagebuch', [
+      await SHEETS.appendRow('Futter', [
         getHundId(), fd(datum), futter,
         document.getElementById('f-produkt').value,
         FORM.getErsteGabe(), FORM.getZweiWo(), FORM.getProv(),
@@ -2288,7 +2183,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-a','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Ausschlussdiät', [
+      await SHEETS.appendRow('Ausschluss', [
         getHundId(), zutat, FORM.getAVerd(),
         document.getElementById('a-kategorie').value,
         document.getElementById('a-status').value,
@@ -2311,7 +2206,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-al','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Bekannte Allergene', [
+      await SHEETS.appendRow('Allergene', [
         getHundId(), allergen,
         document.getElementById('al-kategorie').value,
         FORM.getAlReakt(),
@@ -2333,7 +2228,7 @@ const TAGEBUCH = (() => {
     btn.disabled = true;
     UI.setStatus('status-t','loading','Wird gespeichert…');
     try {
-      await SHEETS.appendRow('Tierarztbesuche', [
+      await SHEETS.appendRow('Tierarzt', [
         getHundId(), fd(datum),
         document.getElementById('t-arzt').value,
         document.getElementById('t-anlass').value,
@@ -2427,9 +2322,9 @@ const ANSICHT = (() => {
 
   // Tabellenblatt-Mapping: Tab-Name → Sheet-Name
   const SHEET_MAP = {
-    umwelt: 'Umweltagebuch', symptom: 'Symptomtagebuch', futter: 'Futtertagebuch',
-    ausschluss: 'Ausschlussdiät', allergen: 'Bekannte Allergene',
-    tierarzt: 'Tierarztbesuche', medikamente: 'Medikamente',
+    umwelt: 'Umwelt', symptom: 'Symptome', futter: 'Futter',
+    ausschluss: 'Ausschluss', allergen: 'Allergene',
+    tierarzt: 'Tierarzt', medikamente: 'Medikamente',
   };
 
   // Daten laden und rendern
@@ -2440,36 +2335,18 @@ const ANSICHT = (() => {
     try {
       const sheet = SHEET_MAP[which];
       const rows = await SHEETS.readSheet(sheet, CONFIG.get().tagebuchId);
-
-      if (!rows || !rows.length) {
-        el.innerHTML = '<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge.</div>';
-        return;
-      }
-
-      // Header-Zeile dynamisch finden: erste Zeile deren erste Zelle 'hund_id' enthält
-      // (robust gegen fehlende/verschobene Titelzeilen in der API-Antwort)
-      let headerIdx = 0;
-      for (let i = 0; i < Math.min(rows.length, 5); i++) {
-        const first = String(rows[i][0] || '').toLowerCase().trim();
-        if (first === 'hund_id' || first === 'hund') { headerIdx = i; break; }
-      }
-      // Daten = alles nach dem Header, nicht-leere Zeilen
-      const dataRows = rows.slice(headerIdx + 1)
-        .filter(r => r && r.some(v => v !== null && v !== undefined && String(v).trim() !== ''));
-
+      // Header in Zeile 2, Daten ab Zeile 3
+      const dataRows = rows.slice(2).filter(r => r && r.some(v => v !== null && v !== undefined && String(v).trim() !== ''));
       if (!dataRows.length) {
         el.innerHTML = '<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge.</div>';
         return;
       }
-
       // Aktuellen Hund filtern (Spalte 0 = hund_id)
       const hundId = String(parseInt(document.getElementById('tb-hund-select')?.value) || 1);
-      const filtered = dataRows.filter(r => !r[0] || String(r[0]).trim() === hundId);
-      el.innerHTML = filtered.length
-        ? renderRows(which, filtered)
-        : '<div class="view-empty"><div class="icon">📭</div>Keine Einträge für diesen Hund.</div>';
+      const filtered = dataRows.filter(r => !r[0] || String(r[0]) === hundId);
+      el.innerHTML = renderRows(which, filtered);
     } catch(e) {
-      el.innerHTML = `<div class="status err" style="display:block">Fehler: ${UI.esc(e.message)}<br><small>${UI.esc(e.stack||'')}</small></div>`;
+      el.innerHTML = `<div class="status err" style="display:block">Fehler: ${UI.esc(e.message)}</div>`;
     }
   }
 
@@ -3405,147 +3282,52 @@ const STAMMDATEN = (() => {
     // Sortiert nach Kategorie
     const sorted = [...zutaten].sort((a,b) => (a.kategorie||'').localeCompare(b.kategorie||'') || a.name.localeCompare(b.name,'de'));
     el.innerHTML = `<table class="crud-table">
-      <thead><tr><th>Name</th><th>Hersteller</th><th>Kategorie</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>Name</th><th>Hersteller</th><th>Kategorie</th></tr></thead>
       <tbody>
       ${sorted.map(z => `
         <tr>
-          <td style="font-weight:500;font-size:13px">${UI.esc(z.name)}</td>
-          <td style="color:var(--sub);font-size:12px">${UI.esc(z.hersteller||'–')}</td>
+          <td style="color:var(--sub);font-size:11px">${UI.esc(String(z.zutaten_id))}</td>
+          <td style="font-weight:500">${UI.esc(z.name)}</td>
+          <td style="color:var(--sub)">${UI.esc(z.hersteller||'–')}</td>
           <td><span class="badge badge-ok" style="font-size:10px">${UI.esc(z.kategorie||'–')}</span></td>
-          <td><button class="edit-btn" onclick="STAMMDATEN.showZutatModal(${z.zutaten_id})">✏️</button></td>
         </tr>`).join('')}
       </tbody>
     </table>`;
   }
 
-  // Zeigt Nährstofffelder für alle bekannten Nährstoffe (aus STORE.getBedarf())
-  function buildNutrFields(existing) {
-    const bedarf = STORE.getBedarf();
-    if (!bedarf.length) return '<p style="font-size:12px;color:var(--sub)">Nährstoffe nach dem Speichern im Futterrechner eintragen.</p>';
-    
-    // Nach Gruppe sortieren
-    const groups = {};
-    bedarf.forEach(b => { const g = b.gruppe || 'Sonstiges'; if (!groups[g]) groups[g] = []; groups[g].push(b); });
-    
-    let html = '<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">';
-    html += '<div style="font-size:12px;font-weight:700;color:var(--c2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Nährwerte pro 100g</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
-    
-    Object.entries(groups).forEach(([gruppe, items]) => {
-      html += `<div style="grid-column:1/-1;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--sub);margin-top:6px;letter-spacing:.05em">${UI.esc(gruppe)}</div>`;
-      items.forEach(b => {
-        const val = existing ? (existing[b.name] || '') : '';
-        const fieldId = 'zn-' + b.naehrstoff_id;
-        html += `<div style="display:flex;flex-direction:column;gap:2px">
-          <label style="font-size:10px;color:var(--sub);font-weight:600">${UI.esc(b.name)} <span style="color:var(--c3)">[${UI.esc(b.einheit)}]</span></label>
-          <input type="number" id="${fieldId}" value="${val}" placeholder="0" step="any" min="0"
-            style="padding:5px 8px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)">
-        </div>`;
-      });
-    });
-    html += '</div></div>';
-    return html;
-  }
-
-  // Modal: neue Zutat anlegen (inkl. Nährstofffelder)
-  function showZutatModal(zutatId) {
+  function showZutatModal() {
+    // Kategorien aus bestehenden Zutaten ableiten
     const cats = [...new Set(STORE.getZutaten().map(z => z.kategorie).filter(Boolean))].sort();
-    const isEdit = !!zutatId;
-    const z = isEdit ? (STORE.getZutaten().find(x => x.zutaten_id === zutatId) || {}) : {};
-    
-    // Vorhandene Nährwerte laden falls Bearbeitung
-    let existing = null;
-    if (isEdit) {
-      const nm = STORE.getNutrMap(zutatId);
-      existing = nm;
-    }
-    
-    UI.openModal(isEdit ? `✏️ ${UI.esc(z.name||'')} bearbeiten` : '+ Neue Zutat', `
-      <div class="field"><label>Name *</label>
-        <input type="text" id="zutat-name" value="${UI.esc(z.name||'')}" placeholder="z.B. Pferd (Muskelfleisch)">
-      </div>
-      <div class="field"><label>Hersteller</label>
-        <input type="text" id="zutat-hersteller" value="${UI.esc(z.hersteller||'')}" placeholder="z.B. barfers">
-      </div>
+    UI.openModal('Neue Zutat', `
+      <div class="field"><label>Name</label><input type="text" id="zutat-name" placeholder="z.B. Pferd (Muskelfleisch)"></div>
+      <div class="field"><label>Hersteller</label><input type="text" id="zutat-hersteller" placeholder="z.B. barfers"></div>
       <div class="field"><label>Kategorie</label>
         <select id="zutat-kat">
           <option value="">– wählen –</option>
-          ${cats.map(c => `<option value="${UI.esc(c)}" ${z.kategorie===c?'selected':''}>${UI.esc(c)}</option>`).join('')}
+          ${cats.map(c => `<option value="${UI.esc(c)}">${UI.esc(c)}</option>`).join('')}
         </select>
       </div>
-      ${buildNutrFields(existing)}
-      <button class="btn-primary" style="margin-top:1rem" onclick="STAMMDATEN.saveZutat(${zutatId||'null'})">
-        ${isEdit ? '💾 Änderungen speichern' : '+ Zutat speichern'}
-      </button>
+      <p style="font-size:12px;color:var(--sub);margin-bottom:.5rem">Nährstoffe können nach dem Anlegen im Futterrechner über "Neue Zutat manuell erfassen" hinzugefügt werden.</p>
+      <button class="btn-primary" onclick="STAMMDATEN.saveZutat()">Speichern</button>
       <div class="status" id="status-zutat"></div>
     `);
   }
 
-  // Zutat speichern (neu oder bearbeiten) inkl. Nährwerte
-  async function saveZutat(existingId) {
+  async function saveZutat() {
     const name = document.getElementById('zutat-name')?.value.trim();
     if (!name) { UI.setStatus('status-zutat','err','Bitte Name eingeben.'); return; }
-
-    const sid        = CONFIG.get().stammdatenId;
+    const sid = CONFIG.get().stammdatenId;
+    const zutaten = STORE.getZutaten();
+    const newId = Math.max(0, ...zutaten.map(z=>z.zutaten_id)) + 1;
     const hersteller = document.getElementById('zutat-hersteller')?.value.trim() || '';
     const kategorie  = document.getElementById('zutat-kat')?.value || 'Sonstiges';
-    UI.setStatus('status-zutat','loading','Wird gespeichert…');
-
     try {
-      let zutatId = existingId;
-
-      if (!existingId) {
-        // Neu anlegen
-        const zutaten = STORE.getZutaten();
-        zutatId = Math.max(0, ...zutaten.map(z => z.zutaten_id)) + 1;
-        await SHEETS.appendRow('Zutaten', [zutatId, name, hersteller, kategorie, 'ja'], sid);
-        STORE.addZutat({ zutaten_id: zutatId, name, hersteller, kategorie, aktiv: 'ja' });
-      } else {
-        // Bearbeiten: Zeile finden und überschreiben
-        const rows = await SHEETS.readSheet('Zutaten', sid);
-        const idx  = rows.findIndex(r => String(r[0]).trim() === String(existingId));
-        if (idx >= 0) {
-          await SHEETS.writeRange('Zutaten', `A${idx+1}:E${idx+1}`,
-            [[existingId, name, hersteller, kategorie, 'ja']], sid);
-        }
-      }
-
-      // Nährwerte speichern (alle ausgefüllten Felder aus den Inputs)
-      const bedarf = STORE.getBedarf();
-      const nutrRows = [];
-      for (const b of bedarf) {
-        const el  = document.getElementById('zn-' + b.naehrstoff_id);
-        if (!el) continue;
-        const val = parseFloat(el.value);
-        if (isNaN(val)) continue; // Leerfeld überspringen
-        nutrRows.push([zutatId, b.naehrstoff_id, b.name, val]);
-      }
-
-      // Nährwerte anhängen (append – bestehende Werte bleiben, neue werden hinzugefügt)
-      // Für neue Zutaten: alle auf einmal
-      // Für bearbeitete Zutaten: vorhandene Zeilen suchen und überschreiben
-      if (existingId) {
-        // Zeilen für diese zutat_id im Sheet finden und updaten
-        const znRows = await SHEETS.readSheet('Zutaten_Naehrstoffe', sid);
-        for (const nr of nutrRows) {
-          const idx = znRows.findIndex(r => String(r[0]).trim() === String(existingId) &&
-                                            String(r[1]).trim() === String(nr[1]));
-          if (idx >= 0) {
-            await SHEETS.writeRange('Zutaten_Naehrstoffe', `D${idx+1}`, [[nr[3]]], sid);
-          } else {
-            await SHEETS.appendRow('Zutaten_Naehrstoffe', nr, sid);
-          }
-        }
-      } else {
-        for (const nr of nutrRows) {
-          await SHEETS.appendRow('Zutaten_Naehrstoffe', nr, sid);
-        }
-      }
-
-      UI.setStatus('status-zutat','ok',`✓ Gespeichert! (${nutrRows.length} Nährwerte)`);
+      await SHEETS.appendRow('Zutaten', [newId, name, hersteller, kategorie, 'ja'], sid);
+      STORE.addZutat({ zutaten_id: newId, name, hersteller, kategorie, aktiv: 'ja' });
+      UI.setStatus('status-zutat','ok','✓ Gespeichert!');
       RECHNER.initIngredientSelect();
-      setTimeout(() => { UI.closeModal(); loadZutaten(); }, 1200);
-    } catch(e) { UI.setStatus('status-zutat','err','Fehler: ' + e.message); }
+      setTimeout(() => { UI.closeModal(); loadZutaten(); }, 1000);
+    } catch(e) { UI.setStatus('status-zutat','err','Fehler: '+e.message); }
   }
 
   // ── Parameter ────────────────────────────────────────────────────
@@ -3589,7 +3371,7 @@ const STAMMDATEN = (() => {
     } catch(e) { UI.setStatus('status-param','err','Fehler: '+e.message); }
   }
 
-  return { loadCurrentTab, loadTab, loadHunde, showHundModal, saveHund, toggleHundAktiv, loadZutaten, showZutatModal, saveZutat, loadParameter, saveParameter, buildNutrFields };
+  return { loadCurrentTab, loadTab, loadHunde, showHundModal, saveHund, toggleHundAktiv, loadZutaten, showZutatModal, saveZutat, loadParameter, saveParameter };
 })();
 
 
@@ -3630,32 +3412,11 @@ const APP = (() => {
   // Nach erfolgreichem Login
   async function onLogin() {
     UI.showLoader('Stammdaten werden geladen…');
-
-    // Prüfen ob Token wirklich Sheets-Zugriff hat
-    // (gespeicherte Tokens können mit unzureichendem Scope sein)
-    const cfg = CONFIG.get();
-    if (cfg.stammdatenId) {
-      try {
-        await SHEETS.readSheet('Hunde', cfg.stammdatenId);
-      } catch(e) {
-        if (e.message && (e.message.includes('insufficient') || e.message.includes('403') || e.message.includes('401'))) {
-          // Token hat nicht genug Rechte → neu anmelden
-          console.warn('Token ungültig, neu anmelden:', e.message);
-          AUTH.signOut();
-          setTimeout(() => {
-            document.getElementById('login-screen').style.display = 'flex';
-            document.getElementById('main-screen').style.display = 'none';
-            alert('Bitte erneut anmelden – der Zugriff auf Google Sheets muss neu genehmigt werden.');
-          }, 100);
-          return;
-        }
-      }
-    }
-
     try {
       await STORE.loadAll();
     } catch(e) {
       console.warn('Stammdaten-Ladefehler:', e.message);
+      // Trotzdem weitermachen (App funktioniert eingeschränkt)
     }
 
     // UI initialisieren
