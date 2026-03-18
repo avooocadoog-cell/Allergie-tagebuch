@@ -1281,7 +1281,9 @@ const SHEETS = (() => {
   async function readSheet(sheet, spreadsheetId) {
     const token = AUTH.getToken();
     if (!token) throw new Error('Nicht angemeldet');
-    const range = encodeURIComponent(sheet);
+    // Google Sheets API: Blattname + expliziter Range ohne Zeilenlimit
+    // Nur Blattname funktioniert nicht zuverlässig → 'SheetName'!A:AZ verwenden
+    const range = encodeURIComponent("'" + sheet.replace(/'/g, "''") + "'!A:AZ");
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
     const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     if (res.status === 401) { AUTH.handleExpired(); throw new Error('Sitzung abgelaufen.'); }
@@ -1467,10 +1469,9 @@ const STORE = (() => {
 
     UI.setLoaderMsg('Lade Stammdaten…');
 
-    const [
-      rHunde, rParam, rNaehr, rTol, rBedarf,
-      rZutaten, rZutatNutr, rRezepte, rRezZut, rKal
-    ] = await Promise.all([
+    // Jedes Blatt einzeln mit Fehlertoleranz laden
+    // Promise.allSettled statt Promise.all → ein Fehler bricht nicht alles ab
+    const settled = await Promise.allSettled([
       SHEETS.readSheet('Hunde',              sid),
       SHEETS.readSheet('Parameter',          sid),
       SHEETS.readSheet('Naehrstoffe',        sid),
@@ -1482,6 +1483,20 @@ const STORE = (() => {
       SHEETS.readSheet('Rezept_Zutaten',     sid),
       SHEETS.readSheet('Hund_Kalorienbedarf',sid),
     ]);
+    // Ergebnisse extrahieren – bei Fehler leeres Array
+    const safeRows = (r) => r.status === 'fulfilled' ? (r.value || []) : [];
+    const [
+      rHunde, rParam, rNaehr, rTol, rBedarf,
+      rZutaten, rZutatNutr, rRezepte, rRezZut, rKal
+    ] = settled.map(safeRows);
+    // Fehler loggen
+    settled.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        const names = ['Hunde','Parameter','Naehrstoffe','Toleranzen','Bedarf',
+                       'Zutaten','Zutaten_Naehrstoffe','Rezepte','Rezept_Zutaten','Hund_Kalorienbedarf'];
+        console.warn('Sheet-Ladefehler:', names[i], r.reason?.message || r.reason);
+      }
+    });
 
     // Hunde parsen (Header Zeile 2, Daten ab Zeile 3)
     hunde = parseRows(rHunde, ['hund_id','name','rasse','geburtsdatum','geschlecht','kastriert','aktiv','notizen'], 2)
@@ -3282,52 +3297,147 @@ const STAMMDATEN = (() => {
     // Sortiert nach Kategorie
     const sorted = [...zutaten].sort((a,b) => (a.kategorie||'').localeCompare(b.kategorie||'') || a.name.localeCompare(b.name,'de'));
     el.innerHTML = `<table class="crud-table">
-      <thead><tr><th>ID</th><th>Name</th><th>Hersteller</th><th>Kategorie</th></tr></thead>
+      <thead><tr><th>Name</th><th>Hersteller</th><th>Kategorie</th><th></th></tr></thead>
       <tbody>
       ${sorted.map(z => `
         <tr>
-          <td style="color:var(--sub);font-size:11px">${UI.esc(String(z.zutaten_id))}</td>
-          <td style="font-weight:500">${UI.esc(z.name)}</td>
-          <td style="color:var(--sub)">${UI.esc(z.hersteller||'–')}</td>
+          <td style="font-weight:500;font-size:13px">${UI.esc(z.name)}</td>
+          <td style="color:var(--sub);font-size:12px">${UI.esc(z.hersteller||'–')}</td>
           <td><span class="badge badge-ok" style="font-size:10px">${UI.esc(z.kategorie||'–')}</span></td>
+          <td><button class="edit-btn" onclick="STAMMDATEN.showZutatModal(${z.zutaten_id})">✏️</button></td>
         </tr>`).join('')}
       </tbody>
     </table>`;
   }
 
-  function showZutatModal() {
-    // Kategorien aus bestehenden Zutaten ableiten
+  // Zeigt Nährstofffelder für alle bekannten Nährstoffe (aus STORE.getBedarf())
+  function buildNutrFields(existing) {
+    const bedarf = STORE.getBedarf();
+    if (!bedarf.length) return '<p style="font-size:12px;color:var(--sub)">Nährstoffe nach dem Speichern im Futterrechner eintragen.</p>';
+    
+    // Nach Gruppe sortieren
+    const groups = {};
+    bedarf.forEach(b => { const g = b.gruppe || 'Sonstiges'; if (!groups[g]) groups[g] = []; groups[g].push(b); });
+    
+    let html = '<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">';
+    html += '<div style="font-size:12px;font-weight:700;color:var(--c2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Nährwerte pro 100g</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+    
+    Object.entries(groups).forEach(([gruppe, items]) => {
+      html += `<div style="grid-column:1/-1;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--sub);margin-top:6px;letter-spacing:.05em">${UI.esc(gruppe)}</div>`;
+      items.forEach(b => {
+        const val = existing ? (existing[b.name] || '') : '';
+        const fieldId = 'zn-' + b.naehrstoff_id;
+        html += `<div style="display:flex;flex-direction:column;gap:2px">
+          <label style="font-size:10px;color:var(--sub);font-weight:600">${UI.esc(b.name)} <span style="color:var(--c3)">[${UI.esc(b.einheit)}]</span></label>
+          <input type="number" id="${fieldId}" value="${val}" placeholder="0" step="any" min="0"
+            style="padding:5px 8px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)">
+        </div>`;
+      });
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  // Modal: neue Zutat anlegen (inkl. Nährstofffelder)
+  function showZutatModal(zutatId) {
     const cats = [...new Set(STORE.getZutaten().map(z => z.kategorie).filter(Boolean))].sort();
-    UI.openModal('Neue Zutat', `
-      <div class="field"><label>Name</label><input type="text" id="zutat-name" placeholder="z.B. Pferd (Muskelfleisch)"></div>
-      <div class="field"><label>Hersteller</label><input type="text" id="zutat-hersteller" placeholder="z.B. barfers"></div>
+    const isEdit = !!zutatId;
+    const z = isEdit ? (STORE.getZutaten().find(x => x.zutaten_id === zutatId) || {}) : {};
+    
+    // Vorhandene Nährwerte laden falls Bearbeitung
+    let existing = null;
+    if (isEdit) {
+      const nm = STORE.getNutrMap(zutatId);
+      existing = nm;
+    }
+    
+    UI.openModal(isEdit ? `✏️ ${UI.esc(z.name||'')} bearbeiten` : '+ Neue Zutat', `
+      <div class="field"><label>Name *</label>
+        <input type="text" id="zutat-name" value="${UI.esc(z.name||'')}" placeholder="z.B. Pferd (Muskelfleisch)">
+      </div>
+      <div class="field"><label>Hersteller</label>
+        <input type="text" id="zutat-hersteller" value="${UI.esc(z.hersteller||'')}" placeholder="z.B. barfers">
+      </div>
       <div class="field"><label>Kategorie</label>
         <select id="zutat-kat">
           <option value="">– wählen –</option>
-          ${cats.map(c => `<option value="${UI.esc(c)}">${UI.esc(c)}</option>`).join('')}
+          ${cats.map(c => `<option value="${UI.esc(c)}" ${z.kategorie===c?'selected':''}>${UI.esc(c)}</option>`).join('')}
         </select>
       </div>
-      <p style="font-size:12px;color:var(--sub);margin-bottom:.5rem">Nährstoffe können nach dem Anlegen im Futterrechner über "Neue Zutat manuell erfassen" hinzugefügt werden.</p>
-      <button class="btn-primary" onclick="STAMMDATEN.saveZutat()">Speichern</button>
+      ${buildNutrFields(existing)}
+      <button class="btn-primary" style="margin-top:1rem" onclick="STAMMDATEN.saveZutat(${zutatId||'null'})">
+        ${isEdit ? '💾 Änderungen speichern' : '+ Zutat speichern'}
+      </button>
       <div class="status" id="status-zutat"></div>
     `);
   }
 
-  async function saveZutat() {
+  // Zutat speichern (neu oder bearbeiten) inkl. Nährwerte
+  async function saveZutat(existingId) {
     const name = document.getElementById('zutat-name')?.value.trim();
     if (!name) { UI.setStatus('status-zutat','err','Bitte Name eingeben.'); return; }
-    const sid = CONFIG.get().stammdatenId;
-    const zutaten = STORE.getZutaten();
-    const newId = Math.max(0, ...zutaten.map(z=>z.zutaten_id)) + 1;
+
+    const sid        = CONFIG.get().stammdatenId;
     const hersteller = document.getElementById('zutat-hersteller')?.value.trim() || '';
     const kategorie  = document.getElementById('zutat-kat')?.value || 'Sonstiges';
+    UI.setStatus('status-zutat','loading','Wird gespeichert…');
+
     try {
-      await SHEETS.appendRow('Zutaten', [newId, name, hersteller, kategorie, 'ja'], sid);
-      STORE.addZutat({ zutaten_id: newId, name, hersteller, kategorie, aktiv: 'ja' });
-      UI.setStatus('status-zutat','ok','✓ Gespeichert!');
+      let zutatId = existingId;
+
+      if (!existingId) {
+        // Neu anlegen
+        const zutaten = STORE.getZutaten();
+        zutatId = Math.max(0, ...zutaten.map(z => z.zutaten_id)) + 1;
+        await SHEETS.appendRow('Zutaten', [zutatId, name, hersteller, kategorie, 'ja'], sid);
+        STORE.addZutat({ zutaten_id: zutatId, name, hersteller, kategorie, aktiv: 'ja' });
+      } else {
+        // Bearbeiten: Zeile finden und überschreiben
+        const rows = await SHEETS.readSheet('Zutaten', sid);
+        const idx  = rows.findIndex(r => String(r[0]).trim() === String(existingId));
+        if (idx >= 0) {
+          await SHEETS.writeRange('Zutaten', `A${idx+1}:E${idx+1}`,
+            [[existingId, name, hersteller, kategorie, 'ja']], sid);
+        }
+      }
+
+      // Nährwerte speichern (alle ausgefüllten Felder aus den Inputs)
+      const bedarf = STORE.getBedarf();
+      const nutrRows = [];
+      for (const b of bedarf) {
+        const el  = document.getElementById('zn-' + b.naehrstoff_id);
+        if (!el) continue;
+        const val = parseFloat(el.value);
+        if (isNaN(val)) continue; // Leerfeld überspringen
+        nutrRows.push([zutatId, b.naehrstoff_id, b.name, val]);
+      }
+
+      // Nährwerte anhängen (append – bestehende Werte bleiben, neue werden hinzugefügt)
+      // Für neue Zutaten: alle auf einmal
+      // Für bearbeitete Zutaten: vorhandene Zeilen suchen und überschreiben
+      if (existingId) {
+        // Zeilen für diese zutat_id im Sheet finden und updaten
+        const znRows = await SHEETS.readSheet('Zutaten_Naehrstoffe', sid);
+        for (const nr of nutrRows) {
+          const idx = znRows.findIndex(r => String(r[0]).trim() === String(existingId) &&
+                                            String(r[1]).trim() === String(nr[1]));
+          if (idx >= 0) {
+            await SHEETS.writeRange('Zutaten_Naehrstoffe', `D${idx+1}`, [[nr[3]]], sid);
+          } else {
+            await SHEETS.appendRow('Zutaten_Naehrstoffe', nr, sid);
+          }
+        }
+      } else {
+        for (const nr of nutrRows) {
+          await SHEETS.appendRow('Zutaten_Naehrstoffe', nr, sid);
+        }
+      }
+
+      UI.setStatus('status-zutat','ok',`✓ Gespeichert! (${nutrRows.length} Nährwerte)`);
       RECHNER.initIngredientSelect();
-      setTimeout(() => { UI.closeModal(); loadZutaten(); }, 1000);
-    } catch(e) { UI.setStatus('status-zutat','err','Fehler: '+e.message); }
+      setTimeout(() => { UI.closeModal(); loadZutaten(); }, 1200);
+    } catch(e) { UI.setStatus('status-zutat','err','Fehler: ' + e.message); }
   }
 
   // ── Parameter ────────────────────────────────────────────────────
@@ -3371,7 +3481,7 @@ const STAMMDATEN = (() => {
     } catch(e) { UI.setStatus('status-param','err','Fehler: '+e.message); }
   }
 
-  return { loadCurrentTab, loadTab, loadHunde, showHundModal, saveHund, toggleHundAktiv, loadZutaten, showZutatModal, saveZutat, loadParameter, saveParameter };
+  return { loadCurrentTab, loadTab, loadHunde, showHundModal, saveHund, toggleHundAktiv, loadZutaten, showZutatModal, saveZutat, loadParameter, saveParameter, buildNutrFields };
 })();
 
 
