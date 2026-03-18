@@ -1653,9 +1653,19 @@ const STORE = (() => {
 
   // ── Hilfsfunktionen ─────────────────────────────────────────────
 
-  // Sheets-Zeilen in Objekte umwandeln (überspringt Header-Zeilen)
+  // Sheets-Zeilen in Objekte umwandeln
+  // Findet den Header dynamisch: erste Zeile deren erste Spalte dem ersten cols-Eintrag entspricht
+  // Fallback: skipRows (hardcoded) wenn kein Header gefunden wird
   function parseRows(rawRows, cols, skipRows) {
-    return rawRows.slice(skipRows)
+    if (!rawRows || !rawRows.length) return [];
+    // Header-Zeile suchen: erste Zelle muss dem ersten Spaltenname entsprechen
+    const firstCol = cols[0].toLowerCase();
+    let headerIdx = skipRows - 1; // Standard-Fallback
+    for (let i = 0; i < Math.min(rawRows.length, 6); i++) {
+      const cell = String(rawRows[i]?.[0] || '').toLowerCase().trim();
+      if (cell === firstCol) { headerIdx = i; break; }
+    }
+    return rawRows.slice(headerIdx + 1)
       .filter(row => row && row.some(v => v !== null && v !== undefined && String(v).trim() !== ''))
       .map(row => {
         const obj = {};
@@ -2411,18 +2421,36 @@ const ANSICHT = (() => {
     try {
       const sheet = SHEET_MAP[which];
       const rows = await SHEETS.readSheet(sheet, CONFIG.get().tagebuchId);
-      // Header in Zeile 2, Daten ab Zeile 3
-      const dataRows = rows.slice(2).filter(r => r && r.some(v => v !== null && v !== undefined && String(v).trim() !== ''));
+
+      if (!rows || !rows.length) {
+        el.innerHTML = '<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge.</div>';
+        return;
+      }
+
+      // Header-Zeile dynamisch finden: erste Zeile deren erste Zelle 'hund_id' enthält
+      // (robust gegen fehlende/verschobene Titelzeilen in der API-Antwort)
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(rows.length, 5); i++) {
+        const first = String(rows[i][0] || '').toLowerCase().trim();
+        if (first === 'hund_id' || first === 'hund') { headerIdx = i; break; }
+      }
+      // Daten = alles nach dem Header, nicht-leere Zeilen
+      const dataRows = rows.slice(headerIdx + 1)
+        .filter(r => r && r.some(v => v !== null && v !== undefined && String(v).trim() !== ''));
+
       if (!dataRows.length) {
         el.innerHTML = '<div class="view-empty"><div class="icon">📭</div>Noch keine Einträge.</div>';
         return;
       }
+
       // Aktuellen Hund filtern (Spalte 0 = hund_id)
       const hundId = String(parseInt(document.getElementById('tb-hund-select')?.value) || 1);
-      const filtered = dataRows.filter(r => !r[0] || String(r[0]) === hundId);
-      el.innerHTML = renderRows(which, filtered);
+      const filtered = dataRows.filter(r => !r[0] || String(r[0]).trim() === hundId);
+      el.innerHTML = filtered.length
+        ? renderRows(which, filtered)
+        : '<div class="view-empty"><div class="icon">📭</div>Keine Einträge für diesen Hund.</div>';
     } catch(e) {
-      el.innerHTML = `<div class="status err" style="display:block">Fehler: ${UI.esc(e.message)}</div>`;
+      el.innerHTML = `<div class="status err" style="display:block">Fehler: ${UI.esc(e.message)}<br><small>${UI.esc(e.stack||'')}</small></div>`;
     }
   }
 
