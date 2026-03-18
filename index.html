@@ -1494,6 +1494,8 @@ const RECHNER = (() => {
     document.getElementById('fr-portion-g').textContent=Math.round(totalGrams/portionen);
     document.getElementById('fr-kcal-ist').textContent=Math.round(kcalIst);
     document.getElementById('fr-kcal-bedarf').textContent=Math.round(kcalBedarf);
+    const kcalPortEl=document.getElementById('fr-kcal-portion');
+    if(kcalPortEl)kcalPortEl.textContent=Math.round(kcalIst/portionen);
     const kcalPct=kcalBedarf>0?kcalIst/kcalBedarf*100:0;
     const kcalWrap=document.getElementById('fr-kcal-bar-wrap');const kcalBar=document.getElementById('fr-kcal-bar');
     kcalWrap.style.display=totalGrams>0?'block':'none';kcalBar.style.width=Math.min(kcalPct,100)+'%';
