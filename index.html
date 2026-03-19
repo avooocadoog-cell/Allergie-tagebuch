@@ -146,12 +146,19 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .fr-scale-box label{font-size:13px;font-weight:600;white-space:nowrap;margin:0;text-transform:none;letter-spacing:0}
 .scale-btn{padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--sub);cursor:pointer;}
 .scale-btn.active{background:var(--c2);color:#fff;border-color:var(--c2)}
-.fr-portions{background:var(--fr-bg);border:1px solid var(--c2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:1rem;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;}
-.po-item{display:flex;align-items:baseline;gap:4px}
-.po-val{font-size:16px;font-weight:700;color:var(--c2)}
-.po-label{font-size:11px;color:var(--sub)}
-.kcal-bar-wrap{margin:-6px 0 1rem;background:var(--border);border-radius:4px;height:6px;overflow:hidden;display:none;}
-.kcal-bar{height:100%;border-radius:4px;background:var(--bar-ok);transition:width .3s,background .3s}
+.fr-portions{background:var(--fr-bg);border:1px solid var(--c2);border-radius:var(--radius-sm);margin-bottom:.5rem;overflow:hidden;}
+.fr-portions-row{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border);}
+.fr-portions-row:last-child{border-bottom:none}
+.fr-portions-row-label{grid-column:1/-1;padding:4px 12px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--c2);background:rgba(64,145,108,.06);border-bottom:1px solid rgba(64,145,108,.12);}
+.po-item{display:flex;flex-direction:column;align-items:center;padding:8px 6px;border-right:1px solid var(--border);}
+.po-item:last-child{border-right:none}
+.po-val{font-size:17px;font-weight:700;color:var(--c2);line-height:1.1}
+.po-val.warn{color:var(--fr-warn)}
+.po-val.over{color:var(--bar-high)}
+.po-label{font-size:10px;color:var(--sub);margin-top:2px;text-align:center;line-height:1.2}
+.kcal-bar-wrap{margin:0 0 .75rem;background:var(--border);border-radius:4px;height:8px;overflow:hidden;display:none;position:relative;}
+.kcal-bar{height:100%;border-radius:4px;background:var(--bar-ok);transition:width .4s,background .3s}
+.kcal-bar-pct{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3)}
 .fr-ratios{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem}
 .fr-ratio-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px}
 .rc-label{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
@@ -363,13 +370,43 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         </div>
       </div>
       <div class="fr-portions" id="fr-portions">
-        <div class="po-item"><span class="po-val" id="fr-total-g">0</span><span class="po-label">g Tagesration</span></div>
-        <div class="po-item"><span class="po-val" id="fr-portion-g">0</span><span class="po-label">g je Portion</span></div>
-        <div class="po-item"><span class="po-val" id="fr-kcal-ist">0</span><span class="po-label">kcal Ist</span></div>
-        <div class="po-item"><span class="po-val" id="fr-kcal-bedarf">0</span><span class="po-label">kcal Bedarf</span></div>
-        <div class="po-item"><span class="po-val" id="fr-kcal-portion">0</span><span class="po-label">kcal je Portion</span></div>
+        <!-- Zeile 1: Energie -->
+        <div class="fr-portions-row">
+          <div class="fr-portions-row-label">⚡ Energie</div>
+          <div class="po-item">
+            <span class="po-val" id="fr-kcal-bedarf">0</span>
+            <span class="po-label">kcal<br>Tagesbedarf</span>
+          </div>
+          <div class="po-item">
+            <span class="po-val" id="fr-kcal-ist">0</span>
+            <span class="po-label">kcal<br>Ist (Rezept)</span>
+          </div>
+          <div class="po-item">
+            <span class="po-val" id="fr-kcal-portion">0</span>
+            <span class="po-label">kcal<br>je Portion</span>
+          </div>
+        </div>
+        <!-- Zeile 2: Menge -->
+        <div class="fr-portions-row">
+          <div class="fr-portions-row-label">⚖️ Menge</div>
+          <div class="po-item">
+            <span class="po-val" id="fr-total-g">0</span>
+            <span class="po-label">g<br>Tagesration</span>
+          </div>
+          <div class="po-item">
+            <span class="po-val" id="fr-portion-g">0</span>
+            <span class="po-label">g<br>je Portion</span>
+          </div>
+          <div class="po-item">
+            <span class="po-val" id="fr-portionen-count" style="color:var(--sub)">2</span>
+            <span class="po-label">Portionen<br>pro Tag</span>
+          </div>
+        </div>
       </div>
-      <div class="kcal-bar-wrap" id="fr-kcal-bar-wrap"><div class="kcal-bar" id="fr-kcal-bar"></div></div>
+      <div class="kcal-bar-wrap" id="fr-kcal-bar-wrap">
+        <div class="kcal-bar" id="fr-kcal-bar"></div>
+        <span class="kcal-bar-pct" id="fr-kcal-bar-pct"></span>
+      </div>
       <div class="fr-ratios">
         <div class="fr-ratio-card neutral" id="fr-ratio-cap">
           <div class="rc-label">Ca : P Verhältnis</div>
@@ -684,11 +721,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <div><label style="font-size:11px;margin-bottom:3px">Breitengrad</label><input type="number" id="cfg-lat" placeholder="52.4" step="0.01" oninput="CONFIG.save()"></div>
           <div><label style="font-size:11px;margin-bottom:3px">Längengrad</label><input type="number" id="cfg-lon" placeholder="13.4" step="0.01" oninput="CONFIG.save()"></div>
         </div>
-      </div>
-      <div class="field">
-        <label>DWD Pollen-Region-ID</label>
-        <input type="number" id="cfg-pollen-region" placeholder="50 (Berlin)" oninput="CONFIG.save()">
-        <div style="font-size:11px;color:var(--sub);margin-top:4px">Berlin=50 · Hamburg=10 · München=91 · Frankfurt=82</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:5px">Wetter: DWD via BrightSky · Pollen: Open-Meteo Air Quality (kein Proxy, direkt)</div>
       </div>
       <button class="btn-primary" onclick="CONFIG.testConnection()">🔌 Verbindung testen</button>
       <div class="status" id="status-conn"></div>
@@ -1119,11 +1152,21 @@ const STORE = (() => {
     bedarf=parseRows(rBedarf,['naehrstoff_id','naehrstoff_name','einheit','bedarf_pro_mkg','quelle'],2)
       .map(r=>{const nutrInfo=naehrstoffe.find(n=>n.naehrstoff_id===(parseInt(r.naehrstoff_id)||0));return{naehrstoff_id:parseInt(r.naehrstoff_id)||0,name:r.naehrstoff_name,einheit:r.einheit,bedarf_pro_mkg:parseFloat(r.bedarf_pro_mkg)||0,quelle:r.quelle,gruppe:nutrInfo?.gruppe||'Sonstiges'};})
       .filter(r=>r.name);
-    // Fehlende Bedarfswerte aus NRC_NAEHRSTOFFE ergänzen
+    // Fehlende oder null-Bedarfswerte aus NRC_NAEHRSTOFFE ergänzen/korrigieren
     NRC_NAEHRSTOFFE.forEach(n => {
-      if(!bedarf.find(b=>b.naehrstoff_id===n.id)) {
-        bedarf.push({naehrstoff_id:n.id,name:n.name,einheit:n.einheit,bedarf_pro_mkg:n.bedarf,quelle:'NRC 2006',gruppe:n.gruppe});
+      const existing = bedarf.find(b => b.naehrstoff_id === n.id || b.name === n.name);
+      if (!existing) {
+        // Komplett fehlend → hinzufügen
+        bedarf.push({naehrstoff_id:n.id, name:n.name, einheit:n.einheit, bedarf_pro_mkg:n.bedarf, quelle:'NRC 2006 (Fallback)', gruppe:n.gruppe});
+      } else if (existing.bedarf_pro_mkg === 0 && n.bedarf > 0) {
+        // Vorhanden aber 0 → NRC-Wert einsetzen
+        existing.bedarf_pro_mkg = n.bedarf;
+        if (!existing.quelle) existing.quelle = 'NRC 2006 (Fallback)';
+        if (!existing.gruppe || existing.gruppe === 'Sonstiges') existing.gruppe = n.gruppe;
+        if (!existing.einheit) existing.einheit = n.einheit;
       }
+      // Name-Mismatch heilen: wenn ID stimmt aber Name abweicht, NRC-Namen als Alias merken
+      if (existing && existing.name !== n.name) existing._alias = n.name;
     });
     zutaten=parseRows(rZutaten,['zutaten_id','name','hersteller','kategorie','aktiv'],2)
       .map(r=>({...r,zutaten_id:parseInt(r.zutaten_id)||0})).filter(r=>r.name);
@@ -1268,19 +1311,42 @@ const WETTER = (() => {
   }
   async function loadPollen(){
     const cfg=CONFIG.get();
-    const dwdUrl='https://opendata.dwd.de/climate_environment/health/alerts/s31fg.json';
-    const proxyUrls=['https://api.allorigins.win/raw?url='+encodeURIComponent(dwdUrl),'https://corsproxy.io/?'+encodeURIComponent(dwdUrl)];
-    let data=null;
-    for(const url of proxyUrls){try{const res=await fetch(url,{signal:AbortSignal.timeout(8000)});if(!res.ok)throw new Error('HTTP '+res.status);const text=await res.text();const parsed=JSON.parse(text);data=parsed.contents?JSON.parse(parsed.contents):parsed;if(data?.content)break;data=null;}catch(e){data=null;}}
-    if(!data)throw new Error('Proxy nicht erreichbar');
-    const region=(data.content||[]).find(r=>r.region_id===cfg.pollenRegion);if(!region)throw new Error('Region '+cfg.pollenRegion+' nicht gefunden');
-    const pollenData=region.Pollen;const highPollen=[];
-    for(const[key,displayName]of Object.entries(POLLEN_NAMES)){if(!pollenData[key])continue;const level=parsePollenLevel(pollenData[key].today);if(level>=POLLEN_MIN_LEVEL)highPollen.push(`${displayName} (${formatPollenLevel(pollenData[key].today)})`);}
+    // Open-Meteo Air Quality API – kein CORS-Proxy nötig, direkt erreichbar
+    const url=`https://air-quality-api.open-meteo.com/v1/air-quality`
+      +`?latitude=${cfg.lat}&longitude=${cfg.lon}`
+      +`&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`
+      +`&timezone=Europe%2FBerlin&forecast_days=1`;
+    const res=await fetch(url,{signal:AbortSignal.timeout(10000)});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const hourly=data.hourly||{};
+    const times=hourly.time||[];
+    // Heute 06–20 Uhr Tagesdurchschnitt berechnen
+    const today=new Date().toISOString().slice(0,10);
+    const dayIdxs=times.map((t,i)=>t.startsWith(today)&&parseInt(t.slice(11,13))>=6&&parseInt(t.slice(11,13))<=20?i:-1).filter(i=>i>=0);
+    const avg=(arr)=>{const vals=dayIdxs.map(i=>arr[i]).filter(v=>v!=null&&v>=0);return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;};
+    // Schwellenwerte (Körner/m³): gering<10, mittel<50, stark<200, sehr stark≥200
+    const LEVELS=[
+      {key:'alder_pollen',   name:'Erle'},
+      {key:'birch_pollen',   name:'Birke'},
+      {key:'grass_pollen',   name:'Gräser'},
+      {key:'mugwort_pollen', name:'Beifuß'},
+      {key:'olive_pollen',   name:'Olive'},
+      {key:'ragweed_pollen', name:'Ambrosia'},
+    ];
+    const THRESH_HIGH=50; // ab 50 Körner/m³ = erhöhte Belastung
+    const highPollen=[];
+    for(const {key,name} of LEVELS){
+      if(!hourly[key])continue;
+      const val=avg(hourly[key]);
+      if(val>=THRESH_HIGH){
+        const lvl=val>=200?'sehr stark':val>=50?'stark':val>=10?'mittel':'gering';
+        highPollen.push(`${name} (${lvl}, Ø${Math.round(val)} K/m³)`);
+      }
+    }
     document.getElementById('u-pollen').value=highPollen.length>0?highPollen.join(', '):'keine erhöhte Belastung';
-    document.getElementById('pollen-source').textContent='(DWD)';
+    document.getElementById('pollen-source').textContent='(Open-Meteo)';
   }
-  function parsePollenLevel(raw){if(!raw||raw==='-1')return-1;if(raw.includes('-')){const parts=raw.split('-').map(Number);return Math.min(...parts);}return parseFloat(raw)||0;}
-  function formatPollenLevel(raw){return{'0':'keine','0-1':'keine–gering','1':'gering','1-2':'gering–mittel','2':'mittel','2-3':'stark','3':'sehr stark'}[raw]||raw;}
   return{loadAll};
 })();
 
@@ -1767,17 +1833,28 @@ const RECHNER = (() => {
     const kp=STORE.getKalorienParam(currentHundId);
     const kcalBedarf=(kp.kcalManual&&kp.kcalManual>0)?kp.kcalManual:(kp.rerFaktor70*Math.pow(kg,kp.rerExponent)*kp.rerFaktor);
     const portionen=params['portionen_pro_tag']||2;
+    // Portionen-Anzeige aktualisieren
     document.getElementById('fr-total-g').textContent=Math.round(totalGrams);
     document.getElementById('fr-portion-g').textContent=Math.round(totalGrams/portionen);
-    document.getElementById('fr-kcal-ist').textContent=Math.round(kcalIst);
+    const portEl=document.getElementById('fr-portionen-count');if(portEl)portEl.textContent=portionen;
     document.getElementById('fr-kcal-bedarf').textContent=Math.round(kcalBedarf);
+    document.getElementById('fr-kcal-ist').textContent=Math.round(kcalIst);
     const kcalPortEl=document.getElementById('fr-kcal-portion');
     if(kcalPortEl)kcalPortEl.textContent=Math.round(kcalIst/portionen);
+    // Farbkodierung kcal Ist
     const kcalPct=kcalBedarf>0?kcalIst/kcalBedarf*100:0;
+    const kcalOk=kcalBedarf>0&&kcalPct>=90&&kcalPct<=120;
+    const kcalOver=kcalBedarf>0&&kcalPct>120;
+    const kcalIstEl=document.getElementById('fr-kcal-ist');
+    const kcalPortEl2=document.getElementById('fr-kcal-portion');
+    [kcalIstEl,kcalPortEl2].forEach(el=>{if(!el)return;el.classList.toggle('warn',!kcalOk&&!kcalOver&&kcalBedarf>0);el.classList.toggle('over',kcalOver);});
+    // Fortschrittsbalken
     const kcalWrap=document.getElementById('fr-kcal-bar-wrap');const kcalBar=document.getElementById('fr-kcal-bar');
-    kcalWrap.style.display=totalGrams>0?'block':'none';kcalBar.style.width=Math.min(kcalPct,100)+'%';
-    kcalBar.style.background=kcalPct>=90&&kcalPct<=120?'var(--bar-ok)':kcalPct>120?'var(--bar-high)':'var(--bar-low)';
-    document.getElementById('fr-kcal-ist').style.color=kcalBedarf>0&&kcalPct>=90&&kcalPct<=120?'var(--fr-ok)':kcalBedarf>0?'var(--fr-warn)':'var(--text)';
+    const kcalPctEl=document.getElementById('fr-kcal-bar-pct');
+    kcalWrap.style.display=totalGrams>0?'block':'none';
+    kcalBar.style.width=Math.min(kcalPct,100)+'%';
+    kcalBar.style.background=kcalOk?'var(--bar-ok)':kcalOver?'var(--bar-high)':'var(--bar-low)';
+    if(kcalPctEl)kcalPctEl.textContent=kcalBedarf>0?Math.round(kcalPct)+'%':'';
     const ca=totals['Calcium']||0,p=totals['Phosphor']||0,capRatio=p>0?ca/p:0;
     const capMin=params['cap_verhaeltnis_min']||1.2,capMax=params['cap_verhaeltnis_max']||1.5;
     const capCard=document.getElementById('fr-ratio-cap');
@@ -1800,7 +1877,9 @@ const RECHNER = (() => {
     Object.entries(groups).forEach(([gruppe,items])=>{
       html+=`<div class="fr-nutr-group">${UI.esc(gruppe)}</div>`;
       items.forEach(b=>{
-        const ist=totals[b.name]||0;const tagesBedarf=b.bedarf_pro_mkg*mkg;
+        // Wert aus totals per Name oder Alias suchen
+        const ist=(totals[b.name]||totals[b._alias]||0);
+        const tagesBedarf=b.bedarf_pro_mkg*mkg;
         const tol=STORE.getTolerance(currentHundId,b.name);
         let pct=0,cls='zero',barColor='var(--bar-zero)',pctStr='?';
         if(tagesBedarf>0){pct=ist/tagesBedarf*100;pctStr=pct.toFixed(0)+'%';if(pct>=tol.min&&pct<=tol.max){cls='ok';barColor='var(--bar-ok)';}else if(pct<tol.min){cls='low';barColor='var(--bar-low)';}else{cls='over';barColor='var(--bar-high)';}}else if(tagesBedarf===0){cls='ok';pctStr='n/a';}
