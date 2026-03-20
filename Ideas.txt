@@ -1,8 +1,13 @@
 1 TODO
 update nutrions database
 redo nutriton value with a more flexible way to enter data
+
+Nutrition table
 rework Nutrition table to support min max and average values
+Comment section / Info section for individual nutrition. Eg what is it for and why you should use it. 
+
 create a premix for you food ration (eg calculate, vegetable innards) to individually create meals out of premade mixtures (eg. main food + innards + vegetables)
+
  
 
 2 IDEAS
