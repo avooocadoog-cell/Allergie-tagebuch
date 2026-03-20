@@ -81,7 +81,11 @@
     <button class="top-nav-btn" id="tnav-stammdaten" onclick="UI.switchTopPanel('stammdaten')">
       <span class="nav-icon">🗂️</span>Stammdaten
     </button>
+    <button class="top-nav-btn" id="tnav-statistik" onclick="UI.switchTopPanel('statistik')">
+      <span class="nav-icon">📊</span>Statistik
+    </button>
     <button class="top-nav-btn" id="tnav-einst"      onclick="UI.switchTopPanel('einst')">
+      <span class="nav-icon">⚙️</span>Einst.
       <span class="nav-icon">⚙️</span>Einst.
     </button>
   </nav>
@@ -515,6 +519,11 @@
         Wetter: DWD via BrightSky API · Pollen: DWD OpenData
       </p>
     </div>
+  </div>
+
+  <!-- PANEL: STATISTIK -->
+  <div id="panel-statistik" class="panel">
+    <div class="view-loading"><div class="spinner"></div>Wird geladen…</div>
   </div>
 
 </div><!-- end main-screen -->
