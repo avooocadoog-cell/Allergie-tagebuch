@@ -69,7 +69,7 @@ export async function submitUmwelt() {
   lock('btn-u');
   setStatus('status-u', 'loading', 'Wird gespeichert…');
   try {
-    await appendRow('Umwelt', [
+    await appendRow('Umweltagebuch', [
       getHundId(), fd(datum),
       document.getElementById('u-temp-min').value,
       document.getElementById('u-temp-max').value,
@@ -101,7 +101,7 @@ export async function submitSymptom() {
   lock('btn-s');
   setStatus('status-s', 'loading', 'Wird gespeichert…');
   try {
-    await appendRow('Symptome', [
+    await appendRow('Symptomtagebuch', [
       getHundId(), fd(datum),
       getSymKat(document.getElementById('s-kat-extra').value),
       document.getElementById('s-beschreibung').value,
@@ -127,7 +127,7 @@ export async function submitFutter() {
   lock('btn-f');
   setStatus('status-f', 'loading', 'Wird gespeichert…');
   try {
-    await appendRow('Futter', [
+    await appendRow('Futtertagebuch', [
       getHundId(), fd(datum), futter,
       document.getElementById('f-produkt').value,
       getErsteGabe(), getZweiWo(), getProv(),
@@ -149,7 +149,7 @@ export async function submitAusschluss() {
   lock('btn-a');
   setStatus('status-a', 'loading', 'Wird gespeichert…');
   try {
-    await appendRow('Ausschluss', [
+    await appendRow('Ausschlussdiät', [
       getHundId(), zutat, getAVerd(),
       document.getElementById('a-kategorie').value,
       document.getElementById('a-status').value,
@@ -172,7 +172,7 @@ export async function submitAllergen() {
   lock('btn-al');
   setStatus('status-al', 'loading', 'Wird gespeichert…');
   try {
-    await appendRow('Allergene', [
+    await appendRow('Bekannte Allergene', [
       getHundId(), allergen,
       document.getElementById('al-kategorie').value,
       getAlReakt(),
@@ -194,7 +194,7 @@ export async function submitTierarzt() {
   lock('btn-t');
   setStatus('status-t', 'loading', 'Wird gespeichert…');
   try {
-    await appendRow('Tierarzt', [
+    await appendRow('Tierarztbesuche', [
       getHundId(), fd(datum),
       document.getElementById('t-arzt').value,
       document.getElementById('t-anlass').value,

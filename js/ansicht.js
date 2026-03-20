@@ -20,13 +20,14 @@ import { get as getCfg } from './config.js';
 import { esc }           from './ui.js';
 
 // ── Sheet-Name Mapping ───────────────────────────────────────────
+// Namen müssen exakt mit den Tabellenblatt-Namen in Hund_Tagebuch übereinstimmen
 const SHEET_MAP = {
-  umwelt:      'Umwelt',
-  symptom:     'Symptome',
-  futter:      'Futter',
-  ausschluss:  'Ausschluss',
-  allergen:    'Allergene',
-  tierarzt:    'Tierarzt',
+  umwelt:      'Umweltagebuch',
+  symptom:     'Symptomtagebuch',
+  futter:      'Futtertagebuch',
+  ausschluss:  'Ausschlussdiät',
+  allergen:    'Bekannte Allergene',
+  tierarzt:    'Tierarztbesuche',
   medikamente: 'Medikamente',
 };
 
