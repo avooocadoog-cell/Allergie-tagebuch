@@ -27,6 +27,7 @@ import * as ANSICHT    from './ansicht.js';
 import * as RECHNER    from './rechner.js';
 import * as STAMMDATEN from './stammdaten.js';
 import * as STATISTIK  from './statistik.js';
+import * as CACHE      from './cache.js';
 
 // Callback registrieren damit auth.js nach Login onLogin() aufrufen kann
 // ohne main.js zirkular zu importieren
@@ -46,6 +47,7 @@ window.ANSICHT    = ANSICHT;
 window.RECHNER    = RECHNER;
 window.STAMMDATEN = STAMMDATEN;
 window.STATISTIK  = STATISTIK;
+window.CACHE      = CACHE;
 
 // APP-Objekt (für APP.currentHundId in HTML)
 window.APP = {
@@ -145,6 +147,9 @@ export async function onLogin() {
 
   // Rezeptliste laden
   setTimeout(() => RECHNER.loadRecipeList(), 800);
+
+  // Tagebuch-Cache im Hintergrund vorladen (nach 2s damit Login-UI zuerst reagiert)
+  setTimeout(() => CACHE.preloadAll(), 2000);
 
   // App einblenden
   UI.hideLoader();
