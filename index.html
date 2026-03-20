@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║  HUND MANAGER – Universelle Hundeernährungs- & Gesundheits-App  ║
+  ║  Version 2.1 | ES Modules | Multi-Hund | Google Sheets Backend  ║
+  ║                                                                  ║
+  ║  Dateistruktur:                                                  ║
+  ║  index.html   ← dieses Gerüst (nur HTML)                        ║
+  ║  css/styles.css                                                  ║
+  ║  js/main.js   ← Einstieg (importiert alle Module)               ║
+  ║  js/config.js · auth.js · sheets.js · store.js                  ║
+  ║  js/ui.js · form.js · wetter.js · rechner.js                    ║
+  ║  js/tagebuch.js · ansicht.js · stammdaten.js                    ║
+  ╚══════════════════════════════════════════════════════════════════╝
+-->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hund Manager">
+<title>Hund Manager</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APP LOADER
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="app-loader">
+  <div class="loader-icon">🐕</div>
+  <div class="spinner"></div>
+  <p id="loader-msg">Wird geladen…</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     LOGIN SCREEN
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="login-screen" class="login-screen" style="display:none">
+  <div class="icon">🐕</div>
+  <h1>Hund Manager</h1>
+  <p>Ernährungs- &amp; Gesundheitstagebuch<br>für deinen Hund</p>
+
+  <div class="setup-required" id="setup-warning" style="display:none">
+    <strong>⚠️ Einrichtung erforderlich</strong>
+    Bitte trage zuerst deine Google Spreadsheet-IDs und Client-ID ein.
+    Tippe auf „⚙️ Einrichtung" unten.
+  </div>
+
+  <button class="google-btn" onclick="AUTH.signIn()">
+    <svg width="18" height="18" viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
+    Mit Google anmelden
+  </button>
+
+  <button class="btn-secondary" style="max-width:280px;margin-top:1rem" onclick="UI.showSetupFromLogin()">
+    ⚙️ Einrichtung / Anleitung
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HAUPT-APP
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="main-screen" style="display:none">
+
+  <!-- Top Navigation -->
+  <nav class="top-nav" id="top-nav">
+    <button class="top-nav-btn active" id="tnav-rechner"    onclick="UI.switchTopPanel('rechner')">
+      <span class="nav-icon">🥩</span>Rechner
+    </button>
+    <button class="top-nav-btn" id="tnav-tagebuch"   onclick="UI.switchTopPanel('tagebuch')">
+      <span class="nav-icon">📔</span>Tagebuch
+    </button>
+    <button class="top-nav-btn" id="tnav-stammdaten" onclick="UI.switchTopPanel('stammdaten')">
+      <span class="nav-icon">🗂️</span>Stammdaten
+    </button>
+    <button class="top-nav-btn" id="tnav-einst"      onclick="UI.switchTopPanel('einst')">
+      <span class="nav-icon">⚙️</span>Einst.
+    </button>
+  </nav>
+
+  <!-- ════════════════════════════════════════════════════════════
+       PANEL: FUTTERRECHNER
+       ════════════════════════════════════════════════════════════ -->
+  <div id="panel-rechner" class="panel active" style="padding:0">
+
+    <div class="fr-header">
+      <h2>🧮 Futterrechner</h2>
+      <p>Rezepte berechnen · Nährstoffbedarf prüfen</p>
+    </div>
+
+    <div style="padding:1rem 1rem 0">
+      <div class="hund-bar">
+        <span style="font-size:12px;color:var(--sub);white-space:nowrap">🐕 Hund:</span>
+        <select id="fr-hund-select" onchange="RECHNER.onHundChanged()"></select>
+        <span class="user-info" id="fr-user-info"></span>
+        <button class="sign-out" onclick="AUTH.signOut()">Abmelden</button>
+      </div>
+    </div>
+
+    <!-- Rezept-Liste -->
+    <div id="fr-list" style="padding:0 1rem 1rem">
+      <div class="fr-weight-box" style="margin-bottom:.75rem">
+        <label for="fr-dog-weight">Gewicht</label>
+        <input type="number" id="fr-dog-weight" value="27" min="1" max="80" step="0.1" onchange="RECHNER.updateWeight()">
+        <div class="bedarf-info">
+          Metabol. KG: <strong><span id="fr-mkg">–</span> kg<sup>0,75</sup></strong><br>
+          <span id="fr-kcal-bedarf-info" style="font-size:11px"></span>
+        </div>
+      </div>
+      <div class="section-title" style="font-size:15px;margin-bottom:.75rem">📋 Gespeicherte Rezepte</div>
+      <div id="fr-recipe-cards">
+        <div class="view-loading"><div class="spinner"></div>Rezepte werden geladen…</div>
+      </div>
+      <button class="btn-primary" onclick="RECHNER.newRecipe()" style="margin-top:.5rem">+ Neues Rezept erstellen</button>
+    </div>
+
+    <!-- Rezept-Editor -->
+    <div id="fr-editor" class="fr-editor" style="padding:1rem">
+      <button class="fr-back" onclick="RECHNER.showList()">← Zurück zur Übersicht</button>
+      <div class="fr-name-row">
+        <input type="text" id="fr-recipe-name" placeholder="Rezeptname…" maxlength="50">
+        <button class="save-btn" id="fr-save-btn" onclick="RECHNER.saveRecipe()">💾 Speichern</button>
+      </div>
+      <div class="fr-save-status" id="fr-save-status"></div>
+
+      <div class="fr-weight-box">
+        <label>Gewicht</label>
+        <input type="number" id="fr-dog-weight2" value="27" min="1" max="80" step="0.1" onchange="RECHNER.updateWeight2()">
+        <div class="bedarf-info">Metabol. KG: <strong><span id="fr-mkg2">–</span></strong></div>
+      </div>
+
+      <div class="fr-scale-box">
+        <label>⚖️ Faktor</label>
+        <div style="display:flex;gap:6px;flex:1;align-items:center;flex-wrap:wrap">
+          <button class="scale-btn" onclick="RECHNER.setScale(0.25)">×0.25</button>
+          <button class="scale-btn" onclick="RECHNER.setScale(0.5)">×0.5</button>
+          <button class="scale-btn active" id="scale-1x" onclick="RECHNER.setScale(1)">×1</button>
+          <button class="scale-btn" onclick="RECHNER.setScale(2)">×2</button>
+          <input type="number" id="fr-scale-input" value="1" min="0.01" max="100" step="0.01"
+            style="width:70px;padding:5px 8px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);text-align:center"
+            oninput="RECHNER.applyScale()" title="Eigener Faktor">
+        </div>
+      </div>
+
+      <div class="fr-portions" id="fr-portions">
+        <div class="po-item"><span class="po-val" id="fr-total-g">0</span><span class="po-label">g Tagesration</span></div>
+        <div class="po-item"><span class="po-val" id="fr-portion-g">0</span><span class="po-label">g je Portion</span></div>
+        <div class="po-item"><span class="po-val" id="fr-kcal-ist">0</span><span class="po-label">kcal Ist</span></div>
+        <div class="po-item"><span class="po-val" id="fr-kcal-bedarf">0</span><span class="po-label">kcal Bedarf</span></div>
+      </div>
+      <div class="kcal-bar-wrap" id="fr-kcal-bar-wrap"><div class="kcal-bar" id="fr-kcal-bar"></div></div>
+
+      <div class="fr-ratios">
+        <div class="fr-ratio-card neutral" id="fr-ratio-cap">
+          <div class="rc-label">Ca : P Verhältnis</div>
+          <div class="rc-val" id="fr-cap-val">–</div>
+          <div class="rc-target" id="fr-cap-target">Ziel: 1,2 – 1,5 : 1</div>
+        </div>
+        <div class="fr-ratio-card neutral" id="fr-ratio-omega">
+          <div class="rc-label">Omega 6 : 3</div>
+          <div class="rc-val" id="fr-omega-val">–</div>
+          <div class="rc-target" id="fr-omega-target">Ziel: max. 6 : 1</div>
+        </div>
+      </div>
+
+      <div class="fr-section-toggle open" onclick="UI.toggleSection('zutaten',this)">
+        🥗 Zutaten <span class="fst-arrow">▼</span>
+      </div>
+      <div class="fr-section-body open" id="fr-sec-zutaten">
+        <div class="fr-ingredients-box">
+          <div class="fr-box-title">
+            <span>Zutat</span>
+            <span style="display:grid;grid-template-columns:90px 70px 36px;gap:6px;font-size:11px;color:var(--sub)">
+              <span style="text-align:center">g/Tag</span>
+              <span style="text-align:center">🔥 Gekocht</span>
+              <span></span>
+            </span>
+          </div>
+          <div id="fr-ing-list">
+            <div style="padding:16px;text-align:center;color:var(--sub);font-size:13px">
+              Noch keine Zutaten – füge unten eine hinzu.
+            </div>
+          </div>
+          <div class="fr-add-box">
+            <div class="fr-filter-row">
+              <select id="fr-filter-kat" onchange="RECHNER.filterIngredients()">
+                <option value="">🏷 Alle Kategorien</option>
+              </select>
+              <select id="fr-filter-her" onchange="RECHNER.filterIngredients()">
+                <option value="">🏭 Alle Hersteller</option>
+              </select>
+            </div>
+            <div class="fr-add-row">
+              <select id="fr-ing-select"><option value="">— Zutat wählen —</option></select>
+              <button class="add-btn" onclick="RECHNER.addIngredient()">+ Hinzufügen</button>
+            </div>
+            <span class="fr-custom-toggle" onclick="UI.toggleCustomForm()">✏️ Neue Zutat manuell erfassen</span>
+            <div class="fr-custom-form" id="fr-custom-form">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                <div class="field" style="margin-bottom:0"><label>Name</label>
+                  <input type="text" id="fr-custom-name" placeholder="z.B. Pferd (Muskelfleisch)"></div>
+                <div class="field" style="margin-bottom:0"><label>Hersteller</label>
+                  <input type="text" id="fr-custom-hersteller" placeholder="z.B. barfers"></div>
+              </div>
+              <div class="field" style="margin-bottom:8px"><label>Kategorie</label>
+                <select id="fr-custom-kategorie"><option value="">— wählen —</option></select></div>
+              <div class="fr-custom-grid" id="fr-custom-nutr-grid"></div>
+              <button class="btn-primary" style="margin-top:10px;padding:10px" onclick="RECHNER.saveCustomIngredient()">
+                Zutat speichern &amp; einfügen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fr-section-toggle open" onclick="UI.toggleSection('nutr',this)">
+        📊 Nährstoffanalyse
+        <span style="font-size:11px;color:var(--sub);margin-left:4px">(Nährstoff antippen für Info)</span>
+        <span class="fst-arrow">▼</span>
+      </div>
+      <div class="fr-section-body open" id="fr-sec-nutr">
+        <div class="fr-nutr-table">
+          <div class="fr-nutr-head">
+            <span>Nährstoff</span>
+            <span style="text-align:right">Ist</span>
+            <span style="text-align:right">Bedarf</span>
+            <span>Versorgung</span>
+          </div>
+          <div id="fr-nutr-rows">
+            <div style="padding:14px;text-align:center;color:var(--sub);font-size:13px">
+              Zutaten hinzufügen um die Analyse zu sehen.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- end fr-editor -->
+  </div><!-- end panel-rechner -->
+
+  <!-- ════════════════════════════════════════════════════════════
+       PANEL: TAGEBUCH
+       ════════════════════════════════════════════════════════════ -->
+  <div id="panel-tagebuch" class="panel">
+    <div class="hund-bar">
+      <span style="font-size:12px;color:var(--sub);white-space:nowrap">🐕 Hund:</span>
+      <select id="tb-hund-select" onchange="APP.currentHundId=parseInt(this.value)||1"></select>
+      <span class="user-info" id="tb-user-info"></span>
+      <button class="sign-out" onclick="AUTH.signOut()">Abmelden</button>
+    </div>
+
+    <div class="mode-bar">
+      <button class="mode-btn active" id="mode-eingabe" onclick="UI.switchMode('eingabe')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 13l2-2 8-8 2 2-8 8-2 0 0-2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        Eingabe
+      </button>
+      <button class="mode-btn" id="mode-ansicht" onclick="UI.switchMode('ansicht')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 8C3 4.5 5.5 3 8 3s5 1.5 6.5 5c-1.5 3.5-4 5-6.5 5s-5-1.5-6.5-5z" stroke="currentColor" stroke-width="1.3"/></svg>
+        Ansicht
+      </button>
+    </div>
+
+    <!-- EINGABE -->
+    <div id="mode-eingabe-panel">
+      <div class="tab-bar" id="eingabe-tabs">
+        <button class="tab active" onclick="UI.switchTab('umwelt')">🌿 Umwelt</button>
+        <button class="tab" onclick="UI.switchTab('symptom')">🔍 Sympt.</button>
+        <button class="tab" onclick="UI.switchTab('futter')">🥩 Futter</button>
+        <button class="tab" onclick="UI.switchTab('ausschluss')">📋 Ausschl.</button>
+        <button class="tab" onclick="UI.switchTab('allergen')">⚠️ Allergen</button>
+        <button class="tab" onclick="UI.switchTab('tierarzt')">🏥 Tierarzt</button>
+        <button class="tab" onclick="UI.switchTab('medikamente')">💊 Medik.</button>
+        <button class="tab" style="visibility:hidden"></button>
+      </div>
+
+      <!-- Umwelt -->
+      <div id="tab-umwelt" class="section active">
+        <p class="section-title">🌿 Umwelttagebuch</p>
+        <button class="refresh-btn" onclick="WETTER.loadAll()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Wetter &amp; Pollen automatisch laden
+        </button>
+        <div id="autoload-status" style="display:none;font-size:12px;color:var(--sub);margin-top:-1rem;margin-bottom:1rem;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border);line-height:1.6"></div>
+        <div class="field"><label>Datum</label><div class="date-row"><input type="date" id="u-datum"><button class="btn-small" onclick="UI.setToday('u-datum')">Heute</button></div></div>
+        <div class="field">
+          <label>Wetter <span id="wetter-source" style="font-size:10px;color:var(--c2);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px"></span></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div><label style="font-size:11px;margin-bottom:3px">Min Temperatur °C</label><input type="number" id="u-temp-min" placeholder="z.B. 4" step="0.1"></div>
+            <div><label style="font-size:11px;margin-bottom:3px">Max Temperatur °C</label><input type="number" id="u-temp-max" placeholder="z.B. 15" step="0.1"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label style="font-size:11px;margin-bottom:3px">Luftfeuchtigkeit %</label><input type="number" id="u-luftfeuchtig" placeholder="z.B. 65"></div>
+            <div><label style="font-size:11px;margin-bottom:3px">Regen mm</label><input type="number" id="u-regen" placeholder="z.B. 3" step="0.1"></div>
+          </div>
+        </div>
+        <div class="field"><label>Pollen <span id="pollen-source" style="font-size:10px;color:var(--c2);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px"></span></label><input type="text" id="u-pollen" placeholder="z.B. Hasel, Erle"></div>
+        <div class="field"><label>Raumklima</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label style="font-size:11px;margin-bottom:3px">Temperatur</label><input type="number" id="u-raumtemp" placeholder="z.B. 20" step="0.1"></div><div><label style="font-size:11px;margin-bottom:3px">Luftfeuchtigkeit %</label><input type="number" id="u-raumfeuchtig" placeholder="z.B. 50"></div></div></div>
+        <div class="field"><label>Bett</label><div class="toggle-grid"><div class="tog-btn sel" id="bett-unchanged" onclick="FORM.toggleBett('Unverändert')">Unverändert</div><div class="tog-btn" id="bett-changed" onclick="FORM.toggleBett('Gewechselt')">Gewechselt</div></div></div>
+        <div class="field"><label>Notizen</label><textarea id="u-notizen" placeholder="Freitext…"></textarea></div>
+        <button class="btn-primary" id="btn-u" onclick="TAGEBUCH.submitUmwelt()">Eintrag speichern</button>
+        <div class="status" id="status-u"></div>
+      </div>
+
+      <!-- Symptome -->
+      <div id="tab-symptom" class="section">
+        <p class="section-title">🔍 Symptomtagebuch</p>
+        <div class="field"><label>Datum</label><div class="date-row"><input type="date" id="s-datum"><button class="btn-small" onclick="UI.setToday('s-datum')">Heute</button></div></div>
+        <div class="field">
+          <label>Symptom-Kategorie</label>
+          <div class="toggle-grid three" id="sym-kat-grid">
+            <div class="tog-btn" onclick="FORM.toggleSymKat(this)">Juckreiz</div>
+            <div class="tog-btn" onclick="FORM.toggleSymKat(this)">Ohrentzündung</div>
+            <div class="tog-btn" onclick="FORM.toggleSymKat(this)">Hautrötung</div>
+            <div class="tog-btn" onclick="FORM.toggleSymKat(this)">Pfoten lecken</div>
+            <div class="tog-btn" onclick="FORM.toggleSymKat(this)">Durchfall</div>
+            <div class="tog-btn" onclick="FORM.toggleSymKat(this)">Erbrechen</div>
+            <div class="tog-btn" onclick="FORM.toggleSymKat(this)">Schütteln</div>
+            <div class="tog-btn" onclick="FORM.toggleSymKat(this)">Sonstiges</div>
+          </div>
+          <input type="text" id="s-kat-extra" placeholder="Eigene Kategorie…" style="margin-top:8px">
+        </div>
+        <div class="field"><label>Beschreibung</label><textarea id="s-beschreibung" placeholder="Genauere Beschreibung…"></textarea></div>
+        <div class="field"><label>Schweregrad (1–5)</label><div class="toggle-grid five"><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="1">1</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="2">2</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="3">3</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="4">4</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="5">5</div></div></div>
+        <div class="field"><label>Körperstelle</label><div class="toggle-grid three"><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Ohren</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Pfoten</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Bauch</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Rücken</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Beine</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Gesicht</div></div><input type="text" id="s-koerper-extra" placeholder="Weitere Stellen…" style="margin-top:8px"></div>
+        <div class="field"><label>Notizen</label><textarea id="s-notizen" placeholder="Freitext…"></textarea></div>
+        <button class="btn-primary" id="btn-s" onclick="TAGEBUCH.submitSymptom()">Eintrag speichern</button>
+        <div class="status" id="status-s"></div>
+      </div>
+
+      <!-- Futter -->
+      <div id="tab-futter" class="section">
+        <p class="section-title">🥩 Futtertagebuch</p>
+        <div class="field"><label>Datum</label><div class="date-row"><input type="date" id="f-datum"><button class="btn-small" onclick="UI.setToday('f-datum')">Heute</button></div></div>
+        <div class="field">
+          <label>Futter / Mahlzeit</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <select id="f-rezept-select" style="flex:1" onchange="TAGEBUCH.futterRezeptChanged()"><option value="">— Gespeichertes Rezept wählen —</option></select>
+            <button class="btn-small" onclick="TAGEBUCH.loadRezepteDropdown()" title="Rezepte neu laden">↺</button>
+          </div>
+          <textarea id="f-futter" placeholder="z.B. Rezeptname oder freie Beschreibung…"></textarea>
+        </div>
+        <div class="protocol-box">
+          <div class="protocol-title">📋 Protokoll Ausschlussdiät</div>
+          <div class="field"><label>Produkt</label><input type="text" id="f-produkt" placeholder="z.B. chewies Känguru…"></div>
+          <hr class="protocol-divider">
+          <div class="field"><label>Erste Gabe</label><div class="toggle-grid"><div class="tog-btn" id="erstegabe-nein" onclick="FORM.toggleErsteGabe('nein')">Nein</div><div class="tog-btn" id="erstegabe-ja" onclick="FORM.toggleErsteGabe('ja')">Ja – neu eingeführt</div></div></div>
+          <div class="field"><label>Zwei Wochen abgeschlossen</label><div class="toggle-grid"><div class="tog-btn" id="zweiwo-nein" onclick="FORM.toggleZweiWo('nein')">Nein</div><div class="tog-btn" id="zweiwo-ja" onclick="FORM.toggleZweiWo('ja')">Ja ✓</div></div></div>
+          <div class="field"><label>Provokation</label><div class="toggle-grid"><div class="tog-btn" id="prov-nein" onclick="FORM.toggleProv('nein')">Nein</div><div class="tog-btn" id="prov-ja" onclick="FORM.toggleProv('ja')">Ja ⚠️</div></div></div>
+        </div>
+        <div class="field"><label>Beschreibung / Reaktion</label><textarea id="f-beschreibung" placeholder="z.B. Reaktion beobachtet…"></textarea></div>
+        <div class="field"><label>Notizen</label><textarea id="f-notizen" placeholder="Freitext…"></textarea></div>
+        <button class="btn-primary" id="btn-f" onclick="TAGEBUCH.submitFutter()">Eintrag speichern</button>
+        <div class="status" id="status-f"></div>
+      </div>
+
+      <!-- Ausschluss -->
+      <div id="tab-ausschluss" class="section">
+        <p class="section-title">📋 Ausschlussdiät – Zutat</p>
+        <div class="info-banner warn">⚠️ <strong>Verdachtsfälle</strong> – Noch nicht bestätigt.</div>
+        <div class="field"><label>Zutat</label><input type="text" id="a-zutat" placeholder="z.B. Rind, Karotte…"></div>
+        <div class="field"><label>Verdacht</label><div class="toggle-grid three"><div class="tog-btn" id="averd-1" onclick="FORM.toggleAVerd('1')">1 – leicht</div><div class="tog-btn" id="averd-2" onclick="FORM.toggleAVerd('2')">2 – mittel</div><div class="tog-btn" id="averd-3" onclick="FORM.toggleAVerd('3')">3 – stark</div></div></div>
+        <div class="field"><label>Kategorie</label><select id="a-kategorie"><option value="">– wählen –</option><option>Fleisch</option><option>Fisch</option><option>Gemüse</option><option>Obst</option><option>Getreide</option><option>Milchprodukt</option><option>Öl / Fett</option><option>Supplement</option><option>Sonstiges</option></select></div>
+        <div class="field"><label>Status</label><select id="a-status"><option value="">– wählen –</option><option>Getestet – verträglich</option><option>Getestet – Reaktion</option><option>In Test</option><option>Noch nicht getestet</option><option>Gesperrt</option></select></div>
+        <div class="field"><label>Erstmals gegeben</label><div class="date-row"><input type="date" id="a-datum"><button class="btn-small" onclick="UI.setToday('a-datum')">Heute</button></div></div>
+        <div class="field"><label>Reaktion</label><textarea id="a-reaktion" placeholder="Beobachtete Reaktion…"></textarea></div>
+        <div class="field"><label>Notizen</label><textarea id="a-notizen" placeholder="Freitext…"></textarea></div>
+        <button class="btn-primary" id="btn-a" onclick="TAGEBUCH.submitAusschluss()">Zutat speichern</button>
+        <div class="status" id="status-a"></div>
+      </div>
+
+      <!-- Allergen -->
+      <div id="tab-allergen" class="section">
+        <p class="section-title">⚠️ Bekannte Allergene</p>
+        <div class="info-banner ok">✅ <strong>Bestätigte Allergene</strong> – Durch Test oder eindeutige Reaktion.</div>
+        <div class="field"><label>Allergen</label><input type="text" id="al-allergen" placeholder="z.B. Gräser, Hausstaubmilbe…"></div>
+        <div class="field"><label>Kategorie</label><select id="al-kategorie"><option value="">– wählen –</option><option>Umweltallergen</option><option>Futterallergen</option><option>Kontaktallergen</option><option>Insekten</option><option>Sonstiges</option></select></div>
+        <div class="field"><label>Reaktionsstärke (1–5)</label><div class="toggle-grid five"><div class="tog-btn" onclick="FORM.toggleAlReakt(this)" data-val="1">1</div><div class="tog-btn" onclick="FORM.toggleAlReakt(this)" data-val="2">2</div><div class="tog-btn" onclick="FORM.toggleAlReakt(this)" data-val="3">3</div><div class="tog-btn" onclick="FORM.toggleAlReakt(this)" data-val="4">4</div><div class="tog-btn" onclick="FORM.toggleAlReakt(this)" data-val="5">5</div></div></div>
+        <div class="field"><label>Symptome</label><input type="text" id="al-symptome" placeholder="z.B. Juckreiz, Ohren…"></div>
+        <div class="field"><label>Notizen</label><textarea id="al-notizen" placeholder="Quelle der Erkenntnis…"></textarea></div>
+        <button class="btn-primary" id="btn-al" onclick="TAGEBUCH.submitAllergen()">Allergen speichern</button>
+        <div class="status" id="status-al"></div>
+      </div>
+
+      <!-- Tierarzt -->
+      <div id="tab-tierarzt" class="section">
+        <p class="section-title">🏥 Tierarztbesuch</p>
+        <div class="field"><label>Datum</label><div class="date-row"><input type="date" id="t-datum"><button class="btn-small" onclick="UI.setToday('t-datum')">Heute</button></div></div>
+        <div class="field"><label>Tierarzt / Klinik</label><input type="text" id="t-arzt" placeholder="Name der Praxis…"></div>
+        <div class="field"><label>Anlass / Diagnose</label><textarea id="t-anlass" placeholder="Warum der Besuch, Diagnose…"></textarea></div>
+        <div class="field"><label>Untersuchungen</label><textarea id="t-untersuchungen" placeholder="Blutbild, Hauttest…"></textarea></div>
+        <div class="field"><label>Ergebnis / Befund</label><textarea id="t-ergebnis" placeholder="Befund…"></textarea></div>
+        <div class="field"><label>Empfehlung / Therapie</label><textarea id="t-therapie" placeholder="Verordnete Behandlung…"></textarea></div>
+        <div class="field"><label>Folgebesuch geplant</label><div class="date-row"><input type="date" id="t-folge"><button class="btn-small" onclick="document.getElementById('t-folge').value=''">Löschen</button></div></div>
+        <button class="btn-primary" id="btn-t" onclick="TAGEBUCH.submitTierarzt()">Besuch speichern</button>
+        <div class="status" id="status-t"></div>
+      </div>
+
+      <!-- Medikamente -->
+      <div id="tab-medikamente" class="section">
+        <p class="section-title">💊 Medikamente &amp; Behandlungen</p>
+        <div class="field"><label>Medikament / Supplement</label><input type="text" id="m-name" placeholder="z.B. Apoquel…"></div>
+        <div class="field"><label>Typ</label><select id="m-typ"><option value="">– wählen –</option><option>Antihistaminikum</option><option>Antimykotikum</option><option>Kortikosteroid</option><option>Antibiotikum</option><option>Supplement</option><option>Tropfen</option><option>Salbe / Gel</option><option>Sonstiges</option></select></div>
+        <div class="field"><label>Dosierung</label><input type="text" id="m-dosierung" placeholder="z.B. 1x täglich 16mg"></div>
+        <div class="field"><label>Häufigkeit</label><input type="text" id="m-haeufigkeit" placeholder="z.B. täglich, bei Bedarf"></div>
+        <div class="field"><label>Gegeben von</label><div class="date-row"><input type="date" id="m-von"><button class="btn-small" onclick="UI.setToday('m-von')">Heute</button></div></div>
+        <div class="field"><label>Bis</label><div class="date-row"><input type="date" id="m-bis"><button class="btn-small" onclick="document.getElementById('m-bis').value=''">Löschen</button></div></div>
+        <div class="field"><label>Verordnet von</label><input type="text" id="m-verordnet" placeholder="Tierarzt / selbst"></div>
+        <div class="field"><label>Notizen / Wirkung</label><textarea id="m-notizen" placeholder="Beobachtete Wirkung…"></textarea></div>
+        <button class="btn-primary" id="btn-m" onclick="TAGEBUCH.submitMedikament()">Medikament speichern</button>
+        <div class="status" id="status-m"></div>
+      </div>
+    </div><!-- end eingabe-panel -->
+
+    <!-- ANSICHT -->
+    <div id="mode-ansicht-panel" style="display:none">
+      <div class="tab-bar">
+        <button class="tab active" onclick="UI.switchViewTab('v-umwelt')">🌿 Umwelt</button>
+        <button class="tab" onclick="UI.switchViewTab('v-symptom')">🔍 Sympt.</button>
+        <button class="tab" onclick="UI.switchViewTab('v-futter')">🥩 Futter</button>
+        <button class="tab" onclick="UI.switchViewTab('v-ausschluss')">📋 Ausschl.</button>
+        <button class="tab" onclick="UI.switchViewTab('v-allergen')">⚠️ Allergen</button>
+        <button class="tab" onclick="UI.switchViewTab('v-tierarzt')">🏥 Tierarzt</button>
+        <button class="tab" onclick="UI.switchViewTab('v-medikamente')">💊 Medik.</button>
+        <button class="tab" style="visibility:hidden"></button>
+      </div>
+      <div id="v-umwelt"      class="section active"><button class="refresh-btn" onclick="ANSICHT.load('umwelt')">↺ Aktualisieren</button><div id="v-umwelt-content"><div class="view-empty"><div class="icon">🌿</div>Tippe auf Aktualisieren.</div></div></div>
+      <div id="v-symptom"     class="section"><button class="refresh-btn" onclick="ANSICHT.load('symptom')">↺ Aktualisieren</button><div id="v-symptom-content"><div class="view-empty"><div class="icon">🔍</div>Tippe auf Aktualisieren.</div></div></div>
+      <div id="v-futter"      class="section"><button class="refresh-btn" onclick="ANSICHT.load('futter')">↺ Aktualisieren</button><div id="v-futter-content"><div class="view-empty"><div class="icon">🥩</div>Tippe auf Aktualisieren.</div></div></div>
+      <div id="v-ausschluss"  class="section"><button class="refresh-btn" onclick="ANSICHT.load('ausschluss')">↺ Aktualisieren</button><div id="v-ausschluss-content"><div class="view-empty"><div class="icon">📋</div>Tippe auf Aktualisieren.</div></div></div>
+      <div id="v-allergen"    class="section"><button class="refresh-btn" onclick="ANSICHT.load('allergen')">↺ Aktualisieren</button><div id="v-allergen-content"><div class="view-empty"><div class="icon">⚠️</div>Tippe auf Aktualisieren.</div></div></div>
+      <div id="v-tierarzt"    class="section"><button class="refresh-btn" onclick="ANSICHT.load('tierarzt')">↺ Aktualisieren</button><div id="v-tierarzt-content"><div class="view-empty"><div class="icon">🏥</div>Tippe auf Aktualisieren.</div></div></div>
+      <div id="v-medikamente" class="section"><button class="refresh-btn" onclick="ANSICHT.load('medikamente')">↺ Aktualisieren</button><div id="v-medikamente-content"><div class="view-empty"><div class="icon">💊</div>Tippe auf Aktualisieren.</div></div></div>
+    </div>
+  </div><!-- end panel-tagebuch -->
+
+  <!-- ════════════════════════════════════════════════════════════
+       PANEL: STAMMDATEN
+       ════════════════════════════════════════════════════════════ -->
+  <div id="panel-stammdaten" class="panel">
+    <div class="tab-bar" style="grid-template-columns:repeat(3,1fr)">
+      <button class="tab active" onclick="UI.switchStammdatenTab('hunde')">🐕 Hunde</button>
+      <button class="tab" onclick="UI.switchStammdatenTab('zutaten')">🥩 Zutaten</button>
+      <button class="tab" onclick="UI.switchStammdatenTab('parameter')">⚙️ Parameter</button>
+    </div>
+    <div id="sd-hunde" class="section active">
+      <p class="section-title">🐕 Hunde verwalten</p>
+      <button class="btn-primary" style="margin-bottom:1rem" onclick="STAMMDATEN.showHundModal()">+ Neuen Hund hinzufügen</button>
+      <div id="sd-hunde-list"><div class="view-loading"><div class="spinner"></div></div></div>
+    </div>
+    <div id="sd-zutaten" class="section">
+      <p class="section-title">🥩 Zutaten verwalten</p>
+      <button class="btn-primary" style="margin-bottom:1rem" onclick="STAMMDATEN.showZutatModal()">+ Neue Zutat hinzufügen</button>
+      <div id="sd-zutaten-list"><div class="view-loading"><div class="spinner"></div></div></div>
+    </div>
+    <div id="sd-parameter" class="section">
+      <p class="section-title">⚙️ Parameter &amp; Toleranzen</p>
+      <div class="info-banner warn" style="margin-bottom:1rem">⚠️ Änderungen wirken sich sofort auf alle Berechnungen aus.</div>
+      <div id="sd-parameter-list"><div class="view-loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       PANEL: EINSTELLUNGEN
+       ════════════════════════════════════════════════════════════ -->
+  <div id="panel-einst" class="panel">
+    <p class="section-title">⚙️ Einstellungen</p>
+    <div class="settings-box">
+      <h3>🔑 Google Konfiguration</h3>
+      <p>Trage hier deine Google Client-ID und die Spreadsheet-IDs ein. Diese werden lokal gespeichert.</p>
+      <div class="field"><label>Google OAuth Client-ID</label><input type="text" id="cfg-client-id" placeholder="xxx.apps.googleusercontent.com" oninput="CONFIG.save()"></div>
+      <div class="field">
+        <label>Hund_Stammdaten – Spreadsheet-ID</label>
+        <input type="text" id="cfg-stammdaten-id" placeholder="1rG..." oninput="CONFIG.save()">
+        <div style="font-size:11px;color:var(--sub);margin-top:4px">Aus der URL: /spreadsheets/d/<strong>DIESE_ID</strong>/edit</div>
+      </div>
+      <div class="field"><label>Hund_Tagebuch – Spreadsheet-ID</label><input type="text" id="cfg-tagebuch-id" placeholder="1k__..." oninput="CONFIG.save()"></div>
+      <div class="field">
+        <label>Standort (für Wetter &amp; Pollen)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:11px;margin-bottom:3px">Breitengrad</label><input type="number" id="cfg-lat" placeholder="52.4" step="0.01" oninput="CONFIG.save()"></div>
+          <div><label style="font-size:11px;margin-bottom:3px">Längengrad</label><input type="number" id="cfg-lon" placeholder="13.4" step="0.01" oninput="CONFIG.save()"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>DWD Pollen-Region-ID</label>
+        <input type="number" id="cfg-pollen-region" placeholder="50 (Berlin)" oninput="CONFIG.save()">
+        <div style="font-size:11px;color:var(--sub);margin-top:4px">Berlin=50 · Hamburg=10 · München=91 · Frankfurt=82</div>
+      </div>
+      <button class="btn-primary" onclick="CONFIG.testConnection()">🔌 Verbindung testen</button>
+      <div class="status" id="status-conn"></div>
+    </div>
+
+    <div class="settings-box">
+      <h3>📖 Anleitung für neue Nutzer</h3>
+      <p>Folge diesen Schritten um das System für dich einzurichten:</p>
+      <div class="setup-step"><h4><span class="step-num">1</span>Google Sheets Dateien kopieren</h4><p>Öffne die Vorlagen und erstelle eine Kopie in deinem Google Drive (<strong>Datei → Kopie erstellen</strong>). Die Spreadsheet-ID findest du danach in der URL.</p></div>
+      <div class="setup-step"><h4><span class="step-num">2</span>Google Cloud OAuth Client-ID erstellen</h4><p>1. <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a><br>2. Neues Projekt → Google Sheets API aktivieren<br>3. Anmeldedaten → OAuth-Client-ID (Webanwendung)<br>4. Autorisierte JavaScript-Quellen: deine GitHub Pages URL<br>5. Client-ID hier eintragen</p></div>
+      <div class="setup-step"><h4><span class="step-num">3</span>IDs eintragen &amp; testen</h4><p>Alle IDs oben eintragen und auf „Verbindung testen" klicken.</p></div>
+      <div class="setup-step"><h4><span class="step-num">4</span>Ersten Hund anlegen</h4><p>🗂️ Stammdaten → 🐕 Hunde → Neuen Hund hinzufügen.</p></div>
+      <div class="setup-step"><h4><span class="step-num">5</span>App installieren (optional)</h4><p><strong>iPhone:</strong> Teilen → „Zum Home-Bildschirm"<br><strong>Android:</strong> Menü → „Zum Startbildschirm hinzufügen"</p></div>
+    </div>
+
+    <div class="settings-box">
+      <h3>ℹ️ App-Info</h3>
+      <p style="font-size:12px;color:var(--sub);line-height:1.8">
+        Version 2.1 · Multi-Hund · ES Modules<br>
+        Datenbank: Google Sheets (Hund_Stammdaten + Hund_Tagebuch)<br>
+        NRC 2006 Bedarfswerte · Toleranzen individuell anpassbar<br>
+        Wetter: DWD via BrightSky API · Pollen: DWD OpenData
+      </p>
+    </div>
+  </div>
+
+</div><!-- end main-screen -->
+
+<!-- Nährstoff-Info Popup -->
+<div id="nutr-popup" class="nutr-popup" style="display:none" onclick="UI.closeNutrPopup(event)">
+  <div class="nutr-popup-inner" id="nutr-popup-inner">
+    <button class="nutr-close" onclick="UI.closeNutrPopup()">✕</button>
+    <h3 id="nutr-popup-name"></h3>
+    <div class="nutr-meta" id="nutr-popup-meta"></div>
+    <div id="nutr-popup-content"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay" class="modal-overlay" style="display:none" onclick="UI.closeModal(event)">
+  <div class="modal" id="modal-inner">
+    <h3><span id="modal-title">Formular</span><button class="modal-close" onclick="UI.closeModal()">✕</button></h3>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+</div><!-- end app -->
+
+<!-- Google Identity Services (muss vor main.js geladen sein) -->
+<script src="https://accounts.google.com/gsi/client" async></script>
+
+<!-- App-Einstieg als ES Module -->
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>
