@@ -1,104 +1,113 @@
 /**
  * ╔══════════════════════════════════════════════════════════════╗
  * ║  MODULE: wetter.js                                           ║
- * ║  Hund Manager – Wetter & Pollen Automatik-Laden              ║
+ * ║  Hund Manager – Wetter & Pollen                              ║
  * ║                                                              ║
- * ║  Verantwortlich für:                                         ║
- * ║  - Wetter-Daten von BrightSky API (DWD-Daten) laden          ║
- * ║  - Pollen-Daten von DWD OpenData laden (via CORS-Proxy)      ║
- * ║  - Formularfelder im Umwelt-Tab automatisch befüllen         ║
- * ║  - Status-Meldung während / nach dem Laden anzeigen          ║
+ * ║  Pollen-Quellen:                                             ║
+ * ║  1. DWD OpenData (Deutschland, 18 Regionen, via CORS-Proxy) ║
+ * ║  2. Open-Meteo Air Quality (Europa, koordinatenbasiert,      ║
+ * ║     kein Key, kein CORS-Problem)                             ║
  * ║                                                              ║
- * ║  APIs:                                                       ║
- * ║  - Wetter: https://api.brightsky.dev/weather                 ║
- * ║  - Pollen: https://opendata.dwd.de/.../s31fg.json            ║
- * ║    (via CORS-Proxy: allorigins.win oder corsproxy.io)        ║
+ * ║  Nach dem Laden erscheint eine Auswahl-UI. Der Nutzer        ║
+ * ║  wählt welche Pollenarten + Stärke übernommen werden.        ║
  * ║                                                              ║
  * ║  Abhängigkeiten: config.js                                   ║
- * ║  Wird aufgerufen von: main.js (nach Login, setTimeout 500ms) ║
  * ╚══════════════════════════════════════════════════════════════╝
  */
 
 import { get as getCfg } from './config.js';
 
-// ── Pollen-Konstanten ────────────────────────────────────────────
-
-/** DWD API-Key → Anzeigename */
-const POLLEN_NAMES = {
-  Graeser: 'Gräser',
-  Roggen:  'Roggen',
-  Hasel:   'Hasel',
-  Beifuss: 'Beifuß',
-  Esche:   'Esche',
-  Birke:   'Birke',
-  Erle:    'Erle',
-  Ambrosia:'Ambrosia',
+// ── DWD Konstanten ───────────────────────────────────────────────
+const DWD_POLLEN_NAMES = {
+  Graeser: 'Gräser', Roggen: 'Roggen', Hasel: 'Hasel',
+  Beifuss: 'Beifuß', Esche: 'Esche',  Birke: 'Birke',
+  Erle:    'Erle',   Ambrosia: 'Ambrosia',
+};
+const DWD_LEVEL_LABELS = {
+  '-1':'keine Daten', '0':'keine', '0-1':'keine–gering',
+  '1':'gering', '1-2':'gering–mittel', '2':'mittel',
+  '2-3':'stark', '3':'sehr stark',
+};
+const DWD_LEVEL_NUM = {
+  '-1':-1, '0':0, '0-1':0.5, '1':1, '1-2':1.5, '2':2, '2-3':2.5, '3':3,
 };
 
-/** Mindest-Belastungsstufe für Anzeige (0=keine, 1=gering, 2=mittel, 3=stark) */
-const POLLEN_MIN_LEVEL = 2.0;
+// ── Open-Meteo Konstanten ────────────────────────────────────────
+const OM_POLLEN_FIELDS = [
+  { key:'alder_pollen',   name:'Erle'    },
+  { key:'birch_pollen',   name:'Birke'   },
+  { key:'grass_pollen',   name:'Gräser'  },
+  { key:'mugwort_pollen', name:'Beifuß'  },
+  { key:'olive_pollen',   name:'Olive'   },
+  { key:'ragweed_pollen', name:'Ragweed' },
+];
 
-/** DWD Pollen JSON URL */
-const DWD_POLLEN_URL = 'https://opendata.dwd.de/climate_environment/health/alerts/s31fg.json';
+function omLevelLabel(val) {
+  if (val === null || val === undefined) return null;
+  if (val < 10)  return 'keine';
+  if (val < 50)  return 'gering';
+  if (val < 150) return 'mittel';
+  if (val < 500) return 'stark';
+  return 'sehr stark';
+}
+function omLevelNum(val) {
+  if (!val)      return -1;
+  if (val < 10)  return 0;
+  if (val < 50)  return 1;
+  if (val < 150) return 2;
+  if (val < 500) return 3;
+  return 4;
+}
 
-/** CORS-Proxies (werden der Reihe nach probiert) */
-const CORS_PROXIES = [
-  (url) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-  (url) => 'https://corsproxy.io/?' + encodeURIComponent(url),
+// ── CORS-Proxies ─────────────────────────────────────────────────
+const DWD_URL = 'https://opendata.dwd.de/climate_environment/health/alerts/s31fg.json';
+const PROXIES = [
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  u => 'https://corsproxy.io/?' + encodeURIComponent(u),
 ];
 
 // ════════════════════════════════════════════════════════════════
 //  ÖFFENTLICHE API
 // ════════════════════════════════════════════════════════════════
 
-/**
- * Wetter und Pollen parallel laden.
- * Zeigt Status-Banner im Umwelt-Tab während des Ladens.
- * Fehler werden im Banner angezeigt (kein Throw).
- */
 export async function loadAll() {
   const bar = document.getElementById('autoload-status');
   if (!bar) return;
   bar.style.display = 'block';
   bar.textContent   = '⏳ Lade Wetter und Pollen…';
 
-  const [wetter, pollen] = await Promise.allSettled([
+  const [wetter, dwdRes, omRes] = await Promise.allSettled([
     loadWetter(),
-    loadPollen(),
+    loadPollenDWD(),
+    loadPollenOpenMeteo(),
   ]);
 
-  const msgs = [];
-  msgs.push(wetter.status === 'fulfilled' ? '✅ Wetter geladen' : '⚠️ Wetter: ' + wetter.reason);
-  msgs.push(pollen.status === 'fulfilled' ? '✅ Pollen geladen' : '⚠️ Pollen: ' + pollen.reason);
+  const msgs = [
+    wetter.status === 'fulfilled' ? '✅ Wetter'       : '⚠️ Wetter: '       + wetter.reason,
+    dwdRes.status === 'fulfilled' ? '✅ Pollen DWD'   : '⚠️ Pollen DWD: '   + dwdRes.reason,
+    omRes.status  === 'fulfilled' ? '✅ Open-Meteo'   : '⚠️ Open-Meteo: '   + omRes.reason,
+  ];
   bar.textContent = msgs.join('  ·  ');
+  setTimeout(() => { bar.style.display = 'none'; }, 4_000);
 
-  // Banner nach 6 Sekunden ausblenden
-  setTimeout(() => { bar.style.display = 'none'; }, 6_000);
+  const dwdData = dwdRes.status === 'fulfilled' ? dwdRes.value : [];
+  const omData  = omRes.status  === 'fulfilled' ? omRes.value  : [];
+  renderPollenSelector(dwdData, omData);
 }
 
 // ════════════════════════════════════════════════════════════════
-//  WETTER (BrightSky / DWD)
+//  WETTER
 // ════════════════════════════════════════════════════════════════
 
-/**
- * Tagesdaten von BrightSky laden und in Formularfelder schreiben.
- * Berechnet Tagesmin/-max aus Stunden-Daten.
- *
- * Befüllt: u-temp-min, u-temp-max, u-regen, u-luftfeuchtig
- * @throws {string} Fehlermeldung
- */
 async function loadWetter() {
   const cfg   = getCfg();
   const today = new Date().toISOString().slice(0, 10);
-  const url   = `https://api.brightsky.dev/weather` +
-                `?lat=${cfg.lat}&lon=${cfg.lon}&date=${today}&tz=Europe/Berlin`;
-
-  const res = await fetch(url);
+  const res   = await fetch(
+    `https://api.brightsky.dev/weather?lat=${cfg.lat}&lon=${cfg.lon}&date=${today}&tz=Europe/Berlin`
+  );
   if (!res.ok) throw `HTTP ${res.status}`;
-
-  const data    = await res.json();
-  const records = data.weather || [];
-  if (!records.length) throw 'Keine Wetterdaten für heute';
+  const records = (await res.json()).weather || [];
+  if (!records.length) throw 'Keine Daten';
 
   const temps  = records.map(r => r.temperature).filter(t => t != null);
   const precip = records.map(r => r.precipitation ?? 0);
@@ -106,77 +115,192 @@ async function loadWetter() {
 
   setValue('u-temp-min',    Math.round(Math.min(...temps)));
   setValue('u-temp-max',    Math.round(Math.max(...temps)));
-  setValue('u-regen',       sumPrecip(precip));
-  if (humids.length) setValue('u-luftfeuchtig', Math.round(avg(humids)));
+  setValue('u-regen',       precip.reduce((a,b)=>a+b,0) > 0.1
+    ? Math.round(precip.reduce((a,b)=>a+b,0) * 10) / 10 : 0);
+  if (humids.length) setValue('u-luftfeuchtig',
+    Math.round(humids.reduce((a,b)=>a+b,0) / humids.length));
 
   const src = document.getElementById('wetter-source');
   if (src) src.textContent = '(DWD via BrightSky)';
 }
 
 // ════════════════════════════════════════════════════════════════
-//  POLLEN (DWD OpenData)
+//  POLLEN DWD
 // ════════════════════════════════════════════════════════════════
 
-/**
- * DWD Pollen-Daten laden und in Formularfeld schreiben.
- * Probiert CORS-Proxies der Reihe nach.
- *
- * Befüllt: u-pollen
- * @throws {string} Fehlermeldung
- */
-async function loadPollen() {
+async function loadPollenDWD() {
   const cfg  = getCfg();
-  const data = await fetchWithProxies(DWD_POLLEN_URL);
-
+  const data = await fetchWithProxies(DWD_URL);
   const region = (data.content || []).find(r => r.region_id === cfg.pollenRegion);
   if (!region) throw `Region ${cfg.pollenRegion} nicht gefunden`;
 
-  const pollenData  = region.Pollen || {};
-  const highPollen  = [];
-
-  for (const [key, displayName] of Object.entries(POLLEN_NAMES)) {
-    if (!pollenData[key]) continue;
-    const level = parsePollenLevel(pollenData[key].today);
-    if (level >= POLLEN_MIN_LEVEL) {
-      highPollen.push(`${displayName} (${formatPollenLevel(pollenData[key].today)})`);
-    }
+  const results = [];
+  for (const [key, displayName] of Object.entries(DWD_POLLEN_NAMES)) {
+    const raw      = region.Pollen?.[key]?.today;
+    const levelNum = DWD_LEVEL_NUM[raw] ?? -1;
+    if (levelNum < 0) continue;
+    results.push({
+      name: displayName, source: 'DWD',
+      level: DWD_LEVEL_LABELS[raw] || raw,
+      levelNum, rawLevel: raw,
+    });
   }
-
-  setValue('u-pollen',
-    highPollen.length > 0 ? highPollen.join(', ') : 'keine erhöhte Belastung'
-  );
-
-  const src = document.getElementById('pollen-source');
-  if (src) src.textContent = '(DWD)';
+  return results;
 }
 
-/**
- * JSON von einer URL via CORS-Proxies abrufen.
- * Probiert Proxies sequenziell bis einer funktioniert.
- *
- * @param {string} targetUrl - Ziel-URL (ohne Proxy)
- * @returns {Promise<Object>} Geparstes JSON-Objekt
- * @throws {string} Wenn alle Proxies scheitern
- */
-async function fetchWithProxies(targetUrl) {
-  for (const buildUrl of CORS_PROXIES) {
-    try {
-      const res = await fetch(buildUrl(targetUrl), {
-        signal: AbortSignal.timeout(8_000),
-      });
-      if (!res.ok) continue;
+// ════════════════════════════════════════════════════════════════
+//  POLLEN OPEN-METEO
+// ════════════════════════════════════════════════════════════════
 
-      const text   = await res.text();
-      const parsed = JSON.parse(text);
+async function loadPollenOpenMeteo() {
+  const cfg    = getCfg();
+  const fields = OM_POLLEN_FIELDS.map(f => f.key).join(',');
+  const res    = await fetch(
+    `https://air-quality-api.open-meteo.com/v1/air-quality` +
+    `?latitude=${cfg.lat}&longitude=${cfg.lon}` +
+    `&hourly=${fields}&timezone=Europe%2FBerlin&forecast_days=1`
+  );
+  if (!res.ok) throw `HTTP ${res.status}`;
+  const data = await res.json();
 
-      // allorigins.win wraps in { contents: "..." }
-      const data = parsed.contents ? JSON.parse(parsed.contents) : parsed;
-      if (data?.content) return data;
-    } catch (e) {
-      // Nächsten Proxy versuchen
-    }
+  const results = [];
+  for (const field of OM_POLLEN_FIELDS) {
+    const hourly   = data.hourly?.[field.key] || [];
+    const maxVal   = Math.max(...hourly.filter(v => v !== null));
+    const levelNum = omLevelNum(isFinite(maxVal) ? maxVal : 0);
+    if (levelNum <= 0) continue;
+    results.push({
+      name: field.name, source: 'Open-Meteo',
+      level: omLevelLabel(maxVal),
+      levelNum, rawVal: Math.round(maxVal),
+    });
   }
-  throw 'Kein CORS-Proxy erreichbar (Pollen-Daten)';
+  return results;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  POLLEN AUSWAHL-UI
+// ════════════════════════════════════════════════════════════════
+
+function levelColor(num) {
+  if (num >= 3)  return '#e76f51';
+  if (num >= 2)  return '#f59e0b';
+  if (num >= 1)  return '#40916c';
+  return 'var(--sub)';
+}
+
+function renderPollenSelector(dwdData, omData) {
+  // Alte UI entfernen
+  document.getElementById('pollen-selector')?.remove();
+
+  // Alle Pollen-Namen vereinigen
+  const allNames = [...new Set([
+    ...dwdData.map(p => p.name),
+    ...omData.map(p => p.name),
+  ])].sort();
+
+  if (!allNames.length) {
+    setValue('u-pollen', 'keine erhöhte Belastung');
+    const src = document.getElementById('pollen-source');
+    if (src) src.textContent = '(DWD + Open-Meteo)';
+    return;
+  }
+
+  const pollenField = document.getElementById('u-pollen')?.closest('.field');
+  if (!pollenField) return;
+
+  const container = document.createElement('div');
+  container.id = 'pollen-selector';
+  container.style.cssText = `
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:var(--radius);padding:12px;margin-bottom:1.25rem;
+  `;
+
+  // Buttons für jede Pollenart
+  const btnsHtml = allNames.map(name => {
+    const dwd  = dwdData.find(p => p.name === name);
+    const om   = omData.find(p  => p.name === name);
+    const best = dwd || om;
+    const col  = levelColor(best.levelNum);
+
+    return `<button
+      class="pollen-select-btn"
+      data-name="${name}"
+      data-level="${best.level}"
+      data-levelnum="${best.levelNum}"
+      style="padding:10px 8px;border-radius:var(--radius-sm);border:2px solid ${col};
+        background:var(--bg);color:var(--text);cursor:pointer;text-align:left;
+        font-family:inherit;transition:all .15s;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px">${name}</div>
+      ${dwd ? `<div style="font-size:10px;color:${levelColor(dwd.levelNum)}">
+        DWD: ${dwd.level}</div>` : ''}
+      ${om  ? `<div style="font-size:10px;color:${levelColor(om.levelNum)}">
+        Open-Meteo: ${om.level} (${om.rawVal} gr/m³)</div>` : ''}
+    </button>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.05em;color:var(--c2);margin-bottom:10px">
+      🌿 Pollen auswählen – tippe auf die du übernehmen möchtest
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+      ${btnsHtml}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="pollen-all"
+        style="flex:1;padding:8px;font-size:12px;border:1px solid var(--border);
+          border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);
+          cursor:pointer;font-family:inherit">✓ Alle</button>
+      <button id="pollen-none"
+        style="flex:1;padding:8px;font-size:12px;border:1px solid var(--border);
+          border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);
+          cursor:pointer;font-family:inherit">✗ Keine</button>
+      <button id="pollen-apply"
+        style="flex:2;padding:8px;font-size:13px;font-weight:600;border:none;
+          border-radius:var(--radius-sm);background:var(--c2);color:#fff;
+          cursor:pointer;font-family:inherit">↓ Übernehmen</button>
+    </div>
+  `;
+
+  pollenField.after(container);
+
+  // Event-Listener
+  container.querySelectorAll('.pollen-select-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const active = btn.dataset.selected === '1';
+      active ? deactivateBtn(btn) : activateBtn(btn);
+    });
+    // Vorauswahl: alles mit Stärke ≥ mittel
+    if (parseInt(btn.dataset.levelnum) >= 2) activateBtn(btn);
+  });
+
+  container.getElementById
+  document.getElementById('pollen-all').addEventListener('click', () => {
+    container.querySelectorAll('.pollen-select-btn').forEach(activateBtn);
+  });
+  document.getElementById('pollen-none').addEventListener('click', () => {
+    container.querySelectorAll('.pollen-select-btn').forEach(deactivateBtn);
+  });
+  document.getElementById('pollen-apply').addEventListener('click', () => {
+    const selected = [...container.querySelectorAll('.pollen-select-btn[data-selected="1"]')];
+    setValue('u-pollen', selected.length
+      ? selected.map(b => `${b.dataset.name} (${b.dataset.level})`).join(', ')
+      : 'keine erhöhte Belastung'
+    );
+    const src = document.getElementById('pollen-source');
+    if (src) src.textContent = '(DWD + Open-Meteo)';
+    container.remove();
+  });
+}
+
+function activateBtn(btn) {
+  btn.dataset.selected = '1';
+  btn.style.background = 'var(--c4)';
+}
+function deactivateBtn(btn) {
+  btn.dataset.selected = '0';
+  btn.style.background = 'var(--bg)';
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -188,44 +312,16 @@ function setValue(id, val) {
   if (el) el.value = val;
 }
 
-function avg(arr) {
-  return arr.reduce((a, b) => a + b, 0) / arr.length;
-}
-
-function sumPrecip(arr) {
-  const total = arr.reduce((a, b) => a + b, 0);
-  return total > 0.1 ? Math.round(total * 10) / 10 : 0;
-}
-
-/**
- * Pollen-Rohwert ('0', '1', '1-2', '2-3', '3', '-1') in Zahl umwandeln.
- * Bei Bereich (z.B. '1-2') wird der niedrigere Wert genommen.
- * @param {string} raw
- * @returns {number}
- */
-function parsePollenLevel(raw) {
-  if (!raw || raw === '-1') return -1;
-  if (raw.includes('-')) {
-    const parts = raw.split('-').map(Number);
-    return Math.min(...parts);
+async function fetchWithProxies(targetUrl) {
+  for (const buildUrl of PROXIES) {
+    try {
+      const res    = await fetch(buildUrl(targetUrl), { signal: AbortSignal.timeout(8_000) });
+      if (!res.ok) continue;
+      const text   = await res.text();
+      const parsed = JSON.parse(text);
+      const data   = parsed.contents ? JSON.parse(parsed.contents) : parsed;
+      if (data?.content) return data;
+    } catch (e) { /* nächsten Proxy */ }
   }
-  return parseFloat(raw) || 0;
-}
-
-/**
- * Pollen-Rohwert in lesbaren deutschen Text umwandeln.
- * @param {string} raw
- * @returns {string}
- */
-function formatPollenLevel(raw) {
-  const map = {
-    '0':   'keine',
-    '0-1': 'keine–gering',
-    '1':   'gering',
-    '1-2': 'gering–mittel',
-    '2':   'mittel',
-    '2-3': 'stark',
-    '3':   'sehr stark',
-  };
-  return map[raw] || raw;
+  throw 'CORS-Proxy nicht erreichbar';
 }

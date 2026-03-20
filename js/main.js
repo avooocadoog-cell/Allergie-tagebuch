@@ -26,6 +26,7 @@ import * as TAGEBUCH   from './tagebuch.js';
 import * as ANSICHT    from './ansicht.js';
 import * as RECHNER    from './rechner.js';
 import * as STAMMDATEN from './stammdaten.js';
+import * as STATISTIK  from './statistik.js';
 
 // Callback registrieren damit auth.js nach Login onLogin() aufrufen kann
 // ohne main.js zirkular zu importieren
@@ -44,6 +45,7 @@ window.TAGEBUCH   = TAGEBUCH;
 window.ANSICHT    = ANSICHT;
 window.RECHNER    = RECHNER;
 window.STAMMDATEN = STAMMDATEN;
+window.STATISTIK  = STATISTIK;
 
 // APP-Objekt (für APP.currentHundId in HTML)
 window.APP = {

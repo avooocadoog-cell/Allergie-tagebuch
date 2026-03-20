@@ -28,11 +28,14 @@
  * @param {'rechner'|'tagebuch'|'stammdaten'|'einst'} panel
  */
 export function switchTopPanel(panel) {
-  ['rechner', 'tagebuch', 'stammdaten', 'einst'].forEach(p => {
+  ['rechner', 'tagebuch', 'stammdaten', 'einst', 'statistik'].forEach(p => {
     document.getElementById('panel-' + p)?.classList.toggle('active', p === panel);
     document.getElementById('tnav-' + p)?.classList.toggle('active', p === panel);
   });
   // Stammdaten-Tab beim Öffnen aktualisieren
+  if (panel === 'statistik') {
+    import('./statistik.js').then(m => m.load());
+  }
   if (panel === 'stammdaten') {
     import('./stammdaten.js').then(m => m.loadCurrentTab());
   }
