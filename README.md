@@ -11,3 +11,5 @@ The app tracks pollen and weather data, and you can also monitor indoor temperat
 Currently, it is only available in German and lacks many features you would expect from more advanced software.
 
 I am not a programmer, so this project was mostly “vibe coding” with the help of AI.
+
+So what it does is index.html is a website which connects to your google spreadsheets. These need to be set up. 
