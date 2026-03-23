@@ -1,9 +1,9 @@
 1 TODO
 
-Make the code more modular?
+Make the code more modular? DONE
 
 Nutrition table
-update nutrions database
+update nutrions database 
 
 redo nutriton value with a more flexible way to enter data 
 (better calculator where you can enter the value with units and it will recalculate it in the proper data format)
