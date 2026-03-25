@@ -479,9 +479,10 @@
        PANEL: STAMMDATEN
        ════════════════════════════════════════════════════════════ -->
   <div id="panel-stammdaten" class="panel">
-    <div class="tab-bar" style="grid-template-columns:repeat(3,1fr)">
+    <div class="tab-bar" style="grid-template-columns:repeat(4,1fr)">
       <button class="tab active" onclick="UI.switchStammdatenTab('hunde')">🐕 Hunde</button>
       <button class="tab" onclick="UI.switchStammdatenTab('zutaten')">🥩 Zutaten</button>
+      <button class="tab" onclick="UI.switchStammdatenTab('toleranzen')">📊 Toleranzen</button>
       <button class="tab" onclick="UI.switchStammdatenTab('parameter')">⚙️ Parameter</button>
     </div>
     <div id="sd-hunde" class="section active">
@@ -493,6 +494,10 @@
       <p class="section-title">🥩 Zutaten verwalten</p>
       <button class="btn-primary" style="margin-bottom:1rem" onclick="STAMMDATEN.showZutatModal()">+ Neue Zutat hinzufügen</button>
       <div id="sd-zutaten-list"><div class="view-loading"><div class="spinner"></div></div></div>
+    </div>
+    <div id="sd-toleranzen" class="section">
+      <p class="section-title">📊 Nährstoff-Toleranzen</p>
+      <div id="sd-toleranzen-list"><div class="view-loading"><div class="spinner"></div></div></div>
     </div>
     <div id="sd-parameter" class="section">
       <p class="section-title">⚙️ Parameter &amp; Toleranzen</p>
