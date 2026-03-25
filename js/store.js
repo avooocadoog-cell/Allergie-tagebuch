@@ -22,6 +22,14 @@
 import { readSheet }  from './sheets.js';
 import { get as getCfg } from './config.js';
 
+
+// ── Hilfsfunktion: robuste Zahl-Konvertierung (unterstützt dt. Dezimalkomma) ──
+const _float = v => {
+  const s = String(v ?? '').trim().replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+};
+
 // ── Cache-Objekte ────────────────────────────────────────────────
 let hunde          = [];  // [{hund_id, name, rasse, geburtsdatum, geschlecht, kastriert, aktiv, notizen}]
 let parameter      = {};  // {key: value}  (Key-Value Map)
@@ -33,6 +41,7 @@ let zutatNutr      = [];  // [{zutaten_id, naehrstoff_id, naehrstoff_name, wert_
 let rezepte        = [];  // [{rezept_id, hund_id, name, erstellt, notizen}]
 let rezeptZutaten  = [];  // [{rezept_id, zutaten_id, zutat_name, gramm, gekocht}]
 let kalorienbedarf = [];  // [{hund_id, faktor_typ, wert, beschreibung}]
+let rezeptKomp     = [];  // [{id, rezept_id, komponenten_typ, ref_id, gramm, notizen}]
 
 // ════════════════════════════════════════════════════════════════
 //  LADEN
@@ -62,6 +71,14 @@ export async function loadAll() {
     readSheet('Hund_Kalorienbedarf', sid),
   ]);
 
+  // Rezept_Komponenten laden (optional – Sheet existiert erst nach Migration)
+  let rKomp = [];
+  try {
+    rKomp = await readSheet('Rezept_Komponenten', sid);
+  } catch (e) {
+    console.info('STORE: Rezept_Komponenten noch nicht vorhanden (vor Migration).');
+  }
+
   // ── Hunde (Header Zeile 2, Daten ab Zeile 3) ──────────────────
   hunde = parseRows(rHunde,
     ['hund_id','name','rasse','geburtsdatum','geschlecht','kastriert','aktiv','notizen'], 2)
@@ -77,20 +94,23 @@ export async function loadAll() {
   // ── Nährstoffe ────────────────────────────────────────────────
   naehrstoffe = parseRows(rNaehr,
     ['naehrstoff_id','name','einheit','gruppe',
-     'beschreibung','funktion','mangel_symptome','quellen','obergrenze_info'], 2)
+     'beschreibung','funktion','mangel_symptome','quellen','obergrenze_info',
+     // v2-Spalten J–N (leer wenn Sheet noch nicht migriert):
+     'nrc_min_per_mkg','aafco_min_pct_dm','fediaf_min','upper_safe_limit','quelle_ref'], 2)
     .map(r => ({ ...r, naehrstoff_id: parseInt(r.naehrstoff_id) || 0 }))
     .filter(r => r.name);
 
   // ── Toleranzen ────────────────────────────────────────────────
   toleranzen = parseRows(rTol,
-    ['hund_id','naehrstoff_id','naehrstoff_name','min_pct','max_pct','anmerkung'], 2)
+    ['hund_id','naehrstoff_id','naehrstoff_name','min_pct','max_pct','anmerkung','recommended_pct'], 2)
     .map(r => ({
       hund_id:         parseInt(r.hund_id)         || 0,
       naehrstoff_id:   parseInt(r.naehrstoff_id)   || 0,
       naehrstoff_name: r.naehrstoff_name,
-      min_pct:         parseFloat(r.min_pct)        || 0,
-      max_pct:         parseFloat(r.max_pct)        || 999,
+      min_pct:         _float(r.min_pct),
+      max_pct:         _float(r.max_pct) || 999,
       anmerkung:       r.anmerkung || '',
+      recommended_pct: r.recommended_pct || '',
     }))
     .filter(r => r.hund_id && r.naehrstoff_id);
 
@@ -103,7 +123,7 @@ export async function loadAll() {
         naehrstoff_id:  parseInt(r.naehrstoff_id) || 0,
         name:           r.naehrstoff_name,
         einheit:        r.einheit,
-        bedarf_pro_mkg: parseFloat(r.bedarf_pro_mkg) || 0,
+        bedarf_pro_mkg: _float(r.bedarf_pro_mkg),
         quelle:         r.quelle,
         gruppe:         nutrInfo?.gruppe || 'Sonstiges',
       };
@@ -154,6 +174,19 @@ export async function loadAll() {
     ['hund_id','faktor_typ','wert','beschreibung'], 2)
     .map(r => ({ ...r, hund_id: parseInt(r.hund_id) || 0, wert: parseFloat(r.wert) || 0 }))
     .filter(r => r.hund_id && r.faktor_typ);
+
+  // ── Rezept-Komponenten (für Rezept-Mixing) ────────────────────
+  rezeptKomp = parseRows(rKomp,
+    ['id','rezept_id','komponenten_typ','ref_id','gramm','notizen'], 2)
+    .map(r => ({
+      id:              parseInt(r.id)        || 0,
+      rezept_id:       parseInt(r.rezept_id) || 0,
+      komponenten_typ: r.komponenten_typ,    // 'zutat' | 'rezept'
+      ref_id:          parseInt(r.ref_id)    || 0,
+      gramm:           parseFloat(r.gramm)   || 0,
+      notizen:         r.notizen || '',
+    }))
+    .filter(r => r.rezept_id && r.komponenten_typ && r.gramm > 0);
 
   console.log(
     `STORE geladen: ${hunde.length} Hunde · ${zutaten.length} Zutaten · ` +
@@ -216,17 +249,23 @@ export function getNutrMap(zutatId, zutatName) {
 /**
  * Toleranzbereich für einen Hund × Nährstoff.
  * Fällt auf globale Standard-Parameter zurück wenn keine individuelle Toleranz hinterlegt.
+ * Gibt zusätzlich recommended_pct zurück wenn vorhanden (Spec 12).
  *
  * @param {number} hundId   - hund_id
  * @param {string} nutrName - Nährstoff-Name
- * @returns {{ min: number, max: number }}
+ * @returns {{ min: number, max: number, recommended: number|null }}
  */
 export function getTolerance(hundId, nutrName) {
   const found = toleranzen.find(t => t.hund_id === hundId && t.naehrstoff_name === nutrName);
-  if (found) return { min: found.min_pct, max: found.max_pct };
+  if (found) return {
+    min:         found.min_pct,
+    max:         found.max_pct,
+    recommended: found.recommended_pct ? parseFloat(found.recommended_pct) : null,
+  };
   return {
-    min: parameter['toleranz_default_min_pct'] || 80,
-    max: parameter['toleranz_default_max_pct'] || 150,
+    min:         parameter['toleranz_default_min_pct'] || 80,
+    max:         parameter['toleranz_default_max_pct'] || 150,
+    recommended: null,
   };
 }
 
@@ -277,6 +316,24 @@ export function getRezeptZutaten(rezeptId) {
 }
 
 /**
+ * Rezept-Komponenten für Rezept-Mixing.
+ * Gibt alle Komponenten eines Rezepts zurück.
+ * @param {number} rezeptId
+ * @returns {Array<{id, rezept_id, komponenten_typ, ref_id, gramm, notizen}>}
+ */
+export function getRezeptKomponenten(rezeptId) {
+  return rezeptKomp.filter(k => k.rezept_id === rezeptId);
+}
+
+/**
+ * Prüft ob Rezept_Komponenten geladen sind (Sheet existiert bereits).
+ * @returns {boolean}
+ */
+export function hasRezeptKomponenten() {
+  return rezeptKomp.length > 0;
+}
+
+/**
  * Nährstoff-Info-Objekt per Name (für Info-Popup).
  * @param {string} name
  * @returns {Object|null}
@@ -312,3 +369,6 @@ export function addZutat(z) { zutaten.push(z); }
 
 /** Nährstoff-Einträge einer neuen Zutat dem Cache hinzufügen. */
 export function addZutatNutr(entries) { zutatNutr.push(...entries); }
+
+/** Neue Rezept-Komponente dem Cache hinzufügen. */
+export function addRezeptKomp(k) { rezeptKomp.push(k); }

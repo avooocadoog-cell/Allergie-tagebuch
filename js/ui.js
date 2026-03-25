@@ -90,7 +90,7 @@ export function switchViewTab(tab) {
  * @param {'hunde'|'zutaten'|'parameter'} tab
  */
 export function switchStammdatenTab(tab) {
-  ['hunde', 'zutaten', 'parameter'].forEach(t => {
+  ['hunde', 'zutaten', 'toleranzen', 'parameter'].forEach(t => {
     const el = document.getElementById('sd-' + t);
     if (el) {
       el.classList.toggle('active', t === tab);
@@ -98,7 +98,7 @@ export function switchStammdatenTab(tab) {
     }
   });
   const btns = document.querySelectorAll('#panel-stammdaten .tab');
-  ['hunde', 'zutaten', 'parameter'].forEach((t, i) => btns[i]?.classList.toggle('active', t === tab));
+  ['hunde', 'zutaten', 'toleranzen', 'parameter'].forEach((t, i) => btns[i]?.classList.toggle('active', t === tab));
   import('./stammdaten.js').then(m => m.loadTab(tab));
 }
 
@@ -251,25 +251,73 @@ export function closeModal(event) {
 
 /**
  * Nährstoff-Info Popup mit Details aus dem STORE anzeigen.
+ * Zeigt NRC-Bedarf, AAFCO/FEDIAF Richtwerte und obere Grenzen wenn vorhanden.
  * @param {string} nutrName - Nährstoff-Name
  */
 export function showNutrPopup(nutrName) {
   import('./store.js').then(({ getNaehrstoffInfo, getBedarfByName }) => {
-    const info      = getNaehrstoffInfo(nutrName);
+    const info       = getNaehrstoffInfo(nutrName);
     const bedarfInfo = getBedarfByName(nutrName);
     if (!info && !bedarfInfo) return;
 
     document.getElementById('nutr-popup-name').textContent = info?.name || nutrName;
     document.getElementById('nutr-popup-meta').textContent =
       `${info?.einheit || ''} · ${info?.gruppe || ''} · ` +
-      `Bedarf: ${bedarfInfo?.bedarf_pro_mkg || '–'} ${info?.einheit || ''}/kg^0,75 (${bedarfInfo?.quelle || ''})`;
+      `NRC-Bedarf: ${bedarfInfo?.bedarf_pro_mkg || '–'} ${info?.einheit || ''}/kg^0,75`;
 
     let html = '';
+
+    // ── Quellenvergleich (NRC / AAFCO / FEDIAF) ─────────────────
+    const hasNrc   = bedarfInfo?.bedarf_pro_mkg > 0;
+    const hasAafco = info?.aafco_min_pct_dm && String(info.aafco_min_pct_dm).trim() !== '';
+    const hasFediaf= info?.fediaf_min        && String(info.fediaf_min).trim()        !== '';
+    const hasUsl   = info?.upper_safe_limit  && String(info.upper_safe_limit).trim()  !== '';
+    const hasNrcMin= info?.nrc_min_per_mkg   && String(info.nrc_min_per_mkg).trim()  !== '';
+
+    if (hasNrc || hasAafco || hasFediaf || hasNrcMin || hasUsl) {
+      html += `<div class="nutr-section-label">📊 Referenzwerte</div>`;
+      html += `<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:8px">`;
+
+      if (hasNrcMin || hasNrc) {
+        const val = info?.nrc_min_per_mkg || bedarfInfo?.bedarf_pro_mkg || '–';
+        html += `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 4px;color:var(--sub);width:55%">NRC 2006 Mindestbedarf</td>
+          <td style="padding:5px 4px;font-weight:600;text-align:right">${esc(String(val))} ${esc(info?.einheit || '')} / kg<sup>0,75</sup></td>
+        </tr>`;
+      }
+      if (hasAafco) {
+        html += `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 4px;color:var(--sub)">AAFCO Minimum</td>
+          <td style="padding:5px 4px;font-weight:600;text-align:right">${esc(String(info.aafco_min_pct_dm))} % TM</td>
+        </tr>`;
+      }
+      if (hasFediaf) {
+        html += `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 4px;color:var(--sub)">FEDIAF Minimum</td>
+          <td style="padding:5px 4px;font-weight:600;text-align:right">${esc(String(info.fediaf_min))} ${esc(info?.einheit || '')}</td>
+        </tr>`;
+      }
+      if (hasUsl) {
+        html += `<tr>
+          <td style="padding:5px 4px;color:var(--danger-text,#e76f51)">⚠️ Sicherer Höchstwert</td>
+          <td style="padding:5px 4px;font-weight:600;text-align:right;color:var(--danger-text,#e76f51)">${esc(String(info.upper_safe_limit))} ${esc(info?.einheit || '')}</td>
+        </tr>`;
+      }
+      html += `</table>`;
+
+      if (info?.quelle_ref && String(info.quelle_ref).trim()) {
+        html += `<p style="font-size:10px;color:var(--sub);margin-bottom:8px">Quelle: ${esc(info.quelle_ref)}</p>`;
+      }
+    }
+
+    // ── Inhaltliche Felder ───────────────────────────────────────
     if (info?.beschreibung)    html += `<div class="nutr-section-label">Was ist das?</div><p>${esc(info.beschreibung)}</p>`;
     if (info?.funktion)        html += `<div class="nutr-section-label">Funktion</div><p>${esc(info.funktion)}</p>`;
     if (info?.mangel_symptome) html += `<div class="nutr-section-label">Mangel-Symptome</div><p>${esc(info.mangel_symptome)}</p>`;
-    if (info?.quellen)         html += `<div class="nutr-section-label">Quellen</div><p>${esc(info.quellen)}</p>`;
-    if (info?.obergrenze_info) html += `<div class="nutr-section-label">⚠️ Obergrenze</div><p>${esc(info.obergrenze_info)}</p>`;
+    if (info?.quellen)         html += `<div class="nutr-section-label">Quellen (Lebensmittel)</div><p>${esc(info.quellen)}</p>`;
+    if (info?.obergrenze_info) html += `<div class="nutr-section-label">⚠️ Obergrenze (Hinweise)</div><p>${esc(info.obergrenze_info)}</p>`;
+
+    if (!html) html = `<p style="color:var(--sub);font-size:13px">Keine Detailinformationen verfügbar.</p>`;
 
     document.getElementById('nutr-popup-content').innerHTML = html;
     document.getElementById('nutr-popup').style.display = 'flex';

@@ -20,9 +20,11 @@
 import { readSheet, appendRow, writeRange } from './sheets.js';
 import { get as getCfg }                    from './config.js';
 import { getZutaten, getBedarf, getParameter, getKalorienParam,
-         getTolerance, getNutrMap, getRezepte,
+         getTolerance, getNutrMap, getRezepte, getRezeptZutaten,
          getNaehrstoffInfo, getBedarfByName,
-         addZutat, addZutatNutr }           from './store.js';
+         addZutat, addZutatNutr,
+         getRezeptKomponenten, hasRezeptKomponenten,
+         addRezeptKomp }           from './store.js';
 import { esc, showNutrPopup }               from './ui.js';
 
 // ── Zustand ──────────────────────────────────────────────────────
@@ -129,6 +131,8 @@ export async function loadRecipeList() {
     const rows    = await readSheet('Rezepte', getCfg().stammdatenId);
     const rezepte = rows.slice(2)
       .filter(r => r?.[2] && String(r[2]).trim())
+      // Soft-Delete: Spalte F (Index 5) = deleted. Vor Migration leer → wird nicht gefiltert.
+      .filter(r => String(r[5] ?? '').toUpperCase() !== 'TRUE')
       .map(r => ({
         rezept_id: parseInt(r[0]) || 0,
         hund_id:   parseInt(r[1]) || 0,
@@ -201,9 +205,18 @@ export function newRecipe() {
   _showEditor();
 }
 
-export function deleteRecipe(rezeptId, name) {
-  alert(`Rezept "${name}" bitte direkt in Google Sheets löschen:\n` +
-        `Tabelle "Rezepte" und "Rezept_Zutaten" in Hund_Stammdaten.`);
+export async function deleteRecipe(rezeptId, name) {
+  if (!confirm(`Rezept "${name}" löschen?\n\nWiederherstellung: in Google Sheets Tabelle "Rezepte" Spalte F der Zeile auf FALSE setzen.`)) return;
+  try {
+    const sid  = getCfg().stammdatenId;
+    const rows = await readSheet('Rezepte', sid);
+    const idx  = rows.findIndex(r => parseInt(r[0]) === rezeptId);
+    if (idx < 0) { alert('Rezept nicht gefunden.'); return; }
+    const now  = new Date().toISOString().slice(0, 19);
+    await writeRange('Rezepte', `F${idx + 1}:G${idx + 1}`, [['TRUE', now]], sid);
+    loadRecipeList();
+    _showToast(`Rezept "${name}" gelöscht.`);
+  } catch (e) { alert('Fehler: ' + e.message); }
 }
 
 function _showEditor() {
@@ -455,8 +468,151 @@ export async function saveRecipe() {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  NÄHRSTOFFBERECHNUNG
+//  REZEPT-MIXING (Rezept_Komponenten)
 // ════════════════════════════════════════════════════════════════
+
+/**
+ * Rezept rekursiv in flache Zutatenliste auflösen.
+ *
+ * Unterstützt zwei Komponenten-Typen:
+ *   'zutat'  → direkte Zutat (ref_id = zutaten_id)
+ *   'rezept' → Unter-Rezept (ref_id = rezept_id, wird rekursiv aufgelöst)
+ *
+ * @param {number}  rezeptId  - Das aufzulösende Rezept
+ * @param {number}  scaledG   - Gramm die von diesem Rezept benötigt werden
+ * @param {Set}     visited   - Bereits besuchte Rezept-IDs (Zykluserkennung)
+ * @param {number}  depth     - Aktuelle Rekursionstiefe (max. MAX_MIX_DEPTH)
+ * @returns {{ zutaten_id:number, name:string, grams:number, cooked:boolean }[]}
+ */
+const MAX_MIX_DEPTH = 5;
+
+export function resolveRezept(rezeptId, scaledG = null, visited = new Set(), depth = 0) {
+  if (depth > MAX_MIX_DEPTH) {
+    console.warn(`resolveRezept: Maximale Tiefe (${MAX_MIX_DEPTH}) erreicht für Rezept ${rezeptId}`);
+    return [];
+  }
+  if (visited.has(rezeptId)) {
+    console.warn(`resolveRezept: Zyklus erkannt bei Rezept ${rezeptId}`);
+    return [];
+  }
+
+  const komps = getRezeptKomponenten(rezeptId);
+
+  // Wenn keine Komponenten → klassische Rezept_Zutaten nutzen (Rückwärtskompatibilität)
+  if (!komps.length) {
+    try {
+      const rows    = getRezeptZutaten(rezeptId);
+      const totalG  = rows.reduce((s, r) => s + r.gramm, 0);
+      const factor  = (scaledG !== null && totalG > 0) ? scaledG / totalG : 1;
+      return rows.map(r => ({
+        zutaten_id: r.zutaten_id,
+        name:       r.zutat_name,
+        grams:      Math.round(r.gramm * factor * 10) / 10,
+        cooked:     r.gekocht,
+      }));
+    } catch { return []; }
+  }
+
+  // Gesamtmasse der Komponenten bestimmen (für Skalierung)
+  const totalG = komps.reduce((s, k) => s + k.gramm, 0);
+  const factor = (scaledG !== null && totalG > 0) ? scaledG / totalG : 1;
+
+  const newVisited = new Set([...visited, rezeptId]);
+  const result = [];
+
+  komps.forEach(komp => {
+    const scaled = Math.round(komp.gramm * factor * 10) / 10;
+
+    if (komp.komponenten_typ === 'zutat') {
+      const z = getZutaten().find(z => z.zutaten_id === komp.ref_id);
+      result.push({
+        zutaten_id: komp.ref_id,
+        name:       z?.name || `Zutat #${komp.ref_id}`,
+        grams:      scaled,
+        cooked:     false,
+      });
+    } else if (komp.komponenten_typ === 'rezept') {
+      const sub = resolveRezept(komp.ref_id, scaled, newVisited, depth + 1);
+      result.push(...sub);
+    }
+  });
+
+  // Doppelte zutaten_id zusammenführen
+  const merged = {};
+  result.forEach(r => {
+    if (merged[r.zutaten_id]) {
+      merged[r.zutaten_id].grams += r.grams;
+    } else {
+      merged[r.zutaten_id] = { ...r };
+    }
+  });
+  return Object.values(merged);
+}
+
+/**
+ * Rezept-Mix UI – fügt ausgewählte Menge eines anderen Rezepts
+ * als aufgelöste Zutaten zum aktuellen Rezept hinzu.
+ *
+ * Wird aufgerufen wenn der Nutzer im "Rezept mischen"-Panel
+ * ein Rezept + Gramm auswählt und "Hinzufügen" drückt.
+ */
+export function addRezeptMix() {
+  const sel    = document.getElementById('fr-mix-rezept-select');
+  const gramsI = document.getElementById('fr-mix-gramm');
+  const mixId  = parseInt(sel?.value);
+  const mixG   = parseFloat(gramsI?.value) || 0;
+
+  if (!mixId)  { alert('Bitte ein Rezept wählen.'); return; }
+  if (mixG <= 0) { alert('Bitte Gramm eingeben.'); return; }
+  if (!currentRecipe) newRecipe();
+
+  // Zyklus-Schutz: aktuelles Rezept darf nicht sich selbst enthalten
+  if (currentRecipe.rezept_id && mixId === currentRecipe.rezept_id) {
+    alert('Ein Rezept kann sich nicht selbst enthalten.'); return;
+  }
+
+  const resolved = resolveRezept(mixId, mixG);
+  if (!resolved.length) {
+    alert('Das gewählte Rezept enthält keine Zutaten.'); return;
+  }
+
+  resolved.forEach(r => {
+    const existing = currentRecipe.ingredients.find(i => i.zutaten_id === r.zutaten_id);
+    if (existing) {
+      existing.grams = Math.round((existing.grams + r.grams) * 10) / 10;
+    } else {
+      currentRecipe.ingredients.push({ ...r });
+    }
+  });
+
+  baseIngredients = currentRecipe.ingredients.map(i => ({ ...i, grams: i.grams / scaleFactor }));
+  renderIngredients();
+  recalc();
+
+  if (sel)    sel.value = '';
+  if (gramsI) gramsI.value = '';
+}
+
+/**
+ * Rezept-Mix Dropdown mit allen Rezepten des aktuellen Hundes befüllen.
+ * Wird beim Öffnen des Mix-Panels aufgerufen.
+ */
+export function initMixSelect() {
+  const sel = document.getElementById('fr-mix-rezept-select');
+  if (!sel) return;
+  const rezepte = getRezepte(currentHundId);
+  sel.innerHTML = '<option value="">— Rezept wählen —</option>';
+  rezepte.forEach(r => {
+    if (currentRecipe?.rezept_id && r.rezept_id === currentRecipe.rezept_id) return; // selbst ausschließen
+    const opt = document.createElement('option');
+    opt.value = r.rezept_id;
+    opt.textContent = r.name;
+    sel.appendChild(opt);
+  });
+  if (!rezepte.length) {
+    sel.innerHTML = '<option value="">Noch keine Rezepte vorhanden</option>';
+  }
+}
 
 export function recalc() {
   if (!currentRecipe) return;
@@ -532,9 +688,15 @@ function renderNutrTable(totals, mkg) {
   const rowsEl = document.getElementById('fr-nutr-rows');
   const bedarf = getBedarf();
   if (!bedarf?.length) {
-    rowsEl.innerHTML = '<div style="padding:14px;text-align:center;color:var(--sub);font-size:13px">⚠️ Bedarfsdaten nicht geladen.</div>';
+    rowsEl.innerHTML = `<div style="padding:14px;text-align:center;color:var(--sub);font-size:13px">
+      ⚠️ Bedarfsdaten nicht geladen.<br>
+      <span style="font-size:11px">Prüfe ob das Sheet „Bedarf" in deinem Stammdaten-Spreadsheet vorhanden und befüllt ist.</span>
+    </div>`;
     return;
   }
+
+  // Sicherheitsprüfung: mkg muss eine positive Zahl sein
+  const safeMkg = (mkg > 0 && isFinite(mkg)) ? mkg : Math.pow(27, 0.75);
 
   const groups = {};
   bedarf.forEach(b => { (groups[b.gruppe || 'Sonstiges'] = groups[b.gruppe || 'Sonstiges'] || []).push(b); });
@@ -544,17 +706,18 @@ function renderNutrTable(totals, mkg) {
     html += `<div class="fr-nutr-group">${esc(gruppe)}</div>`;
     items.forEach(b => {
       const ist          = totals[b.name] || 0;
-      const tagesBedarf  = b.bedarf_pro_mkg * mkg;
+      const tagesBedarf  = b.bedarf_pro_mkg * safeMkg;
+      const safeTagesB   = (isFinite(tagesBedarf) && tagesBedarf >= 0) ? tagesBedarf : 0;
       const tol          = getTolerance(currentHundId, b.name);
 
       let pct = 0, barColor = 'var(--bar-zero)', pctStr = '?', cls = 'zero';
-      if (tagesBedarf > 0) {
-        pct    = ist / tagesBedarf * 100;
+      if (safeTagesB > 0) {
+        pct    = ist / safeTagesB * 100;
         pctStr = pct.toFixed(0) + '%';
         if (pct >= tol.min && pct <= tol.max) { cls = 'ok';   barColor = 'var(--bar-ok)'; }
         else if (pct < tol.min)               { cls = 'low';  barColor = 'var(--bar-low)'; }
         else                                  { cls = 'over'; barColor = 'var(--bar-high)'; }
-      } else if (tagesBedarf === 0) {
+      } else {
         cls = 'ok'; pctStr = 'n/a';
       }
 
@@ -567,17 +730,25 @@ function renderNutrTable(totals, mkg) {
       };
 
       const istStr    = fmt(ist) + ' ' + b.einheit;
-      const bedarfStr = tagesBedarf > 0 ? fmt(tagesBedarf) + ' ' + b.einheit : '–';
-      const barW      = tagesBedarf > 0 ? Math.min(pct / tol.max * 100, 100) : 0;
-      const diffStr   = tagesBedarf > 0 ? (ist > tagesBedarf ? '+' : '') + fmt(ist - tagesBedarf) + ' ' + b.einheit : '';
-      const tooltip   = `${pctStr} (${diffStr}) · Toleranz: ${tol.min}–${tol.max}%`;
+      const bedarfStr = safeTagesB > 0 ? fmt(safeTagesB) + ' ' + b.einheit : '–';
+      const barW      = safeTagesB > 0 ? Math.min(pct / tol.max * 100, 100) : 0;
+      const diffStr   = safeTagesB > 0 ? (ist > safeTagesB ? '+' : '') + fmt(ist - safeTagesB) + ' ' + b.einheit : '';
+      const recStr    = tol.recommended ? ` · Empf: ${tol.recommended}%` : '';
+      const tooltip   = `${pctStr} (${diffStr}) · Toleranz: ${tol.min}–${tol.max}%${recStr}`;
+
+      // Recommended-Marker: vertikale Linie auf dem Balken wenn definiert
+      const recMarker = tol.recommended && safeTagesB > 0
+        ? `<div style="position:absolute;left:${Math.min(tol.recommended / tol.max * 100, 100)}%;
+             top:0;height:100%;width:2px;background:var(--c2);opacity:.7;pointer-events:none"></div>`
+        : '';
 
       html += `<div class="fr-nutr-row ${cls}" onclick="UI.showNutrPopup('${esc(b.name)}')" title="${esc(tooltip)}">
         <span class="nr-name">${esc(b.name)}</span>
         <span class="nr-val">${esc(istStr)}</span>
         <span class="nr-bedarf">${esc(bedarfStr)}</span>
-        <div class="nr-bar-wrap">
+        <div class="nr-bar-wrap" style="position:relative">
           <div class="nr-bar" style="width:${barW}%;background:${barColor}"></div>
+          ${recMarker}
           <span class="nr-pct">${esc(pctStr)}</span>
         </div>
       </div>`;
@@ -590,4 +761,24 @@ function renderNutrTable(totals, mkg) {
 function _setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
+}
+
+/**
+ * Kurze Toast-Meldung unten einblenden (verschwindet nach 4 Sekunden).
+ * Wird von deleteRecipe verwendet.
+ * @param {string} msg
+ */
+function _showToast(msg) {
+  document.getElementById('rechner-toast')?.remove();
+  const t = document.createElement('div');
+  t.id = 'rechner-toast';
+  t.style.cssText = `
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:var(--text);color:var(--bg);
+    padding:10px 18px;border-radius:var(--radius);font-size:13px;font-weight:600;
+    z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);white-space:nowrap;
+  `;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
 }

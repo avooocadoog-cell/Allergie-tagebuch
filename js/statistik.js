@@ -1,467 +1,403 @@
 /**
- * MODULE: statistik.js
- * Statistik & Korrelationsanalyse – nutzt cache.js für alle Reads.
+ * MODULE: statistik.js  (v3 – konfigurierbarer Chart)
  *
- * Spalten-Mapping (positional, Daten ab Zeile 3):
- *   Symptomtagebuch:  [0]hund_id [1]datum [2]kategorie [3]beschreibung [4]schweregrad [5]koerper [6]notizen
- *   Umweltagebuch:    [0]hund_id [1]datum [2]tempMin [3]tempMax [4]feuchtig [5]regen [6]pollen [7]raumtemp [8]raumfeuchtig [9]bett [10]notizen
- *   Futtertagebuch:   [0]hund_id [1]datum [2]futter [3]produkt [4]erstegabe [5]zweiwo [6]provokation [7]beschreibung [8]notizen
- *   Ausschlussdiät:   [0]hund_id [1]zutat [2]verdacht [3]kategorie [4]status [5]datum [6]reaktion [7]notizen
- *   Bekannte Allergene:[0]hund_id [1]allergen [2]kategorie [3]reaktion [4]symptome [5]notizen
- *   Medikamente:      [0]hund_id [1]name [2]typ [3]dosierung [4]haeufigkeit [5]von [6]bis [7]verordnet [8]notizen
+ * Ein konfigurierbarer Chart statt fester Diagramme.
+ * Der Nutzer wählt welche Parameter gleichzeitig angezeigt werden.
+ *
+ * Y-Links  (y):  Temperatur °C, Luftfeuchtigkeit %, Gewicht kg
+ * Y-Rechts (y2): Schweregrad 0–5, Pollen-Stufe 0–5
  */
 
-import { getSheet, preloadAll, invalidateAll, isCached, getAge } from './cache.js';
-import { getHunde } from './store.js';
-import { esc }      from './ui.js';
+import { getSheet, invalidateAll, getAge } from './cache.js';
+import { getHunde }                         from './store.js';
+import { esc }                              from './ui.js';
 
-const _charts = {};
 const C = {
-  green:'#40916c', greenL:'rgba(64,145,108,.2)',
-  orange:'#e76f51', orangeL:'rgba(231,111,81,.2)',
-  amber:'#f59e0b',  amberL:'rgba(245,158,11,.2)',
-  blue:'#3b82f6',   blueL:'rgba(59,130,246,.2)',
-  purple:'#8b5cf6', purpleL:'rgba(139,92,246,.2)',
-  gray:'#9ca3af',
+  blue:'#3b82f6',   blueL:'rgba(59,130,246,.15)',
+  orange:'#f97316', orangeL:'rgba(249,115,22,.15)',
+  amber:'#f59e0b',  amberL:'rgba(245,158,11,.15)',
+  green:'#22c55e',  greenL:'rgba(34,197,94,.15)',
+  red:'#ef4444',    redL:'rgba(239,68,68,.15)',
+  purple:'#a855f7', purpleL:'rgba(168,85,247,.15)',
+  teal:'#14b8a6',   tealL:'rgba(20,184,166,.15)',
+  sky:'#0ea5e9',    skyL:'rgba(14,165,233,.15)',
 };
 
-// ════════════════════════════════════════════════════════════════
-//  ÖFFENTLICHE API
-// ════════════════════════════════════════════════════════════════
+let _chart      = null;
+let _selected   = new Set(['temp_max','symptome']);
+let _cachedData = null;
 
+const PARAM_DEFS = [
+  {
+    key:'temp_max', label:'Temp. Max (°C)', emoji:'🌡',
+    color:C.orange, colorL:C.orangeL, yAxis:'y',
+    extract:({umw})=>_byDate(umw,1,r=>parseFloat(g(r,3)),Math.max),
+  },
+  {
+    key:'temp_min', label:'Temp. Min (°C)', emoji:'🌡',
+    color:C.blue, colorL:C.blueL, yAxis:'y', dashed:true,
+    extract:({umw})=>_byDate(umw,1,r=>parseFloat(g(r,2)),Math.min),
+  },
+  {
+    key:'temp_in', label:'Temp. innen (°C)', emoji:'🏠',
+    color:C.amber, colorL:C.amberL, yAxis:'y',
+    extract:({umw})=>_byDate(umw,1,r=>parseFloat(g(r,7))),
+  },
+  {
+    key:'feuchte_aus', label:'Feuchte außen (%)', emoji:'💧',
+    color:C.sky, colorL:C.skyL, yAxis:'y', dashed:true,
+    extract:({umw})=>_byDate(umw,1,r=>parseFloat(g(r,4))),
+  },
+  {
+    key:'feuchte_in', label:'Feuchte innen (%)', emoji:'🏠',
+    color:C.teal, colorL:C.tealL, yAxis:'y', dashed:true,
+    extract:({umw})=>_byDate(umw,1,r=>parseFloat(g(r,8))),
+  },
+  {
+    key:'symptome', label:'Schweregrad (0–5)', emoji:'🔍',
+    color:C.red, colorL:C.redL, yAxis:'y2',
+    extract:({sym})=>_byDate(sym,1,r=>parseInt(g(r,4)),Math.max),
+  },
+  {
+    key:'pollen', label:'Pollen-Stufe (0–5)', emoji:'🌿',
+    color:C.green, colorL:C.greenL, yAxis:'y2',
+    extract:({pol,umw})=>{
+      if(pol?.length) return _byDate(pol,2,r=>parseInt(g(r,4)),Math.max);
+      const m={};
+      umw.forEach(r=>{
+        const iso=_toISO(g(r,1)); if(!iso) return;
+        const p=g(r,6);
+        if(p&&p!=='keine erhöhte Belastung'&&p.trim()) m[iso]=1;
+      });
+      return m;
+    },
+  },
+  {
+    key:'gewicht', label:'Gewicht (kg)', emoji:'⚖️',
+    color:C.purple, colorL:C.purpleL, yAxis:'y',
+    extract:({gew})=>_byDate(gew||[],2,r=>parseFloat(String(g(r,3)).replace(',','.'))),
+  },
+];
+
+// ════════════════════════════════════════════════════════════════
 export async function load() {
   const panel = document.getElementById('panel-statistik');
   if (!panel) return;
-
-  panel.innerHTML = `
-    <div style="padding:1rem">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-        <div class="section-title" style="margin-bottom:0">📊 Statistik</div>
-        <button onclick="STATISTIK.forceRefresh()"
-          style="padding:7px 12px;font-size:12px;border:1px solid var(--border);
-            border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);
-            cursor:pointer;font-family:inherit" title="Cache leeren und neu laden">
-          ↺ Aktualisieren
-        </button>
-      </div>
-
-      <!-- Hund + Zeitraum -->
-      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
-        <select id="stat-hund" onchange="STATISTIK.refresh()"
-          style="flex:1;padding:10px 12px;font-size:14px;border:1px solid var(--border);
-            border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit">
-        </select>
-        <select id="stat-range" onchange="STATISTIK.refresh()"
-          style="width:110px;padding:10px 12px;font-size:14px;border:1px solid var(--border);
-            border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit">
-          <option value="30">30 Tage</option>
-          <option value="90" selected>90 Tage</option>
-          <option value="180">6 Monate</option>
-          <option value="365">1 Jahr</option>
-          <option value="0">Alles</option>
-        </select>
-      </div>
-
-      <!-- Cache-Status -->
-      <div id="stat-cache-status"
-        style="font-size:11px;color:var(--sub);margin-bottom:1rem;padding:6px 10px;
-          background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border)">
-        Wird geladen…
-      </div>
-
-      <div id="stat-content">
-        <div class="view-loading"><div class="spinner"></div>Daten werden geladen…</div>
-      </div>
-    </div>
-  `;
-
-  // Hunde befüllen
+  panel.innerHTML = _buildShell();
   const hundSel = document.getElementById('stat-hund');
-  getHunde().forEach(h => {
-    const opt = document.createElement('option');
-    opt.value = h.hund_id; opt.textContent = h.name;
-    hundSel.appendChild(opt);
+  getHunde().forEach(h=>{
+    const opt=document.createElement('option');
+    opt.value=h.hund_id; opt.textContent=h.name;
+    hundSel?.appendChild(opt);
   });
-
+  _buildParamButtons();
   refresh();
 }
 
-export async function refresh(forceRefresh = false) {
-  const hundId    = parseInt(document.getElementById('stat-hund')?.value)  || 1;
-  const rangeDays = parseInt(document.getElementById('stat-range')?.value) || 90;
+export async function refresh(forceRefresh=false) {
+  const hundId    = parseInt(document.getElementById('stat-hund')?.value)||1;
+  const rangeDays = parseInt(document.getElementById('stat-range')?.value)||90;
   const content   = document.getElementById('stat-content');
   const cacheEl   = document.getElementById('stat-cache-status');
-  if (!content) return;
+  if(!content) return;
 
-  _destroyCharts();
-  content.innerHTML = '<div class="view-loading"><div class="spinner"></div>Lade Daten…</div>';
+  content.innerHTML='<div class="view-loading"><div class="spinner"></div>Lade Daten…</div>';
 
   try {
-    // Alle 6 Sheets über Cache laden
-    const [rSym, rUmw, rFut, rAus, rAll, rMed] = await Promise.all([
-      getSheet('Symptomtagebuch',  'tagebuch', forceRefresh),
-      getSheet('Umweltagebuch',    'tagebuch', forceRefresh),
-      getSheet('Futtertagebuch',   'tagebuch', forceRefresh),
-      getSheet('Ausschlussdiät',   'tagebuch', forceRefresh),
-      getSheet('Bekannte Allergene','tagebuch', forceRefresh),
-      getSheet('Medikamente',      'tagebuch', forceRefresh),
+    const [rSym,rUmw,rFut,rAus,rAll,rMed] = await Promise.all([
+      getSheet('Symptomtagebuch',   'tagebuch',forceRefresh),
+      getSheet('Umweltagebuch',     'tagebuch',forceRefresh),
+      getSheet('Futtertagebuch',    'tagebuch',forceRefresh),
+      getSheet('Ausschlussdiät',    'tagebuch',forceRefresh),
+      getSheet('Bekannte Allergene','tagebuch',forceRefresh),
+      getSheet('Medikamente',       'tagebuch',forceRefresh),
     ]);
+    const rGew=await getSheet('Hund_Gewicht','tagebuch',forceRefresh).catch(()=>[]);
+    const rPol=await getSheet('Pollen_Log',  'tagebuch',forceRefresh).catch(()=>[]);
 
-    // Cache-Status anzeigen
-    const age = getAge('Symptomtagebuch');
-    if (cacheEl) {
-      cacheEl.textContent = age !== null && age < 30
-        ? `✅ Daten gerade geladen · nächste Aktualisierung in ~${Math.round((600-age)/60)} Min`
-        : age !== null
-        ? `📦 Cache vom vor ${age < 60 ? age + ' Sek' : Math.round(age/60) + ' Min'} · ↺ für neue Daten`
-        : '✅ Frisch geladen';
-    }
+    const age=getAge('Symptomtagebuch');
+    if(cacheEl) cacheEl.textContent = age!==null&&age<30
+      ? `✅ Gerade geladen · Aktualisierung in ~${Math.round((600-age)/60)} Min`
+      : age!==null
+      ? `📦 Cache vor ${age<60?age+'s':Math.round(age/60)+' Min'} · ↺ für neue Daten`
+      : '✅ Frisch geladen';
 
-    // Zeitraum-Filter
-    const cutoff = rangeDays > 0 ? new Date(Date.now() - rangeDays*86_400_000) : new Date(0);
+    const cutoff  = rangeDays>0 ? new Date(Date.now()-rangeDays*86_400_000) : new Date(0);
+    const notDel  = idx=>r=>String(r[idx]??'').toUpperCase()!=='TRUE';
 
-    // Positionales Parsen (ab Zeile 3, Index 2)
-    const allSym = parseRows(rSym,  2);
-    const allUmw = parseRows(rUmw,  2);
-    const allFut = parseRows(rFut,  2);
-    const allAus = parseRows(rAus,  2);
-    const allAll = parseRows(rAll,  2);
-    const allMed = parseRows(rMed,  2);
+    const _pr = (raw,skip)=>_parseRows(raw,skip);
+    const allSym=_pr(rSym,2); const allUmw=_pr(rUmw,2);
+    const allFut=_pr(rFut,2); const allAus=_pr(rAus,2);
+    const allAll=_pr(rAll,2); const allMed=_pr(rMed,2);
+    const allGew=_pr(rGew,2); const allPol=_pr(rPol,2);
 
-    const sym = allSym.filter(r => matchHund(r,hundId) && inRange(col(r,1), cutoff));
-    const umw = allUmw.filter(r => matchHund(r,hundId) && inRange(col(r,1), cutoff));
-    const fut = allFut.filter(r => matchHund(r,hundId) && inRange(col(r,1), cutoff));
-    const aus = allAus.filter(r => matchHund(r,hundId));
-    const all = allAll.filter(r => matchHund(r,hundId));
-    const med = allMed.filter(r => matchHund(r,hundId));
+    const sym=allSym.filter(r=>_matchH(r,hundId)&&_inRange(g(r,1),cutoff)&&notDel(9)(r));
+    const umw=allUmw.filter(r=>_matchH(r,hundId)&&_inRange(g(r,1),cutoff)&&notDel(13)(r));
+    const fut=allFut.filter(r=>_matchH(r,hundId)&&_inRange(g(r,1),cutoff)&&notDel(11)(r));
+    const aus=allAus.filter(r=>_matchH(r,hundId)&&notDel(10)(r));
+    const all=allAll.filter(r=>_matchH(r,hundId)&&notDel(8)(r));
+    const med=allMed.filter(r=>_matchH(r,hundId)&&notDel(11)(r));
+    const gew=allGew.filter(r=>g(r,1)===String(hundId)&&_inRange(g(r,2),cutoff));
+    const pol=allPol.filter(r=>g(r,1)===String(hundId)&&_inRange(g(r,2),cutoff));
 
-    content.innerHTML = buildHTML();
-    await renderCharts({ sym, umw, fut, aus, all, med });
+    _cachedData={sym,umw,fut,aus,all,med,gew,pol};
+
+    const schweList=sym.map(r=>parseInt(g(r,4))||0).filter(v=>v>0);
+    const avgSchw=schweList.length?(schweList.reduce((a,b)=>a+b,0)/schweList.length).toFixed(1):'–';
+    const symDays=new Set(sym.map(r=>g(r,1))).size;
+    const polDays=pol.length
+      ? new Set(pol.map(r=>g(r,2))).size
+      : umw.filter(r=>{const p=g(r,6);return p&&p!=='keine erhöhte Belastung'&&p.trim();}).length;
+
+    content.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem">
+        ${_kpi('Symptomtage',symDays,C.red)}
+        ${_kpi('Ø Schweregrad',avgSchw,parseFloat(avgSchw)>=3?C.red:C.green)}
+        ${_kpi('Pollentage',polDays,C.amber)}
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+        padding:14px;margin-bottom:1rem">
+        <canvas id="ch-konfig" height="240"></canvas>
+      </div>
+      ${_box('⚠️ Bekannte Allergene','<div id="st-allergene"></div>')}
+      ${_box('📋 Ausschlussdiät','<div id="st-aus-badges"></div>')}
+      ${_box('🥩 Futter-Reaktionen','<div id="st-futter"></div>')}
+      ${_box('💊 Medikamente','<div id="st-medis"></div>')}
+    `;
+
+    await _buildChart(_cachedData);
+    _renderAllergene(all);
+    _renderAusschluss(aus);
+    _renderFutter(fut);
+    _renderMedis(med);
 
   } catch(e) {
-    content.innerHTML = `<div class="status err" style="display:block">Fehler: ${esc(e.message)}</div>`;
+    content.innerHTML=`<div class="status err" style="display:block">Fehler: ${esc(e.message)}</div>`;
   }
 }
 
 export function forceRefresh() {
-  invalidateAll();
-  refresh(true);
+  invalidateAll(); _cachedData=null; refresh(true);
+}
+
+export async function toggleParam(key) {
+  _selected.has(key) ? _selected.delete(key) : _selected.add(key);
+  document.querySelectorAll('.stat-param-btn').forEach(btn=>{
+    btn.classList.toggle('sel',_selected.has(btn.dataset.key));
+  });
+  if(_cachedData) await _buildChart(_cachedData);
 }
 
 // ════════════════════════════════════════════════════════════════
-//  HTML GERÜST
-// ════════════════════════════════════════════════════════════════
-
-function buildHTML() {
+function _buildShell() {
   return `
-    <div id="stat-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.25rem"></div>
-    ${box('📈 Symptom-Schweregrad Verlauf',  '<canvas id="ch-verlauf"  height="200"></canvas>')}
-    ${box('🔍 Häufigste Symptome',           '<canvas id="ch-haeufig" height="220"></canvas>')}
-    ${box('⚠️ Bekannte Allergene',           '<div id="st-allergene"></div>')}
-    ${box('📋 Ausschlussdiät',
-      `<div id="st-aus-badges" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
-       <canvas id="ch-aus" height="160"></canvas>`)}
-    ${box('🌿 Pollen & Symptome (wöchentlich)',
-      `<p style="font-size:12px;color:var(--sub);margin-bottom:8px">Pollentage vs Symptomtage vs Schweregrad</p>
-       <canvas id="ch-pollen" height="200"></canvas>`)}
-    ${box('🌡️ Außenklima & Symptome',        '<canvas id="ch-wetter"  height="200"></canvas>')}
-    ${box('🏠 Raumklima',                    '<canvas id="ch-raumklima" height="180"></canvas>')}
-    ${box('🥩 Futter-Reaktionen',            '<div id="st-futter"></div>')}
-    ${box('💊 Medikamente',                  '<div id="st-medis"></div>')}
-  `;
-}
-
-function box(title, body) {
-  return `<div style="background:var(--bg2);border:1px solid var(--border);
-    border-radius:var(--radius);padding:14px;margin-bottom:1rem">
-    <div style="font-size:14px;font-weight:700;margin-bottom:12px">${title}</div>
-    ${body}
+  <div style="padding:1rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="section-title" style="margin-bottom:0">📊 Statistik</div>
+      <button onclick="STATISTIK.forceRefresh()"
+        style="padding:7px 12px;font-size:12px;border:1px solid var(--border);
+          border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);
+          cursor:pointer;font-family:inherit">↺ Aktualisieren</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <select id="stat-hund" onchange="STATISTIK.refresh()"
+        style="flex:1;padding:10px 12px;font-size:14px;border:1px solid var(--border);
+          border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit">
+      </select>
+      <select id="stat-range" onchange="STATISTIK.refresh()"
+        style="width:110px;padding:10px 12px;font-size:14px;border:1px solid var(--border);
+          border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit">
+        <option value="30">30 Tage</option>
+        <option value="90" selected>90 Tage</option>
+        <option value="180">6 Monate</option>
+        <option value="365">1 Jahr</option>
+        <option value="0">Alles</option>
+      </select>
+    </div>
+    <div id="stat-cache-status"
+      style="font-size:11px;color:var(--sub);margin-bottom:1rem;padding:6px 10px;
+        background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border)">
+      Wird geladen…
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+      padding:12px;margin-bottom:1rem">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+        color:var(--c2);margin-bottom:10px">Parameter auswählen</div>
+      <div id="stat-param-btns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+    <div id="stat-content">
+      <div class="view-loading"><div class="spinner"></div>Daten werden geladen…</div>
+    </div>
   </div>`;
 }
 
-// ════════════════════════════════════════════════════════════════
-//  CHARTS
-// ════════════════════════════════════════════════════════════════
+function _buildParamButtons() {
+  const c=document.getElementById('stat-param-btns'); if(!c) return;
+  c.innerHTML=PARAM_DEFS.map(p=>`
+    <button class="stat-param-btn tog-btn${_selected.has(p.key)?' sel':''}"
+      data-key="${p.key}"
+      onclick="STATISTIK.toggleParam('${p.key}')"
+      style="font-size:12px;padding:6px 10px;border-color:${p.color}">
+      ${p.emoji} ${p.label}
+    </button>`).join('');
+}
 
-async function renderCharts({ sym, umw, fut, aus, all, med }) {
-  if (!window.Chart) {
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js');
+async function _buildChart(data) {
+  if(!window.Chart) await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js');
+  const canvas=document.getElementById('ch-konfig'); if(!canvas) return;
+  if(_chart){try{_chart.destroy();}catch(e){} _chart=null;}
+
+  const active=PARAM_DEFS.filter(p=>_selected.has(p.key));
+  if(!active.length){
+    canvas.style.display='none';
+    if(!canvas.nextElementSibling?.classList?.contains('stat-no-data'))
+      canvas.insertAdjacentHTML('afterend','<p class="stat-no-data" style="text-align:center;color:var(--sub);font-size:13px;margin-top:8px">Bitte oben mindestens einen Parameter auswählen.</p>');
+    return;
+  }
+  canvas.style.display='';
+  document.querySelector('.stat-no-data')?.remove();
+
+  const maps=active.map(p=>({...p,map:p.extract(data)}));
+  const allDates=[...new Set(maps.flatMap(m=>Object.keys(m.map)))].sort();
+
+  if(!allDates.length){
+    canvas.style.display='none';
+    canvas.insertAdjacentHTML('afterend','<p class="stat-no-data" style="text-align:center;color:var(--sub);font-size:13px">Keine Daten im gewählten Zeitraum.</p>');
+    return;
   }
 
-  // ── KPIs ────────────────────────────────────────────────────
-  const schweList = sym.map(r => parseInt(col(r,4))||0).filter(v=>v>0);
-  const avgSchw   = schweList.length ? (schweList.reduce((a,b)=>a+b,0)/schweList.length).toFixed(1) : '–';
-  const symDays   = new Set(sym.map(r=>col(r,1))).size;
-  const polDays   = umw.filter(r => col(r,6) && col(r,6) !== 'keine erhöhte Belastung').length;
-  document.getElementById('stat-kpis').innerHTML =
-    kpi('Symptomtage', symDays, C.orange) +
-    kpi('Ø Schweregrad', avgSchw, parseFloat(avgSchw)>=3 ? C.orange : C.green) +
-    kpi('Pollentage', polDays, C.amber);
+  const datasets=maps.map(p=>({
+    label:p.label,
+    data:allDates.map(d=>{const v=p.map[d]; return(v!==undefined&&!isNaN(v))?v:null;}),
+    borderColor:p.color,
+    backgroundColor:p.colorL,
+    borderWidth:2,
+    pointRadius:allDates.length>60?0:3,
+    pointHoverRadius:5,
+    tension:0.3,
+    fill:false,
+    borderDash:p.dashed?[4,4]:undefined,
+    yAxisID:p.yAxis,
+    spanGaps:true,
+  }));
 
-  // ── Verlauf ──────────────────────────────────────────────────
-  {
-    const byDate = {};
-    sym.forEach(r => {
-      const d = col(r,1); if(!d) return;
-      const iso = toISO(d);
-      byDate[iso] = Math.max(byDate[iso]||0, parseInt(col(r,4))||0);
-    });
-    const dates = Object.keys(byDate).sort();
-    mkChart('ch-verlauf','line',{
-      labels: dates.map(fmtLabel),
-      datasets:[{
-        label:'Max. Schweregrad',
-        data: dates.map(d=>byDate[d]),
-        borderColor:C.orange, backgroundColor:C.orangeL,
-        fill:true, tension:0.3, pointRadius:3,
-      }]
-    }, baseOpts({max:5, stepSize:1}));
-  }
+  const hasY  = active.some(p=>p.yAxis==='y');
+  const hasY2 = active.some(p=>p.yAxis==='y2');
+  const scales={};
+  if(hasY)  scales.y  ={type:'linear',position:'left', ticks:{font:{size:10},maxTicksLimit:6},grid:{color:'rgba(150,150,150,.1)'}};
+  if(hasY2) scales.y2 ={type:'linear',position:'right',min:0,max:5,
+    ticks:{font:{size:10},stepSize:1,callback:v=>['–','●','●●','●●●','●●●●','●●●●●'][v]||v},
+    grid:{drawOnChartArea:false}};
+  scales.x={ticks:{font:{size:10},maxTicksLimit:allDates.length>30?8:allDates.length,callback:(_,i)=>_fmtLabel(allDates[i])},grid:{color:'rgba(150,150,150,.05)'}};
 
-  // ── Häufigste Symptome ───────────────────────────────────────
-  {
-    const cnt = {};
-    sym.forEach(r => {
-      (col(r,2)||'').split(',').map(s=>s.trim()).filter(Boolean)
-        .forEach(k => { cnt[k]=(cnt[k]||0)+1; });
-    });
-    const sorted = Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    if (sorted.length) {
-      mkChart('ch-haeufig','bar',{
-        labels: sorted.map(([k])=>k),
-        datasets:[{ label:'Häufigkeit', data:sorted.map(([,v])=>v),
-          backgroundColor:sorted.map((_,i)=>i===0?C.orange:i<3?C.amber:C.green) }]
-      }, {...baseOpts(), indexAxis:'y'});
-    } else {
-      setText('ch-haeufig', 'Keine Symptome im Zeitraum.');
-    }
-  }
-
-  // ── Allergene ────────────────────────────────────────────────
-  {
-    const el = document.getElementById('st-allergene');
-    el.innerHTML = all.length ? all.map(r => {
-      const reakt = parseInt(col(r,3))||0;
-      const col2  = reakt>=4?C.orange:reakt>=3?C.amber:C.green;
-      return `<div style="display:flex;justify-content:space-between;align-items:center;
-        padding:10px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-size:14px;font-weight:600">${esc(col(r,1))}</div>
-          <div style="font-size:12px;color:var(--sub)">${esc(col(r,2))} · ${esc(col(r,4))}</div>
-        </div>
-        <div style="font-size:18px;color:${col2};letter-spacing:2px">
-          ${'●'.repeat(reakt)}${'○'.repeat(5-reakt)}
-        </div>
-      </div>`;
-    }).join('') : '<p style="color:var(--sub);font-size:13px">Keine Allergene erfasst.</p>';
-  }
-
-  // ── Ausschluss ───────────────────────────────────────────────
-  {
-    const badges = document.getElementById('st-aus-badges');
-    const groups = {};
-    aus.forEach(r => { const s=col(r,4)||'Unbekannt'; (groups[s]=groups[s]||[]).push(col(r,1)); });
-    badges.innerHTML = Object.entries(groups).map(([s,items]) => {
-      const c = s.includes('vertr')?C.green:s.includes('Reaktion')||s.includes('Gesperrt')?C.orange:C.amber;
-      return `<div style="width:100%;margin-bottom:4px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:${c};margin-bottom:3px">${esc(s)}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${items.map(z=>`<span class="badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(z)}</span>`).join('')}
-        </div>
-      </div>`;
-    }).join('') || '<p style="color:var(--sub);font-size:13px">Keine Ausschlussdiät-Einträge.</p>';
-
-    if (aus.length) {
-      const cnt = {}; aus.forEach(r=>{const s=col(r,4)||'Unbekannt';cnt[s]=(cnt[s]||0)+1;});
-      mkChart('ch-aus','doughnut',{
-        labels: Object.keys(cnt),
-        datasets:[{ data:Object.values(cnt),
-          backgroundColor:Object.keys(cnt).map(s=>
-            s.includes('vertr')?C.green:s.includes('Reaktion')||s.includes('Gesperrt')?C.orange:s.includes('Test')?C.amber:C.blue)
-        }]
-      },{plugins:{legend:{position:'right'}},cutout:'60%'});
-    }
-  }
-
-  // ── Pollen-Korrelation ───────────────────────────────────────
-  {
-    const weeks = {};
-    umw.forEach(r => {
-      const d=parseDate(col(r,1)); if(!d) return;
-      const w=weekKey(d);
-      if(!weeks[w]) weeks[w]={pollen:0,symDays:0,maxSchw:0};
-      if(col(r,6)&&col(r,6)!=='keine erhöhte Belastung'&&col(r,6)!=='') weeks[w].pollen++;
-    });
-    sym.forEach(r => {
-      const d=parseDate(col(r,1)); if(!d) return;
-      const w=weekKey(d);
-      if(!weeks[w]) weeks[w]={pollen:0,symDays:0,maxSchw:0};
-      weeks[w].symDays++;
-      weeks[w].maxSchw=Math.max(weeks[w].maxSchw,parseInt(col(r,4))||0);
-    });
-    const wks = Object.keys(weeks).sort();
-    if (wks.length) {
-      mkChart('ch-pollen','bar',{
-        labels:wks.map(w=>'KW'+w.split('-W')[1]+'/'+w.split('-W')[0].slice(2)),
-        datasets:[
-          {label:'Pollentage',    data:wks.map(w=>weeks[w].pollen),  backgroundColor:C.amberL,  borderColor:C.amber,  borderWidth:1, yAxisID:'y'},
-          {label:'Symptomtage',   data:wks.map(w=>weeks[w].symDays), backgroundColor:C.orangeL, borderColor:C.orange, borderWidth:1, yAxisID:'y'},
-          {label:'Max. Schweregrad',data:wks.map(w=>weeks[w].maxSchw),type:'line',
-           borderColor:C.purple,backgroundColor:'transparent',borderWidth:2,pointRadius:3,yAxisID:'y2'},
-        ]
-      },{
-        ...baseOpts(),
-        scales:{
-          y: {beginAtZero:true,position:'left', title:{display:true,text:'Tage'}},
-          y2:{beginAtZero:true,max:5,position:'right',title:{display:true,text:'Schweregrad'},grid:{drawOnChartArea:false}},
-        }
-      });
-    } else { setText('ch-pollen','Keine Daten im Zeitraum.'); }
-  }
-
-  // ── Wetter + Symptome ────────────────────────────────────────
-  {
-    const byDate = {};
-    umw.forEach(r => {
-      const iso = toISO(col(r,1)); if(!iso) return;
-      byDate[iso]={...byDate[iso], tMax:parseFloat(col(r,3))||null, feuchtig:parseFloat(col(r,4))||null};
-    });
-    sym.forEach(r => {
-      const iso = toISO(col(r,1)); if(!iso) return;
-      if(!byDate[iso]) byDate[iso]={};
-      byDate[iso].schw = Math.max(byDate[iso].schw||0, parseInt(col(r,4))||0);
-    });
-    const dates = Object.keys(byDate).sort();
-    if (dates.length) {
-      mkChart('ch-wetter','line',{
-        labels:dates.map(fmtLabel),
-        datasets:[
-          {label:'Temp. Max (°C)',    data:dates.map(d=>byDate[d].tMax),    borderColor:C.orange, backgroundColor:'transparent',tension:0.3,pointRadius:0,yAxisID:'y'},
-          {label:'Luftfeuchtig. (%)', data:dates.map(d=>byDate[d].feuchtig),borderColor:C.blue,   backgroundColor:'transparent',tension:0.3,pointRadius:0,yAxisID:'y'},
-          {label:'Schweregrad',       data:dates.map(d=>byDate[d].schw||null),borderColor:C.purple,backgroundColor:C.purpleL,
-           fill:true,tension:0.3,pointRadius:3,yAxisID:'y2'},
-        ]
-      },{
-        ...baseOpts(),
-        scales:{
-          y: {beginAtZero:false,position:'left'},
-          y2:{beginAtZero:true,max:5,position:'right',grid:{drawOnChartArea:false}},
-        }
-      });
-    } else { setText('ch-wetter','Keine Wetterdaten im Zeitraum.'); }
-  }
-
-  // ── Raumklima ────────────────────────────────────────────────
-  {
-    const rData = umw
-      .filter(r=>col(r,7)||col(r,8))
-      .map(r=>({iso:toISO(col(r,1)), temp:parseFloat(col(r,7))||null, feuchtig:parseFloat(col(r,8))||null}))
-      .filter(r=>r.iso).sort((a,b)=>a.iso.localeCompare(b.iso));
-    if (rData.length) {
-      mkChart('ch-raumklima','line',{
-        labels:rData.map(r=>fmtLabel(r.iso)),
-        datasets:[
-          {label:'Raumtemperatur (°C)',  data:rData.map(r=>r.temp),    borderColor:C.orange,backgroundColor:'transparent',tension:0.3,pointRadius:2},
-          {label:'Raumluftfeucht. (%)',  data:rData.map(r=>r.feuchtig),borderColor:C.blue,  backgroundColor:'transparent',tension:0.3,pointRadius:2},
-        ]
-      }, baseOpts());
-    } else { setText('ch-raumklima','Keine Raumklima-Daten im Zeitraum.'); }
-  }
-
-  // ── Futter-Reaktionen ────────────────────────────────────────
-  {
-    const el = document.getElementById('st-futter');
-    const reakt = fut.filter(r=>col(r,7)||col(r,6)==='Ja');
-    el.innerHTML = reakt.length ? reakt.map(r=>`
-      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div style="font-size:13px;font-weight:600">${esc(col(r,1))}</div>
-          ${col(r,6)==='Ja'?'<span class="badge badge-warn">⚠️ Provokation</span>':col(r,4)==='Ja'?'<span class="badge badge-ok">Erste Gabe</span>':''}
-        </div>
-        ${col(r,3)?`<div style="font-size:12px;color:var(--sub)">${esc(col(r,3))}</div>`:''}
-        ${col(r,7)?`<div style="font-size:13px;margin-top:4px">${esc(col(r,7))}</div>`:''}
-      </div>`).join('')
-      : '<p style="color:var(--sub);font-size:13px">Keine Reaktionen im Zeitraum.</p>';
-  }
-
-  // ── Medikamente ──────────────────────────────────────────────
-  {
-    const el = document.getElementById('st-medis');
-    el.innerHTML = med.length ? med.map(r=>`
-      <div style="display:flex;justify-content:space-between;align-items:center;
-        padding:10px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-size:14px;font-weight:600">${esc(col(r,1))}</div>
-          <div style="font-size:12px;color:var(--sub)">${esc(col(r,2))} · ${esc(col(r,3))}</div>
-        </div>
-        <div style="font-size:12px;color:var(--sub);text-align:right">
-          ${esc(col(r,5)||'?')}<br>bis ${esc(col(r,6)||'laufend')}
-        </div>
-      </div>`).join('')
-      : '<p style="color:var(--sub);font-size:13px">Keine Medikamente erfasst.</p>';
-  }
+  _chart=new window.Chart(canvas.getContext('2d'),{
+    type:'line',
+    data:{labels:allDates,datasets},
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,labels:{boxWidth:10,font:{size:11},padding:8}},
+        tooltip:{callbacks:{
+          title:items=>_fmtLabel(items[0]?.label||''),
+          label:item=>{
+            const v=item.raw; if(v===null) return null;
+            const p=active[item.datasetIndex];
+            return ` ${p?.emoji||''} ${item.dataset.label}: ${typeof v==='number'?v.toFixed(v<10?1:0):v}`;
+          },
+        }},
+      },
+      scales,
+    },
+  });
 }
 
 // ════════════════════════════════════════════════════════════════
-//  HILFSFUNKTIONEN
+function _renderAllergene(all) {
+  const el=document.getElementById('st-allergene'); if(!el) return;
+  el.innerHTML=all.length?all.map(r=>{
+    const reakt=parseInt(g(r,3))||0;
+    const color=reakt>=4?C.red:reakt>=3?C.amber:C.green;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;
+      padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-size:14px;font-weight:600">${esc(g(r,1))}</div>
+        <div style="font-size:12px;color:var(--sub)">${esc(g(r,2))} · ${esc(g(r,4))}</div></div>
+      <div style="font-size:18px;color:${color};letter-spacing:2px">
+        ${'●'.repeat(reakt)}${'○'.repeat(5-reakt)}</div></div>`;
+  }).join(''):'<p style="color:var(--sub);font-size:13px">Keine Allergene erfasst.</p>';
+}
+
+function _renderAusschluss(aus) {
+  const el=document.getElementById('st-aus-badges'); if(!el) return;
+  const groups={};
+  aus.forEach(r=>{const s=g(r,4)||'Unbekannt';(groups[s]=groups[s]||[]).push(g(r,1));});
+  el.innerHTML=Object.entries(groups).map(([s,items])=>{
+    const c=s.includes('vertr')?C.green:s.includes('Reaktion')||s.includes('Gesperrt')?C.red:C.amber;
+    return `<div style="width:100%;margin-bottom:6px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:${c};margin-bottom:3px">${esc(s)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${items.map(z=>`<span class="badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(z)}</span>`).join('')}
+      </div></div>`;
+  }).join('')||'<p style="color:var(--sub);font-size:13px">Keine Ausschlussdiät-Einträge.</p>';
+}
+
+function _renderFutter(fut) {
+  const el=document.getElementById('st-futter'); if(!el) return;
+  const reakt=fut.filter(r=>g(r,7)||g(r,6)==='Ja');
+  el.innerHTML=reakt.length?reakt.map(r=>`
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="font-size:13px;font-weight:600">${esc(g(r,1))}</div>
+        ${g(r,6)==='Ja'?'<span class="badge badge-warn">⚠️ Provokation</span>':g(r,4)==='Ja'?'<span class="badge badge-ok">Erste Gabe</span>':''}
+      </div>
+      ${g(r,3)?`<div style="font-size:12px;color:var(--sub)">${esc(g(r,3))}</div>`:''}
+      ${g(r,7)?`<div style="font-size:13px;margin-top:4px">${esc(g(r,7))}</div>`:''}
+    </div>`).join(''):'<p style="color:var(--sub);font-size:13px">Keine Reaktionen im Zeitraum.</p>';
+}
+
+function _renderMedis(med) {
+  const el=document.getElementById('st-medis'); if(!el) return;
+  el.innerHTML=med.length?med.map(r=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;
+      padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-size:14px;font-weight:600">${esc(g(r,1))}</div>
+        <div style="font-size:12px;color:var(--sub)">${esc(g(r,2))} · ${esc(g(r,3))}</div></div>
+      <div style="font-size:12px;color:var(--sub);text-align:right">
+        ${esc(g(r,5)||'?')}<br>bis ${esc(g(r,6)||'laufend')}</div>
+    </div>`).join(''):'<p style="color:var(--sub);font-size:13px">Keine Medikamente erfasst.</p>';
+}
+
 // ════════════════════════════════════════════════════════════════
+const g=(row,i)=>(row[i]??'').toString().trim();
 
-// Positionale Zeilen-Zugriff
-const col = (row, i) => (row[i] ?? '').toString().trim();
-
-// Zeilen ab skipRows parsen (kein Header-Mapping, roh)
-function parseRows(rawRows, skipRows) {
-  if (!rawRows?.length) return [];
-  return rawRows.slice(skipRows)
-    .filter(r => r?.some(v => v !== null && v !== undefined && String(v).trim() !== ''));
+function _parseRows(rawRows,skipRows) {
+  if(!rawRows?.length) return [];
+  return rawRows.slice(skipRows).filter(r=>r?.some(v=>v!==null&&v!==undefined&&String(v).trim()!==''));
 }
-
-function matchHund(row, hundId) {
-  return !col(row,0) || col(row,0) === String(hundId);
-}
-
-// DD.MM.YYYY → Date
-function parseDate(str) {
-  if (!str) return null;
-  if (str.includes('.')) {
-    const [d,m,y] = str.split('.');
-    const yr = y?.length===2 ? '20'+y : y;
-    const date = new Date(parseInt(yr), parseInt(m)-1, parseInt(d));
-    return isNaN(date.getTime()) ? null : date;
-  }
-  if (str.includes('-')) {
-    const date = new Date(str);
-    return isNaN(date.getTime()) ? null : date;
-  }
+function _matchH(row,hundId) { return !g(row,0)||g(row,0)===String(hundId); }
+function _parseDate(str) {
+  if(!str) return null;
+  if(str.includes('.')){const[d,m,y]=str.split('.');const yr=y?.length===2?'20'+y:y;const date=new Date(parseInt(yr),parseInt(m)-1,parseInt(d));return isNaN(date.getTime())?null:date;}
+  if(str.includes('-')){const date=new Date(str);return isNaN(date.getTime())?null:date;}
   return null;
 }
+function _toISO(str){const d=_parseDate(str);return d?d.toISOString().slice(0,10):null;}
+function _inRange(datum,cutoff){const d=_parseDate(datum);return d&&d>=cutoff;}
+function _fmtLabel(iso){if(!iso)return'';const d=new Date(iso);return`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;}
 
-function toISO(str) {
-  const d = parseDate(str);
-  return d ? d.toISOString().slice(0,10) : null;
+function _byDate(rows,dateCol,valFn,aggFn) {
+  const map={};
+  rows.forEach(r=>{
+    const iso=_toISO(g(r,dateCol)); if(!iso) return;
+    const v=valFn(r); if(v===undefined||v===null||isNaN(v)) return;
+    if(map[iso]===undefined) map[iso]=v;
+    else if(aggFn) map[iso]=aggFn(map[iso],v);
+    else map[iso]=v;
+  });
+  return map;
 }
 
-function inRange(datum, cutoff) {
-  const d = parseDate(datum);
-  return d && d >= cutoff;
-}
-
-function fmtLabel(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
-}
-
-function weekKey(date) {
-  const d = new Date(date);
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate()+3-(d.getDay()+6)%7);
-  const w1 = new Date(d.getFullYear(),0,4);
-  const wn = 1+Math.round(((d-w1)/86400000-3+(w1.getDay()+6)%7)/7);
-  return `${d.getFullYear()}-W${String(wn).padStart(2,'0')}`;
-}
-
-function kpi(label, value, color) {
+function _kpi(label,value,color) {
   return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
     padding:12px;text-align:center">
     <div style="font-size:24px;font-weight:700;color:${color}">${value}</div>
@@ -469,43 +405,17 @@ function kpi(label, value, color) {
   </div>`;
 }
 
-function baseOpts({max,stepSize}={}) {
-  return {
-    responsive:true,
-    plugins:{legend:{display:true,labels:{boxWidth:12,font:{size:11}}}},
-    scales:{
-      x:{ticks:{font:{size:10},maxTicksLimit:8}},
-      y:{beginAtZero:true,...(max?{max}:{}),ticks:{stepSize:stepSize||undefined,font:{size:10}}},
-    }
-  };
+function _box(title,body) {
+  return `<div style="background:var(--bg2);border:1px solid var(--border);
+    border-radius:var(--radius);padding:14px;margin-bottom:1rem">
+    <div style="font-size:14px;font-weight:700;margin-bottom:12px">${title}</div>${body}</div>`;
 }
 
-function mkChart(id, type, data, options) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  _destroyChart(id);
-  _charts[id] = new window.Chart(el.getContext('2d'), {type, data, options});
-}
-
-function setText(id, msg) {
-  const el = document.getElementById(id);
-  if (el) el.insertAdjacentHTML('afterend',
-    `<p style="color:var(--sub);font-size:13px;text-align:center;padding:.75rem">${msg}</p>`);
-}
-
-function _destroyChart(id) {
-  if (_charts[id]) { try { _charts[id].destroy(); } catch(e){} delete _charts[id]; }
-}
-
-function _destroyCharts() {
-  Object.keys(_charts).forEach(_destroyChart);
-}
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
-    const s = document.createElement('script');
-    s.src=src; s.onload=resolve; s.onerror=reject;
+function _loadScript(src) {
+  return new Promise((resolve,reject)=>{
+    if(document.querySelector(`script[src="${src}"]`)){resolve();return;}
+    const s=document.createElement('script');
+    s.src=src;s.onload=resolve;s.onerror=reject;
     document.head.appendChild(s);
   });
 }
