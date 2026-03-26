@@ -373,14 +373,29 @@
       <div id="tab-futter" class="section">
         <p class="section-title">🥩 Futtertagebuch</p>
         <div class="field"><label>Datum</label><div class="date-row"><input type="date" id="f-datum"><button class="btn-small" onclick="UI.setToday('f-datum')">Heute</button></div></div>
+
+        <!-- Futter-Positionen (dynamisch) -->
         <div class="field">
-          <label>Futter / Mahlzeit</label>
-          <div style="display:flex;gap:8px;margin-bottom:8px">
-            <select id="f-rezept-select" style="flex:1" onchange="TAGEBUCH.futterRezeptChanged()"><option value="">— Gespeichertes Rezept wählen —</option></select>
-            <button class="btn-small" onclick="TAGEBUCH.loadRezepteDropdown()" title="Rezepte neu laden">↺</button>
+          <label>Futter / Mahlzeit
+            <span style="font-size:11px;color:var(--sub);font-weight:400;margin-left:6px">
+              Rezepte auswählen oder Freitext unten
+            </span>
+          </label>
+          <div id="f-items-container">
+            <button onclick="TAGEBUCH.addFutterItem()"
+              style="width:100%;padding:9px;border:1px dashed var(--border);border-radius:var(--radius-sm);
+                background:transparent;color:var(--sub);cursor:pointer;font-family:inherit;font-size:13px">
+              + Futter / Rezept hinzufügen
+            </button>
           </div>
-          <textarea id="f-futter" placeholder="z.B. Rezeptname oder freie Beschreibung…"></textarea>
         </div>
+
+        <!-- Freitext-Ergänzung -->
+        <div class="field">
+          <label>Freitext-Ergänzung</label>
+          <textarea id="f-futter-text" placeholder="z.B. Knochen, Leckerli, manuelle Angaben…" rows="2"></textarea>
+        </div>
+
         <div class="protocol-box">
           <div class="protocol-title">📋 Protokoll Ausschlussdiät</div>
           <div class="field"><label>Produkt</label><input type="text" id="f-produkt" placeholder="z.B. chewies Känguru…"></div>

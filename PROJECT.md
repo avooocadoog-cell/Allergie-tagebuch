@@ -45,10 +45,10 @@
 ├── form.js                 ← Toggle-Button-Zustand für alle Tagebuch-Formulare
 ├── wetter.js               ← Wetter & Pollen + Pollen_Log schreiben + Skala 0–5
 ├── rechner.js              ← Futterrechner + Rezept-Mix + recommended_pct Marker
-├── tagebuch.js             ← Submit-Handler 7 Typen + _meta() (entry_id, created_at, …)
+├── tagebuch.js             ← Submit-Handler 7 Typen + Multi-Futter mit Kcal-Berechnung
 ├── ansicht.js              ← Entry-Cards + Soft-Delete + Edit-Modal + Undo-Banner
-├── stammdaten.js           ← CRUD Hunde/Zutaten (Edit + Undo-Stack) + Parameter
-├── statistik.js            ← Charts: Symptome, Klima, Pollen-Typ, Gewichtsverlauf
+├── stammdaten.js           ← CRUD Hunde/Zutaten/Toleranzen + Kcal-Bedarf + Gewicht eintragen
+├── statistik.js            ← Konfigurierbarer Chart: Bänder, Balken, individuelle Pollen-Typen
 └── i18n.js                 ← Mehrsprachigkeit: t(), setLang(), applyAll(), loadDefaults()
 ```
 
@@ -531,6 +531,8 @@ Einstellungen-Panel: Google-Config + Sprache (i18n) + Sheet-Setup + Verbindungst
 - **Omega 6:3-Verhältnis:** Ziel max. 6 : 1
 - **Toleranzbalken-Farben:** ok (grün 80–150%), low (gelb <80%), high (orange >150%), zero (rot 0%)
 - **recommended_pct:** optionaler Empfehlungswert je Toleranz-Eintrag → zeigt grüne Markierungslinie im Balken
+- **Kcal-Bedarf manuell:** `kcal_manuell`-Eintrag in `Hund_Kalorienbedarf` überschreibt RER-Berechnung komplett → einstellbar im Hunde-Edit-Modal (Stammdaten)
+- **NaN-Schutz:** `calcMkg()` prüft ob Eingabe positiv + finite ist; Fallback auf Milow-Default (27kg)
 
 ---
 
@@ -539,7 +541,7 @@ Einstellungen-Panel: Google-Config + Sprache (i18n) + Sheet-Setup + Verbindungst
 Alle geplanten Features sind implementiert. Die folgende Übersicht zeigt welche
 Sheet-Änderungen noch manuell in Google Sheets vorgenommen werden müssen.
 
-### ✅ Code – vollständig implementiert
+### ✅ Code – vollständig implementiert (inkl. v2.2)
 - `_meta()` in alle 7 tagebuch.js Submit-Handler (entry_id, created_at, deleted, deleted_at)
 - Soft-Delete-Filter in ansicht.js, statistik.js
 - Edit-Modal für alle 7 Tagebuch-Typen (ansicht.js `editEntry` / `saveEdit`)
@@ -555,6 +557,11 @@ Sheet-Änderungen noch manuell in Google Sheets vorgenommen werden müssen.
 - createSheetWithHeaders() + setupAllSheets() (sheets.js / config.js)
 - i18n-Modul mit 35 Standard-Übersetzungen + Sheet-Integration (i18n.js)
 - Sprachschalter in Einstellungen + data-i18n Attribute (index.html)
+- **v2.2:** Kcal-Bedarf pro Hund manuell eintragbar (Stammdaten → Hund bearbeiten)
+- **v2.2:** Multi-Futter Tagebuch: mehrere Rezepte mit g-Angaben, automatische Kcal-Berechnung und Komponentenaufschlüsselung
+- **v2.2:** Statistik konfigurierbarer Chart mit Temperaturband, Schweregrad-Balken, individuelle Pollen-Typen (Toggle)
+- **v2.2:** NaN-Schutz in `calcMkg()` und `renderNutrTable()` (rechner.js)
+- **v2.2:** German-Decimal-Fix: `_float()` in store.js für alle Nährstoff- und Toleranzwerte
 
 ### 📋 Sheets – noch manuell anzupassen
 Siehe SHEET_ANPASSUNGEN.txt für vollständige Anleitung.
