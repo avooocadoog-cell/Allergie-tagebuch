@@ -121,7 +121,16 @@ async function handleTokenResponse(resp) {
   }
 
   // App starten via registriertem Callback (kein Zirkelimport)
-  if (_onLoginCallback) _onLoginCallback();
+  if (_onLoginCallback) {
+    try {
+      await _onLoginCallback();
+    } catch (e) {
+      console.error('Auth: onLogin-Fehler:', e);
+      // Loader verstecken und Login-Screen zeigen falls onLogin() fehlschlägt
+      document.getElementById('app-loader').style.display   = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+  }
 }
 
 /**
