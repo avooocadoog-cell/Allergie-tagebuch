@@ -29,13 +29,14 @@ let _cachedData = null;
 
 const PARAM_DEFS = [
   {
-    key:'temp_band', label:'Temp. Band (Min–Max)', emoji:'🌡',
-    color:C.orange, colorL:'rgba(249,115,22,.12)', yAxis:'y',
-    chartType:'band',  // Spezial: zwei Datensätze als gefülltes Band
-    extract:({umw})=>({
-      max:_byDate(umw,1,r=>parseFloat(g(r,3)),Math.max),
-      min:_byDate(umw,1,r=>parseFloat(g(r,2)),Math.min),
-    }),
+    key:'temp_max', label:'Temp. Max (°C)', emoji:'🌡',
+    color:C.orange, colorL:C.orangeL, yAxis:'y',
+    extract:({umw})=>_byDate(umw,1,r=>parseFloat(g(r,3)),Math.max),
+  },
+  {
+    key:'temp_min', label:'Temp. Min (°C)', emoji:'🌡',
+    color:C.blue, colorL:C.blueL, yAxis:'y', dashed:true,
+    extract:({umw})=>_byDate(umw,1,r=>parseFloat(g(r,2)),Math.min),
   },
   {
     key:'temp_in', label:'Temp. innen (°C)', emoji:'🏠',
@@ -54,8 +55,22 @@ const PARAM_DEFS = [
   },
   {
     key:'symptome', label:'Schweregrad (0–5)', emoji:'🔍',
-    color:C.red, colorL:C.redL, yAxis:'y2', chartType:'bar',
+    color:C.red, colorL:C.redL, yAxis:'y2',
     extract:({sym})=>_byDate(sym,1,r=>parseInt(g(r,4)),Math.max),
+  },
+  {
+    key:'pollen', label:'Pollen-Stufe (0–5)', emoji:'🌿',
+    color:C.green, colorL:C.greenL, yAxis:'y2',
+    extract:({pol,umw})=>{
+      if(pol?.length) return _byDate(pol,2,r=>parseInt(g(r,4)),Math.max);
+      const m={};
+      umw.forEach(r=>{
+        const iso=_toISO(g(r,1)); if(!iso) return;
+        const p=g(r,6);
+        if(p&&p!=='keine erhöhte Belastung'&&p.trim()) m[iso]=1;
+      });
+      return m;
+    },
   },
   {
     key:'gewicht', label:'Gewicht (kg)', emoji:'⚖️',
@@ -63,12 +78,6 @@ const PARAM_DEFS = [
     extract:({gew})=>_byDate(gew||[],2,r=>parseFloat(String(g(r,3)).replace(',','.'))),
   },
 ];
-
-// Pollen-Farben (werden dynamisch je Typ zugewiesen)
-const POLLEN_COLORS = [C.green,C.amber,C.teal,C.sky,C.orange,C.purple,'#10b981','#f97316'];
-// Pollen-Typen die der Nutzer aktivieren kann (dynamisch aus den Daten befüllt)
-let _pollenTypes    = [];   // ['Birke','Gräser',...]
-let _selPollenTypes = new Set(); // Welche Pollen-Typen aktiv sind
 
 // ════════════════════════════════════════════════════════════════
 export async function load() {
@@ -133,16 +142,6 @@ export async function refresh(forceRefresh=false) {
 
     _cachedData={sym,umw,fut,aus,all,med,gew,pol};
 
-    // Pollen-Typen aus Daten ermitteln
-    const discoveredPollen = [...new Set(pol.map(r=>g(r,3)).filter(Boolean))].sort();
-    // Bei leerer Pollen_Log: Fallback auf häufige Typen
-    const fallbackPollen = ['Birke','Erle','Esche','Gräser','Hasel','Beifuß','Ragweed','Ambrosia'];
-    _pollenTypes = discoveredPollen.length ? discoveredPollen : [];
-    // Neue Typen in Selektion aufnehmen
-    _pollenTypes.forEach(t => { if(!_selPollenTypes.has(t)) _selPollenTypes.add(t); });
-    // Param-Buttons inklusive Pollen-Typen neu aufbauen
-    _buildParamButtons();
-
     const schweList=sym.map(r=>parseInt(g(r,4))||0).filter(v=>v>0);
     const avgSchw=schweList.length?(schweList.reduce((a,b)=>a+b,0)/schweList.length).toFixed(1):'–';
     const symDays=new Set(sym.map(r=>g(r,1))).size;
@@ -183,16 +182,8 @@ export function forceRefresh() {
 
 export async function toggleParam(key) {
   _selected.has(key) ? _selected.delete(key) : _selected.add(key);
-  document.querySelectorAll('.stat-param-btn[data-group="param"]').forEach(btn=>{
+  document.querySelectorAll('.stat-param-btn').forEach(btn=>{
     btn.classList.toggle('sel',_selected.has(btn.dataset.key));
-  });
-  if(_cachedData) await _buildChart(_cachedData);
-}
-
-export async function togglePollenType(type) {
-  _selPollenTypes.has(type) ? _selPollenTypes.delete(type) : _selPollenTypes.add(type);
-  document.querySelectorAll('.stat-pollen-btn').forEach(btn=>{
-    btn.classList.toggle('sel', _selPollenTypes.has(btn.dataset.type));
   });
   if(_cachedData) await _buildChart(_cachedData);
 }
@@ -242,32 +233,13 @@ function _buildShell() {
 
 function _buildParamButtons() {
   const c=document.getElementById('stat-param-btns'); if(!c) return;
-
-  // Hauptparameter
-  let html = PARAM_DEFS.map(p=>`
+  c.innerHTML=PARAM_DEFS.map(p=>`
     <button class="stat-param-btn tog-btn${_selected.has(p.key)?' sel':''}"
-      data-key="${p.key}" data-group="param"
+      data-key="${p.key}"
       onclick="STATISTIK.toggleParam('${p.key}')"
       style="font-size:12px;padding:6px 10px;border-color:${p.color}">
       ${p.emoji} ${p.label}
     </button>`).join('');
-
-  // Pollen-Typen (nur wenn vorhanden)
-  if(_pollenTypes.length) {
-    html += `<div style="width:100%;font-size:11px;color:var(--sub);text-transform:uppercase;
-      letter-spacing:.04em;margin:8px 0 4px">🌿 Pollen nach Typ (Pollen_Log)</div>`;
-    html += _pollenTypes.map((t,i)=>{
-      const c2=POLLEN_COLORS[i%POLLEN_COLORS.length];
-      return `<button class="stat-pollen-btn tog-btn${_selPollenTypes.has(t)?' sel':''}"
-        data-type="${t}"
-        onclick="STATISTIK.togglePollenType('${t}')"
-        style="font-size:12px;padding:6px 10px;border-color:${c2}">
-        🌿 ${t}
-      </button>`;
-    }).join('');
-  }
-
-  c.innerHTML = html;
 }
 
 async function _buildChart(data) {
@@ -275,12 +247,8 @@ async function _buildChart(data) {
   const canvas=document.getElementById('ch-konfig'); if(!canvas) return;
   if(_chart){try{_chart.destroy();}catch(e){} _chart=null;}
 
-  // Aktive Standard-Parameter
-  const active = PARAM_DEFS.filter(p => _selected.has(p.key));
-  // Aktive Pollen-Typen
-  const activePollen = _pollenTypes.filter(t => _selPollenTypes.has(t));
-
-  if(!active.length && !activePollen.length){
+  const active=PARAM_DEFS.filter(p=>_selected.has(p.key));
+  if(!active.length){
     canvas.style.display='none';
     if(!canvas.nextElementSibling?.classList?.contains('stat-no-data'))
       canvas.insertAdjacentHTML('afterend','<p class="stat-no-data" style="text-align:center;color:var(--sub);font-size:13px;margin-top:8px">Bitte oben mindestens einen Parameter auswählen.</p>');
@@ -289,80 +257,8 @@ async function _buildChart(data) {
   canvas.style.display='';
   document.querySelector('.stat-no-data')?.remove();
 
-  // Datasets aufbauen
-  const datasets = [];
-  const datasetMeta = []; // {emoji, label} pro Dataset-Index (für Tooltip)
-
-  // Pollen-Typen als Balken (y2-Achse)
-  activePollen.forEach((t, i) => {
-    const polColor = POLLEN_COLORS[(_pollenTypes.indexOf(t)) % POLLEN_COLORS.length];
-    const polMap   = _byDate(
-      data.pol.filter(r => g(r,3) === t),
-      2, r => parseInt(g(r,4)), Math.max
-    );
-    datasets.push({
-      label: `🌿 ${t}`,
-      data:  null, // wird nach allDates gesetzt
-      _map:  polMap,
-      type:  'bar',
-      backgroundColor: polColor + 'aa',
-      borderColor:     polColor,
-      borderWidth: 1,
-      yAxisID: 'y2',
-    });
-    datasetMeta.push({ emoji:'🌿', label:t });
-  });
-
-  // Standard-Parameter
-  for (const p of active) {
-    if (p.chartType === 'band') {
-      // Temperaturband: zwei Linien mit Fill zwischen ihnen
-      const maps = p.extract(data);
-      datasets.push({
-        label: `🌡 Temp. Max`,
-        data: null, _map: maps.max,
-        type: 'line',
-        borderColor: C.orange, backgroundColor: 'rgba(249,115,22,.12)',
-        borderWidth: 1.5, pointRadius: 0, tension: 0.3,
-        fill: '+1',   // fill bis zum nächsten Dataset (Min)
-        yAxisID: 'y', spanGaps: true,
-      });
-      datasets.push({
-        label: `🌡 Temp. Min`,
-        data: null, _map: maps.min,
-        type: 'line',
-        borderColor: C.blue, backgroundColor: 'transparent',
-        borderWidth: 1.5, pointRadius: 0, tension: 0.3,
-        fill: false,
-        borderDash: [3,3],
-        yAxisID: 'y', spanGaps: true,
-      });
-      datasetMeta.push({emoji:'🌡',label:'Temp. Max'}, {emoji:'🌡',label:'Temp. Min'});
-    } else {
-      const map = p.extract(data);
-      datasets.push({
-        label: `${p.emoji} ${p.label}`,
-        data:  null, _map: map,
-        type:  p.chartType === 'bar' ? 'bar' : 'line',
-        borderColor:     p.color,
-        backgroundColor: p.chartType === 'bar' ? p.colorL.replace('.15','.6') : p.colorL,
-        borderWidth: p.chartType === 'bar' ? 0 : 2,
-        pointRadius:  p.chartType === 'bar' ? 0 : undefined,
-        pointHoverRadius: 5,
-        tension: 0.3,
-        fill:  false,
-        borderDash: p.dashed ? [4,4] : undefined,
-        yAxisID: p.yAxis,
-        spanGaps: true,
-      });
-      datasetMeta.push({emoji:p.emoji, label:p.label});
-    }
-  }
-
-  // Alle Datumswerte zusammenführen
-  const allDates = [...new Set(
-    datasets.flatMap(d => Object.keys(d._map || {}))
-  )].sort();
+  const maps=active.map(p=>({...p,map:p.extract(data)}));
+  const allDates=[...new Set(maps.flatMap(m=>Object.keys(m.map)))].sort();
 
   if(!allDates.length){
     canvas.style.display='none';
@@ -370,45 +266,46 @@ async function _buildChart(data) {
     return;
   }
 
-  // Daten einsetzen
-  datasets.forEach(d => {
-    d.data = allDates.map(date => {
-      const v = d._map?.[date];
-      return (v !== undefined && !isNaN(v)) ? v : null;
-    });
-    if(allDates.length > 60 && d.type === 'line') d.pointRadius = 0;
-    delete d._map;
-  });
+  const datasets=maps.map(p=>({
+    label:p.label,
+    data:allDates.map(d=>{const v=p.map[d]; return(v!==undefined&&!isNaN(v))?v:null;}),
+    borderColor:p.color,
+    backgroundColor:p.colorL,
+    borderWidth:2,
+    pointRadius:allDates.length>60?0:3,
+    pointHoverRadius:5,
+    tension:0.3,
+    fill:false,
+    borderDash:p.dashed?[4,4]:undefined,
+    yAxisID:p.yAxis,
+    spanGaps:true,
+  }));
 
-  const hasY  = datasets.some(d => d.yAxisID === 'y');
-  const hasY2 = datasets.some(d => d.yAxisID === 'y2');
-  const scales = {};
-  if(hasY)  scales.y  = {type:'linear',position:'left',  ticks:{font:{size:10},maxTicksLimit:6}, grid:{color:'rgba(150,150,150,.1)'}};
-  if(hasY2) scales.y2 = {type:'linear',position:'right', min:0, max:5,
-    ticks:{font:{size:10},stepSize:1,callback:v=>(['–','gering','gering–m.','mittel','m.–stark','stark'][v]||v)},
+  const hasY  = active.some(p=>p.yAxis==='y');
+  const hasY2 = active.some(p=>p.yAxis==='y2');
+  const scales={};
+  if(hasY)  scales.y  ={type:'linear',position:'left', ticks:{font:{size:10},maxTicksLimit:6},grid:{color:'rgba(150,150,150,.1)'}};
+  if(hasY2) scales.y2 ={type:'linear',position:'right',min:0,max:5,
+    ticks:{font:{size:10},stepSize:1,callback:v=>['–','●','●●','●●●','●●●●','●●●●●'][v]||v},
     grid:{drawOnChartArea:false}};
-  scales.x = {
-    ticks:{font:{size:10}, maxTicksLimit:allDates.length>30?8:allDates.length, callback:(_,i)=>_fmtLabel(allDates[i])},
-    grid:{color:'rgba(150,150,150,.05)'},
-  };
+  scales.x={ticks:{font:{size:10},maxTicksLimit:allDates.length>30?8:allDates.length,callback:(_,i)=>_fmtLabel(allDates[i])},grid:{color:'rgba(150,150,150,.05)'}};
 
-  _chart = new window.Chart(canvas.getContext('2d'), {
-    type: 'bar',   // Mixed chart: jedes Dataset hat sein eigenes type
-    data: { labels: allDates, datasets },
-    options: {
-      responsive: true,
-      interaction: { mode:'index', intersect:false },
-      plugins: {
-        legend: { display:true, labels:{ boxWidth:10, font:{size:11}, padding:8 } },
-        tooltip: {
-          callbacks: {
-            title: items => _fmtLabel(items[0]?.label||''),
-            label: item => {
-              const v = item.raw; if(v===null||v===undefined) return null;
-              return ` ${item.dataset.label}: ${typeof v==='number'?v.toFixed(v<10?1:0):v}`;
-            },
+  _chart=new window.Chart(canvas.getContext('2d'),{
+    type:'line',
+    data:{labels:allDates,datasets},
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,labels:{boxWidth:10,font:{size:11},padding:8}},
+        tooltip:{callbacks:{
+          title:items=>_fmtLabel(items[0]?.label||''),
+          label:item=>{
+            const v=item.raw; if(v===null) return null;
+            const p=active[item.datasetIndex];
+            return ` ${p?.emoji||''} ${item.dataset.label}: ${typeof v==='number'?v.toFixed(v<10?1:0):v}`;
           },
-        },
+        }},
       },
       scales,
     },
