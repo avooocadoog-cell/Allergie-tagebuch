@@ -37,7 +37,12 @@ import { setStatus, formatDate, setToday } from './ui.js';
 import { getBett, getErsteGabe, getZweiWo, getProv,
          getAVerd, getSymKat, getKoerper, getSchwere,
          getAlReakt, resetAll }  from './form.js';
-import { getRezepte, getRezeptZutaten } from './store.js';
+import { getRezepte, getRezeptZutaten, getNutrMap,
+         getParameter, getZutaten }        from './store.js';
+
+// ── Futter-Tab Zustand ────────────────────────────────────────────
+// Jede Position: { rezeptId, rezeptName, gramm, kcal, components }
+let _futterItems = [];
 
 // ── Hilfsfunktionen ──────────────────────────────────────────────
 
@@ -56,6 +61,25 @@ function unlock(btnId) { const b = document.getElementById(btnId); if (b) b.disa
 /** Felder leeren */
 function clear(...ids) {
   ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+
+/**
+ * Erzeugt die 4 Pflicht-Metafelder die jede neue Tagebuchzeile bekommt.
+ * Reihenfolge: entry_id, created_at, deleted, deleted_at
+ *
+ * entry_id: YYYYMMDDHHmmSS_xxxx  (Zeitstempel + 4 Zufallszeichen)
+ *           Eindeutig genug für Soft-Delete / Undo ohne echte UUID-Bibliothek.
+ *
+ * @returns {[string, string, string, string]}
+ */
+function _meta() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const ts  = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}` +
+              `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const eid = ts + '_' + Math.random().toString(36).slice(2, 6);
+  const iso = now.toISOString().slice(0, 19);
+  return [eid, iso, 'FALSE', ''];
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -80,6 +104,7 @@ export async function submitUmwelt() {
       document.getElementById('u-raumfeuchtig').value,
       getBett(),
       document.getElementById('u-notizen').value,
+      ..._meta(),  // entry_id, created_at, deleted, deleted_at  (Spalten L–O)
     ], getCfg().tagebuchId);
 
     setStatus('status-u', 'ok', '✓ Gespeichert!');
@@ -108,6 +133,7 @@ export async function submitSymptom() {
       getSchwere(),
       getKoerper(document.getElementById('s-koerper-extra').value),
       document.getElementById('s-notizen').value,
+      ..._meta(),  // entry_id, created_at, deleted, deleted_at  (Spalten H–K)
     ], getCfg().tagebuchId);
 
     setStatus('status-s', 'ok', '✓ Gespeichert!');
@@ -118,12 +144,164 @@ export async function submitSymptom() {
   unlock('btn-s');
 }
 
+/** 🥩 Futter-Position hinzufügen (UI-Aktion) */
+export function addFutterItem() {
+  _futterItems.push({ rezeptId: null, rezeptName: '', gramm: 0, kcal: 0, components: [] });
+  renderFutterItems();
+}
+
+/** Futter-Position entfernen */
+export function removeFutterItem(idx) {
+  _futterItems.splice(idx, 1);
+  renderFutterItems();
+}
+
+/** Rezept für eine Position wechseln */
+export function futterItemRezeptChanged(idx) {
+  const sel = document.getElementById(`fi-rezept-${idx}`);
+  const val = parseInt(sel?.value);
+  if (!val) {
+    _futterItems[idx] = { rezeptId: null, rezeptName: '', gramm: _futterItems[idx]?.gramm||0, kcal: 0, components: [] };
+  } else {
+    const zutaten = getRezeptZutaten(val);
+    const rzp = getRezepte().find(r => r.rezept_id === val);
+    _futterItems[idx] = {
+      rezeptId: val,
+      rezeptName: rzp?.name || '',
+      gramm: _futterItems[idx]?.gramm || 0,
+      kcal: 0,
+      components: zutaten,
+    };
+  }
+  futterItemGrammChanged(idx);
+}
+
+/** Gramm für eine Position ändern */
+export function futterItemGrammChanged(idx) {
+  const inp = document.getElementById(`fi-gramm-${idx}`);
+  const gramm = parseFloat(inp?.value) || 0;
+  const item = _futterItems[idx];
+  if (!item) return;
+  item.gramm = gramm;
+
+  // Kcal berechnen wenn Rezept gewählt
+  if (item.rezeptId && item.components.length) {
+    const params    = getParameter();
+    const kProt     = parseFloat(String(params['kcal_faktor_protein'] || '3.5').replace(',','.')) || 3.5;
+    const kFett     = parseFloat(String(params['kcal_faktor_fett']    || '8.5').replace(',','.')) || 8.5;
+    const totalBase = item.components.reduce((s, c) => s + c.gramm, 0);
+    let kcalBase = 0;
+    item.components.forEach(c => {
+      const nm   = getNutrMap(c.zutaten_id, c.zutat_name);
+      const fakt = c.gekocht ? 0.75 : 1;
+      kcalBase  += ((nm['Rohprotein']||0) * kProt + (nm['Fett']||0) * kFett) * c.gramm / 100 * fakt;
+    });
+    const scale = totalBase > 0 ? gramm / totalBase : 0;
+    item.kcal   = Math.round(kcalBase * scale);
+  } else {
+    item.kcal = 0;
+  }
+
+  renderFutterItems();
+}
+
+/** Futter-Positionen-Liste neu rendern */
+export function renderFutterItems() {
+  const container = document.getElementById('f-items-container');
+  if (!container) return;
+
+  const rezepte = getRezepte(getHundId());
+  const totalKcal = _futterItems.reduce((s, i) => s + i.kcal, 0);
+  const totalG    = _futterItems.reduce((s, i) => s + i.gramm, 0);
+
+  let html = '';
+  _futterItems.forEach((item, idx) => {
+    html += `<div style="background:var(--bg2);border:1px solid var(--border);
+      border-radius:var(--radius);padding:10px;margin-bottom:8px">
+      <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">
+        <select id="fi-rezept-${idx}" onchange="TAGEBUCH.futterItemRezeptChanged(${idx})"
+          style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);
+            background:var(--bg);color:var(--text);font-family:inherit;font-size:13px">
+          <option value="">— Rezept wählen —</option>
+          ${rezepte.map(r => `<option value="${r.rezept_id}" ${item.rezeptId===r.rezept_id?'selected':''}>${r.name}</option>`).join('')}
+        </select>
+        <input type="number" id="fi-gramm-${idx}" value="${item.gramm||''}" placeholder="g"
+          min="0" step="1" inputmode="decimal"
+          onchange="TAGEBUCH.futterItemGrammChanged(${idx})"
+          style="width:70px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);
+            background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;text-align:center">
+        <button onclick="TAGEBUCH.removeFutterItem(${idx})"
+          style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);
+            background:var(--bg);color:var(--danger-text,#e76f51);cursor:pointer;font-size:14px">✕</button>
+      </div>
+      ${item.rezeptId && item.gramm > 0 ? `
+        <div style="font-size:12px;color:var(--sub);margin-bottom:4px">
+          ⚡ ${item.kcal} kcal
+          ${item.components.length ? '· ' + item.components
+            .filter(c => c.gramm > 0)
+            .map(c => {
+              const totalBase = item.components.reduce((s,x)=>s+x.gramm,0);
+              const scaled = totalBase>0 ? Math.round(c.gramm * item.gramm / totalBase) : 0;
+              return `${c.zutat_name}: ${scaled}g`;
+            }).join(', ') : ''}
+        </div>` : ''}
+    </div>`;
+  });
+
+  html += `<button onclick="TAGEBUCH.addFutterItem()"
+    style="width:100%;padding:9px;border:1px dashed var(--border);border-radius:var(--radius-sm);
+      background:transparent;color:var(--sub);cursor:pointer;font-family:inherit;font-size:13px">
+    + Futter / Rezept hinzufügen
+  </button>`;
+
+  if (_futterItems.length > 0) {
+    html += `<div style="margin-top:8px;padding:8px 10px;background:var(--bg);
+      border:1px solid var(--border);border-radius:var(--radius-sm);
+      font-size:13px;font-weight:600">
+      Gesamt: ${totalG}g · ${totalKcal} kcal
+    </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+/** Futter-Eintrag als formatierten Text zusammenbauen */
+function _buildFutterText() {
+  if (!_futterItems.length) return '';
+  const totalKcal = _futterItems.reduce((s,i) => s + i.kcal, 0);
+  const totalG    = _futterItems.reduce((s,i) => s + i.gramm, 0);
+  const lines = [`Gesamt: ${totalG}g, ${totalKcal} kcal`];
+  _futterItems.forEach((item, idx) => {
+    if (!item.rezeptName && !item.gramm) return;
+    let line = `Futter ${idx+1}: ${item.rezeptName || 'Freitext'} (${item.gramm}g, ${item.kcal} kcal)`;
+    if (item.components.length) {
+      const totalBase = item.components.reduce((s,c)=>s+c.gramm, 0);
+      const parts = item.components
+        .filter(c => c.gramm > 0)
+        .map(c => {
+          const scaled = totalBase>0 ? Math.round(c.gramm * item.gramm / totalBase) : 0;
+          return `${c.zutat_name}: ${scaled}g`;
+        });
+      if (parts.length) line += ' | ' + parts.join(', ');
+    }
+    lines.push(line);
+  });
+  // Freitext anhängen falls vorhanden
+  const freitext = document.getElementById('f-futter-text')?.value.trim();
+  if (freitext) lines.push(freitext);
+  return lines.join('\n');
+}
+
 /** 🥩 Futter-Eintrag speichern */
 export async function submitFutter() {
-  const datum  = document.getElementById('f-datum').value;
-  const futter = document.getElementById('f-futter').value.trim();
-  if (!datum)  { setStatus('status-f', 'err', 'Bitte Datum auswählen.'); return; }
-  if (!futter) { setStatus('status-f', 'err', 'Bitte Futter eintragen.'); return; }
+  const datum = document.getElementById('f-datum').value;
+  if (!datum) { setStatus('status-f', 'err', 'Bitte Datum auswählen.'); return; }
+
+  const futterText = _buildFutterText();
+  const freitext   = document.getElementById('f-futter-text')?.value.trim();
+  const futter     = futterText || freitext;
+  if (!futter) { setStatus('status-f', 'err', 'Bitte mindestens ein Futter hinzufügen.'); return; }
+
   lock('btn-f');
   setStatus('status-f', 'loading', 'Wird gespeichert…');
   try {
@@ -133,10 +311,13 @@ export async function submitFutter() {
       getErsteGabe(), getZweiWo(), getProv(),
       document.getElementById('f-beschreibung').value,
       document.getElementById('f-notizen').value,
+      ..._meta(),
     ], getCfg().tagebuchId);
 
     setStatus('status-f', 'ok', '✓ Gespeichert!');
-    clear('f-beschreibung','f-notizen','f-futter','f-produkt');
+    _futterItems = [];
+    renderFutterItems();
+    clear('f-beschreibung','f-notizen','f-futter-text','f-produkt');
     resetAll();
   } catch (e) { setStatus('status-f', 'err', 'Fehler: ' + e.message); }
   unlock('btn-f');
@@ -156,6 +337,7 @@ export async function submitAusschluss() {
       fd(document.getElementById('a-datum').value),
       document.getElementById('a-reaktion').value,
       document.getElementById('a-notizen').value,
+      ..._meta(),  // entry_id, created_at, deleted, deleted_at  (Spalten I–L)
     ], getCfg().tagebuchId);
 
     setStatus('status-a', 'ok', '✓ Gespeichert!');
@@ -178,6 +360,7 @@ export async function submitAllergen() {
       getAlReakt(),
       document.getElementById('al-symptome').value,
       document.getElementById('al-notizen').value,
+      ..._meta(),  // entry_id, created_at, deleted, deleted_at  (Spalten G–J)
     ], getCfg().tagebuchId);
 
     setStatus('status-al', 'ok', '✓ Gespeichert!');
@@ -202,6 +385,7 @@ export async function submitTierarzt() {
       document.getElementById('t-ergebnis').value,
       document.getElementById('t-therapie').value,
       fd(document.getElementById('t-folge').value),
+      ..._meta(),  // entry_id, created_at, deleted, deleted_at  (Spalten I–L)
     ], getCfg().tagebuchId);
 
     setStatus('status-t', 'ok', '✓ Gespeichert!');
@@ -227,6 +411,7 @@ export async function submitMedikament() {
       fd(document.getElementById('m-bis').value),
       document.getElementById('m-verordnet').value,
       document.getElementById('m-notizen').value,
+      ..._meta(),  // entry_id, created_at, deleted, deleted_at  (Spalten J–M)
     ], getCfg().tagebuchId);
 
     setStatus('status-m', 'ok', '✓ Gespeichert!');
@@ -242,41 +427,15 @@ export async function submitMedikament() {
 
 /** Rezept-Dropdown im Futter-Tab aus STORE befüllen */
 export async function loadRezepteDropdown() {
-  const sel = document.getElementById('f-rezept-select');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">⏳ Wird geladen…</option>';
-  try {
-    const hundId  = getHundId();
-    const rezepte = getRezepte(hundId);
-    sel.innerHTML = '<option value="">— Gespeichertes Rezept wählen —</option>';
-    rezepte.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value       = r.rezept_id;
-      opt.textContent = r.name;
-      sel.appendChild(opt);
-    });
-    if (!rezepte.length) {
-      sel.innerHTML = '<option value="">Noch keine Rezepte gespeichert</option>';
-    }
-  } catch (e) {
-    sel.innerHTML = `<option value="">Fehler: ${e.message}</option>`;
-  }
+  // Futter-Items-Container initialisieren wenn noch nicht geschehen
+  renderFutterItems();
 }
 
-/** Rezept auswählen → Zusammensetzung als Text in Futter-Textarea einfügen */
-export function futterRezeptChanged() {
-  const val = document.getElementById('f-rezept-select')?.value;
-  if (!val) return;
-  const rezeptId = parseInt(val);
-  const textarea = document.getElementById('f-futter');
-  const zutaten  = getRezeptZutaten(rezeptId);
-  if (zutaten.length) {
-    textarea.value = zutaten
-      .filter(z => z.gramm > 0)
-      .map(z => `${parseFloat(z.gramm.toFixed(1))} g ${z.zutat_name}`)
-      .join(', ');
-  } else {
-    const rezept = getRezepte().find(r => r.rezept_id === rezeptId);
-    if (rezept) textarea.value = rezept.name;
-  }
+/** Alias für Hund-Wechsel */
+export function onHundChangedFutter() {
+  _futterItems = [];
+  renderFutterItems();
 }
+
+/** Legacy - nicht mehr genutzt, bleibt für Kompatibilität */
+export function futterRezeptChanged() {}
