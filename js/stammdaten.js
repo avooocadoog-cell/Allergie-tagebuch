@@ -79,6 +79,18 @@ export function showHundModal(hundId) {
   const h      = hundId ? (hunde.find(x => x.hund_id === hundId) || {}) : {};
   const isEdit = !!hundId;
 
+  // Aktuellen kcal_manuell Wert laden (aus Hund_Kalorienbedarf cache)
+  let existingKcal = '';
+  if (hundId) {
+    import('./store.js').then(({ getKalorienParam }) => {
+      const kp = getKalorienParam(hundId);
+      if (kp.kcalManual > 0) {
+        const el = document.getElementById('hund-kcal');
+        if (el) el.value = kp.kcalManual;
+      }
+    });
+  }
+
   // DD.MM.YYYY → YYYY-MM-DD für input[type=date]
   let gebVal = h.geburtsdatum || '';
   if (gebVal.includes('.')) {
@@ -111,6 +123,16 @@ export function showHundModal(hundId) {
       </select></div>
     <div class="field"><label>Notizen</label>
       <textarea id="hund-notizen" placeholder="z.B. Besonderheiten…">${esc(h.notizen || '')}</textarea></div>
+    <div class="field" style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+      <label>⚡ Kcal-Bedarf/Tag (überschreibt RER-Berechnung)</label>
+      <input type="number" id="hund-kcal" value="${esc(String(existingKcal || ''))}"
+        placeholder="leer = automatisch berechnen" min="0" max="9999" step="1"
+        style="text-align:center">
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">
+        Leer lassen = App berechnet Bedarf automatisch (RER × Faktor).
+        Eingetragener Wert ersetzt die Berechnung komplett.
+      </div>
+    </div>
     <button class="btn-primary" onclick="STAMMDATEN.saveHund(${hundId || 'null'})">
       ${isEdit ? '💾 Änderungen speichern' : '+ Hund anlegen'}
     </button>
@@ -151,10 +173,34 @@ export async function saveHund(existingId) {
       await appendRow('Hunde', [newId, name, rasse, gebFmt, gesch, kastr, aktiv, notizen], sid);
       addHund({ hund_id: newId, name, rasse, geburtsdatum: gebFmt, geschlecht: gesch, kastriert: kastr, aktiv, notizen });
     }
+    // Kcal-Bedarf speichern (in Hund_Kalorienbedarf)
+    const kcalVal = parseInt(document.getElementById('hund-kcal')?.value) || 0;
+    await _saveKcalManuell(existingId || newId, kcalVal, sid);
+
     setStatus('status-hund', 'ok', '✓ Gespeichert!');
     syncHundSelects();
     setTimeout(() => { closeModal(); loadHunde(); }, 900);
   } catch (e) { setStatus('status-hund', 'err', 'Fehler: ' + e.message); }
+}
+
+/** Kcal-Manuell-Wert in Hund_Kalorienbedarf schreiben oder aktualisieren */
+async function _saveKcalManuell(hundId, kcal, sid) {
+  try {
+    const rows = await readSheet('Hund_Kalorienbedarf', sid);
+    const idx  = rows.findIndex(r =>
+      String(r[0]).trim() === String(hundId) &&
+      String(r[1]).trim() === 'kcal_manuell'
+    );
+    if (idx >= 0) {
+      await writeRange('Hund_Kalorienbedarf', `C${idx+1}`, [[kcal || '']], sid);
+    } else if (kcal > 0) {
+      await appendRow('Hund_Kalorienbedarf',
+        [hundId, 'kcal_manuell', kcal, 'Manuell eingetragener Tagesbedarf'], sid);
+    }
+    // Store-Cache sofort aktualisieren
+    const { getKalorienParam } = await import('./store.js');
+    // Cache-Update über Store ist nicht direkt möglich – App-Reload holt neuen Wert
+  } catch(e) { console.warn('kcal_manuell save:', e.message); }
 }
 
 export async function toggleHundAktiv(hundId, name, aktuell) {

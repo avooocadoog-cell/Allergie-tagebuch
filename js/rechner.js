@@ -45,8 +45,11 @@ const COOKING_LOSS_NUTR = new Set([
 // ════════════════════════════════════════════════════════════════
 
 function calcMkg(kg) {
-  const exp = getParameter()['metabolisches_kg_exponent'] || 0.75;
-  return Math.pow(kg, exp);
+  const safeKg  = (kg > 0 && isFinite(kg)) ? kg : 27;
+  const rawExp  = getParameter()['metabolisches_kg_exponent'];
+  const exp     = (rawExp > 0 && isFinite(parseFloat(rawExp))) ? parseFloat(rawExp) : 0.75;
+  const result  = Math.pow(safeKg, exp);
+  return (isFinite(result) && result > 0) ? result : Math.pow(27, 0.75);
 }
 
 export function onHundChanged() {
@@ -72,9 +75,10 @@ export function updateWeight2() {
 }
 
 function _setMkg(mkg) {
+  const display = (mkg > 0 && isFinite(mkg)) ? mkg.toFixed(2) : '–';
   ['fr-mkg','fr-mkg2'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.textContent = mkg.toFixed(2);
+    if (el) el.textContent = display;
   });
 }
 

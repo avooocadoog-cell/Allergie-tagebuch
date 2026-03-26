@@ -58,12 +58,9 @@ export function switchTab(tab) {
     }
   });
 
-  // Rezepte laden wenn Futter-Tab geöffnet wird
+  // Futter-Tab: Items-Container initialisieren
   if (tab === 'futter') {
-    const sel = document.getElementById('f-rezept-select');
-    if (sel && sel.options.length <= 1) {
-      import('./tagebuch.js').then(m => m.loadRezepteDropdown());
-    }
+    import('./tagebuch.js').then(m => m.loadRezepteDropdown());
   }
 }
 

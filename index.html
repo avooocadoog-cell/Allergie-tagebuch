@@ -245,6 +245,38 @@
           </div>
         </div>
       </div>
+
+      <div class="fr-section-toggle" onclick="UI.toggleSection('mix',this)">
+        🔀 Rezept einmischen
+        <span style="font-size:11px;color:var(--sub);margin-left:4px">Anderes Rezept als Basis nutzen</span>
+        <span class="fst-arrow">▼</span>
+      </div>
+      <div class="fr-section-body" id="fr-sec-mix">
+        <p style="font-size:12px;color:var(--sub);margin-bottom:10px">
+          Wähle ein gespeichertes Rezept und eine Menge – die Zutaten werden anteilig ins aktuelle Rezept übernommen.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px">
+          <div>
+            <label style="font-size:12px;color:var(--sub);display:block;margin-bottom:4px">Rezept</label>
+            <select id="fr-mix-rezept-select" onclick="RECHNER.initMixSelect()"
+              style="width:100%;padding:10px 12px;border:1px solid var(--border);
+                border-radius:var(--radius-sm);background:var(--bg);color:var(--text);
+                font-family:inherit;font-size:14px">
+              <option value="">— Rezept wählen —</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--sub);display:block;margin-bottom:4px">Gramm</label>
+            <input type="number" id="fr-mix-gramm" placeholder="300" min="1" inputmode="decimal"
+              style="width:100%;padding:10px 8px;border:1px solid var(--border);
+                border-radius:var(--radius-sm);background:var(--bg);color:var(--text);
+                font-family:inherit;font-size:14px;text-align:center">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="RECHNER.addRezeptMix()" style="width:100%;padding:11px">
+          + Einmischen
+        </button>
+      </div>
     </div><!-- end fr-editor -->
   </div><!-- end panel-rechner -->
 
@@ -273,7 +305,7 @@
     <!-- EINGABE -->
     <div id="mode-eingabe-panel">
       <div class="tab-bar" id="eingabe-tabs">
-        <button class="tab active" onclick="UI.switchTab('umwelt')">🌿 Umwelt</button>
+        <button class="tab active" onclick="UI.switchTab('umwelt')">🌿 <span data-i18n="nav_umwelt">Umwelt</span></button>
         <button class="tab" onclick="UI.switchTab('symptom')">🔍 Sympt.</button>
         <button class="tab" onclick="UI.switchTab('futter')">🥩 Futter</button>
         <button class="tab" onclick="UI.switchTab('ausschluss')">📋 Ausschl.</button>
@@ -330,7 +362,7 @@
           <input type="text" id="s-kat-extra" placeholder="Eigene Kategorie…" style="margin-top:8px">
         </div>
         <div class="field"><label>Beschreibung</label><textarea id="s-beschreibung" placeholder="Genauere Beschreibung…"></textarea></div>
-        <div class="field"><label>Schweregrad (1–5)</label><div class="toggle-grid five"><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="1">1</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="2">2</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="3">3</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="4">4</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="5">5</div></div></div>
+        <div class="field"><label>Schweregrad (0 = keine Symptome, 1–5)</label><div class="toggle-grid six"><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="0">0</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="1">1</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="2">2</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="3">3</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="4">4</div><div class="tog-btn" onclick="FORM.toggleSchwere(this)" data-val="5">5</div></div></div>
         <div class="field"><label>Körperstelle</label><div class="toggle-grid three"><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Ohren</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Pfoten</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Bauch</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Rücken</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Beine</div><div class="tog-btn" onclick="FORM.toggleKoerper(this)">Gesicht</div></div><input type="text" id="s-koerper-extra" placeholder="Weitere Stellen…" style="margin-top:8px"></div>
         <div class="field"><label>Notizen</label><textarea id="s-notizen" placeholder="Freitext…"></textarea></div>
         <button class="btn-primary" id="btn-s" onclick="TAGEBUCH.submitSymptom()">Eintrag speichern</button>
@@ -341,14 +373,29 @@
       <div id="tab-futter" class="section">
         <p class="section-title">🥩 Futtertagebuch</p>
         <div class="field"><label>Datum</label><div class="date-row"><input type="date" id="f-datum"><button class="btn-small" onclick="UI.setToday('f-datum')">Heute</button></div></div>
+
+        <!-- Futter-Positionen (dynamisch) -->
         <div class="field">
-          <label>Futter / Mahlzeit</label>
-          <div style="display:flex;gap:8px;margin-bottom:8px">
-            <select id="f-rezept-select" style="flex:1" onchange="TAGEBUCH.futterRezeptChanged()"><option value="">— Gespeichertes Rezept wählen —</option></select>
-            <button class="btn-small" onclick="TAGEBUCH.loadRezepteDropdown()" title="Rezepte neu laden">↺</button>
+          <label>Futter / Mahlzeit
+            <span style="font-size:11px;color:var(--sub);font-weight:400;margin-left:6px">
+              Rezepte auswählen oder Freitext unten
+            </span>
+          </label>
+          <div id="f-items-container">
+            <button onclick="TAGEBUCH.addFutterItem()"
+              style="width:100%;padding:9px;border:1px dashed var(--border);border-radius:var(--radius-sm);
+                background:transparent;color:var(--sub);cursor:pointer;font-family:inherit;font-size:13px">
+              + Futter / Rezept hinzufügen
+            </button>
           </div>
-          <textarea id="f-futter" placeholder="z.B. Rezeptname oder freie Beschreibung…"></textarea>
         </div>
+
+        <!-- Freitext-Ergänzung -->
+        <div class="field">
+          <label>Freitext-Ergänzung</label>
+          <textarea id="f-futter-text" placeholder="z.B. Knochen, Leckerli, manuelle Angaben…" rows="2"></textarea>
+        </div>
+
         <div class="protocol-box">
           <div class="protocol-title">📋 Protokoll Ausschlussdiät</div>
           <div class="field"><label>Produkt</label><input type="text" id="f-produkt" placeholder="z.B. chewies Känguru…"></div>
@@ -447,9 +494,10 @@
        PANEL: STAMMDATEN
        ════════════════════════════════════════════════════════════ -->
   <div id="panel-stammdaten" class="panel">
-    <div class="tab-bar" style="grid-template-columns:repeat(3,1fr)">
+    <div class="tab-bar" style="grid-template-columns:repeat(4,1fr)">
       <button class="tab active" onclick="UI.switchStammdatenTab('hunde')">🐕 Hunde</button>
       <button class="tab" onclick="UI.switchStammdatenTab('zutaten')">🥩 Zutaten</button>
+      <button class="tab" onclick="UI.switchStammdatenTab('toleranzen')">📊 Toleranzen</button>
       <button class="tab" onclick="UI.switchStammdatenTab('parameter')">⚙️ Parameter</button>
     </div>
     <div id="sd-hunde" class="section active">
@@ -461,6 +509,10 @@
       <p class="section-title">🥩 Zutaten verwalten</p>
       <button class="btn-primary" style="margin-bottom:1rem" onclick="STAMMDATEN.showZutatModal()">+ Neue Zutat hinzufügen</button>
       <div id="sd-zutaten-list"><div class="view-loading"><div class="spinner"></div></div></div>
+    </div>
+    <div id="sd-toleranzen" class="section">
+      <p class="section-title">📊 Nährstoff-Toleranzen</p>
+      <div id="sd-toleranzen-list"><div class="view-loading"><div class="spinner"></div></div></div>
     </div>
     <div id="sd-parameter" class="section">
       <p class="section-title">⚙️ Parameter &amp; Toleranzen</p>
@@ -508,6 +560,36 @@
       <div class="setup-step"><h4><span class="step-num">3</span>IDs eintragen &amp; testen</h4><p>Alle IDs oben eintragen und auf „Verbindung testen" klicken.</p></div>
       <div class="setup-step"><h4><span class="step-num">4</span>Ersten Hund anlegen</h4><p>🗂️ Stammdaten → 🐕 Hunde → Neuen Hund hinzufügen.</p></div>
       <div class="setup-step"><h4><span class="step-num">5</span>App installieren (optional)</h4><p><strong>iPhone:</strong> Teilen → „Zum Home-Bildschirm"<br><strong>Android:</strong> Menü → „Zum Startbildschirm hinzufügen"</p></div>
+    </div>
+
+    <div class="settings-box">
+      <h3>🌐 Sprache / Language</h3>
+      <p style="font-size:13px;color:var(--sub);margin-bottom:12px">
+        Übersetzungen werden aus der <code>Translations</code>-Tabelle geladen.<br>
+        Neue Sprachen können dort jederzeit ergänzt werden.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="lang-btns">
+        <button class="btn-secondary" onclick="I18N.setLang('de')"
+          style="padding:8px 16px;font-size:13px">🇩🇪 Deutsch</button>
+        <button class="btn-secondary" onclick="I18N.setLang('en')"
+          style="padding:8px 16px;font-size:13px">🇬🇧 English</button>
+      </div>
+      <div style="font-size:11px;color:var(--sub);margin-top:8px">
+        Aktive Sprache: <strong id="lang-current">de</strong> ·
+        <span id="lang-available" style="color:var(--sub)"></span>
+      </div>
+    </div>
+
+    <div class="settings-box">
+      <h3>🗂️ Sheets einrichten (v2-Migration)</h3>
+      <p style="font-size:13px;color:var(--sub);line-height:1.6;margin-bottom:12px">
+        Erstellt fehlende Tabellenblätter automatisch in beiden Spreadsheets.<br>
+        Bestehende Sheets werden <strong>nicht</strong> verändert.
+      </p>
+      <div id="setup-sheets-status" style="font-size:12px;color:var(--sub);min-height:1.4em;margin-bottom:10px"></div>
+      <button class="btn-primary" onclick="CONFIG.setupAllSheets()" style="margin-bottom:6px">
+        ⚙️ Neue Sheets anlegen
+      </button>
     </div>
 
     <div class="settings-box">

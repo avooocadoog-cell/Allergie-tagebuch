@@ -1,0 +1,747 @@
+==============================================================================
+HUND MANAGER – SHEET ANPASSUNGEN (v1 → v2)
+Konkrete Schritt-für-Schritt Anweisungen für Google Sheets
+==============================================================================
+
+Letztes Update: 2025-06
+Prioritäten: P1 = sofort / P2 = kurzfristig / P3 = optional
+
+WICHTIGE GRUNDREGEL:
+Neue Spalten IMMER ans ENDE der Tabelle anfügen.
+Der JS-Code liest per Spaltenindex (A=0, B=1, ...).
+Spalten in der Mitte einfügen würde alle bestehenden Indices verschieben
+und die App sofort kaputt machen.
+
+==============================================================================
+TEIL 1: STAMMDATEN-SPREADSHEET (Hund_Stammdaten)
+==============================================================================
+
+------------------------------------------------------------------------------
+[P1] Sheet: Hunde – Neue Spalten hinzufügen
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: H (notizen)
+Neue Spalten hinzufügen:
+
+  Spalte I:  "created_at"
+             Typ: Text / Datum-Zeit
+             Format: ISO 8601 (YYYY-MM-DDTHH:MM:SS)
+             Beispiel: 2024-01-15T10:30:00
+
+  Spalte J:  "deleted"
+             Typ: Text (nicht Checkbox – wegen API-Kompatibilität)
+             Erlaubte Werte: TRUE oder FALSE (leer = FALSE)
+             Standard: FALSE
+
+  Spalte K:  "deleted_at"
+             Typ: Text / Datum-Zeit
+             Leer wenn nicht gelöscht
+
+Anleitung:
+1. Tabelle "Hunde" öffnen
+2. Auf Spalte I klicken → Rechtsklick → "1 Spalte rechts einfügen"
+   Alternativ: direkt in Zelle I1 klicken und tippen
+3. Zeile 1 (Anzeige-Header): "Erstellt am" / "Gelöscht" / "Gelöscht am"
+4. Zeile 2 (API-Header):     "created_at"  / "deleted"   / "deleted_at"
+5. Für alle bestehenden Einträge: Spalte J mit FALSE füllen
+   → Zelle J3 eingeben: FALSE
+   → Bis letzte Datenzeile nach unten ziehen
+
+------------------------------------------------------------------------------
+[P2] Sheet: Zutaten – Neue Spalten hinzufügen
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: E (aktiv)
+Neue Spalten:
+
+  Spalte F:  "created_at"     (ISO 8601)
+  Spalte G:  "deleted"        (TRUE / FALSE, Standard: FALSE)
+  Spalte H:  "deleted_at"     (leer wenn aktiv)
+
+Anleitung: wie Hunde (s.o.)
+Bestehende Einträge: Spalte G mit FALSE füllen.
+
+------------------------------------------------------------------------------
+[P2] Sheet: Naehrstoffe – Zusatz-Spalten für AAFCO / FEDIAF
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: I (obergrenze_info)
+Neue Spalten:
+
+  Spalte J:  "nrc_min_per_mkg"
+             Typ: Zahl (Dezimal)
+             Beschreibung: NRC 2006 Mindestbedarf pro kg^0.75
+             Einheit: steht bereits in Spalte C
+             Hinweis: Identisch mit Spalte D in "Bedarf", hier redundant
+                      für direkten Zugriff aus Naehrstoffe-Tabelle
+
+  Spalte K:  "aafco_min_pct_dm"
+             Typ: Zahl (Dezimal)
+             Beschreibung: AAFCO Minimum (% Trockensubstanz)
+             Kann leer bleiben wenn kein AAFCO-Wert bekannt
+
+  Spalte L:  "fediaf_min"
+             Typ: Zahl (Dezimal)
+             Beschreibung: FEDIAF Minimum (falls abweichend von NRC/AAFCO)
+             Kann leer bleiben
+
+  Spalte M:  "upper_safe_limit"
+             Typ: Zahl (Dezimal)
+             Beschreibung: Sicherer Höchstwert (NRC "Safe Upper Limit")
+             Kann leer bleiben wenn kein Wert definiert
+
+  Spalte N:  "quelle"
+             Typ: Text
+             Beschreibung: Quellenangabe
+             Beispiel: NRC 2006, AAFCO 2022, FEDIAF 2021
+
+Anleitung:
+1. Sheet "Naehrstoffe" öffnen
+2. Spalten J–N anlegen (Zeile 1 deutsch, Zeile 2 englisch wie oben)
+3. Werte können schrittweise befüllt werden – leer ist ok
+
+Datenquellen für Befüllung:
+- NRC (2006): Nutrient Requirements of Dogs and Cats, Tabellen 15-1 und 15-2
+- AAFCO: https://www.aafco.org/Portals/0/SiteContent/Regulatory/Committees/
+         Pet-Food/Reports/Pet_Food_Report_2013_Midyear-Proposed_Revisions_
+         to_AAFCO_Dog_and_Cat_Food_Nutrient_Profiles.pdf
+- FEDIAF: https://fediaf.org/self-regulation/nutrition.html
+
+------------------------------------------------------------------------------
+[P2] Sheet: Toleranzen – Empfehlungsspalte hinzufügen
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: F (anmerkung)
+Neue Spalte:
+
+  Spalte G:  "recommended_pct"
+             Typ: Zahl (Dezimal)
+             Beschreibung: Empfohlener Wert als % des Bedarfs (optional)
+             Beispiel: 100 (= 100% = genau der Bedarf)
+             Kann leer bleiben
+
+------------------------------------------------------------------------------
+[P2] Sheet: Rezepte – Soft-Delete Spalten
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: E (notizen)
+Neue Spalten:
+
+  Spalte F:  "deleted"        (TRUE / FALSE)
+  Spalte G:  "deleted_at"     (ISO 8601)
+
+Bestehende Einträge: Spalte F mit FALSE füllen.
+
+------------------------------------------------------------------------------
+[P1] NEUES Sheet: Rezept_Komponenten – Erstellen
+------------------------------------------------------------------------------
+
+Dieses Sheet ermöglicht das Mischen mehrerer Rezepte im Futterrechner.
+
+Schritte:
+1. Im Stammdaten-Spreadsheet: "+" (neues Sheet) klicken
+2. Sheet "Rezept_Komponenten" benennen
+3. Zeile 1 (Anzeige-Header) eingeben:
+   A: "ID" | B: "Rezept ID" | C: "Typ" | D: "Referenz ID" | E: "Gramm" | F: "Notizen"
+4. Zeile 2 (API-Header) eingeben:
+   A: "id" | B: "rezept_id" | C: "komponenten_typ" | D: "ref_id" | E: "gramm" | F: "notizen"
+5. Daten kommen ab Zeile 3 (zunächst leer)
+
+Spalten-Erklärung:
+- id:              Auto-increment (manuell vergeben, z.B. 1, 2, 3, ...)
+- rezept_id:       Welchem Rezept gehört diese Komponente? (aus "Rezepte" Spalte A)
+- komponenten_typ: "zutat" oder "rezept"
+                   "zutat"  = einfache Zutat (ref_id = zutaten_id)
+                   "rezept" = anderes Rezept wird eingemischt (ref_id = rezept_id)
+- ref_id:          ID der Zutat ODER des Unter-Rezepts (je nach komponenten_typ)
+- gramm:           Menge in Gramm
+- notizen:         Freitext
+
+Beispiel für "300g Rezept A + 150g Rezept B":
+  1 | 10 | rezept | 7  | 300 |
+  2 | 10 | rezept | 8  | 150 |
+  (Rezept 10 besteht aus 300g Rezept 7 und 150g Rezept 8)
+
+ACHTUNG: Keine Zirkel-Referenzen (Rezept A enthält Rezept B, das wiederum A enthält).
+Der JS-Code prüft das automatisch (max. 5 Ebenen).
+
+------------------------------------------------------------------------------
+[P2] NEUES Sheet: Translations – Erstellen
+------------------------------------------------------------------------------
+
+Ermöglicht Mehrsprachigkeit (aktuell nur Vorbereitung, noch kein UI).
+
+Schritte:
+1. Neues Sheet "Translations" erstellen
+2. Zeile 1: "Schlüssel" | "Sprache" | "Wert" | "Kontext"
+3. Zeile 2: "key"       | "lang"    | "value"| "context"
+
+Beispieldaten (ab Zeile 3):
+  symptom_juckreiz  | de | Juckreiz        | symptom
+  symptom_juckreiz  | en | itching         | symptom
+  symptom_haut      | de | Hautprobleme    | symptom
+  symptom_haut      | en | skin issues     | symptom
+  category_fleisch  | de | Fleisch         | zutat_kategorie
+  category_fleisch  | en | meat            | zutat_kategorie
+
+Format für context:
+- "symptom"         – Symptom-Kategorien
+- "zutat_kategorie" – Zutaten-Kategorien
+- "allergen"        – Allergen-Typen
+- "status"          – Status-Werte (verträglich, Reaktion, ...)
+- "ui"              – UI-Texte
+
+==============================================================================
+TEIL 2: TAGEBUCH-SPREADSHEET (Hund_Tagebuch)
+==============================================================================
+
+ÜBERSICHT: 7 Sheets müssen identisch erweitert werden.
+Jedes Sheet bekommt 4 neue Spalten am Ende:
+  - entry_id   (eindeutige ID pro Zeile – für Undo / Bearbeiten)
+  - created_at (Zeitstempel der Erstellung)
+  - deleted    (TRUE / FALSE)
+  - deleted_at (Zeitstempel der Löschung)
+
+------------------------------------------------------------------------------
+[P1] Sheet: Umweltagebuch
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: K (notizen, Index 10)
+Neue Spalten:
+
+  Spalte L (Index 11): "entry_id"
+  Spalte M (Index 12): "created_at"
+  Spalte N (Index 13): "deleted"
+  Spalte O (Index 14): "deleted_at"
+
+Schritte:
+1. Sheet "Umweltagebuch" öffnen
+2. Zeile 1 Anzeige-Header: "Eintrag-ID" | "Erstellt" | "Gelöscht" | "Gelöscht am"
+3. Zeile 2 API-Header:     "entry_id"   | "created_at"| "deleted" | "deleted_at"
+4. Bestehende Datenzeilen: Spalte N mit FALSE füllen
+   → Formel in N3: =IF(A3="","",FALSE)
+   → Oder manuell FALSE eintragen
+5. entry_id für bestehende Zeilen: leer lassen (wird beim nächsten Bearbeiten gesetzt)
+
+------------------------------------------------------------------------------
+[P1] Sheet: Symptomtagebuch
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: G (notizen, Index 6)
+Neue Spalten:
+
+  Spalte H (Index 7):  "entry_id"
+  Spalte I (Index 8):  "created_at"
+  Spalte J (Index 9):  "deleted"
+  Spalte K (Index 10): "deleted_at"
+
+Zeile 1: "Eintrag-ID" | "Erstellt" | "Gelöscht" | "Gelöscht am"
+Zeile 2: "entry_id"   | "created_at"| "deleted" | "deleted_at"
+Bestehende Daten: Spalte J mit FALSE füllen.
+
+HINWEIS ZUR SCHWEREGRAD-SKALA:
+Die bestehende Skala 1–5 bleibt bestehen.
+Zukünftig soll 0 = "keine Symptome" als eigener Wert nutzbar sein.
+Das Eingabe-Formular kann um einen "0"-Button erweitert werden.
+Keine Sheet-Änderung notwendig.
+
+------------------------------------------------------------------------------
+[P1] Sheet: Futtertagebuch
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: I (notizen, Index 8)
+Neue Spalten:
+
+  Spalte J (Index 9):  "entry_id"
+  Spalte K (Index 10): "created_at"
+  Spalte L (Index 11): "deleted"
+  Spalte M (Index 12): "deleted_at"
+
+Zeile 1: "Eintrag-ID" | "Erstellt" | "Gelöscht" | "Gelöscht am"
+Zeile 2: "entry_id"   | "created_at"| "deleted" | "deleted_at"
+Bestehende Daten: Spalte L mit FALSE füllen.
+
+------------------------------------------------------------------------------
+[P1] Sheet: Ausschlussdiät
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: H (notizen, Index 7)
+Neue Spalten:
+
+  Spalte I (Index 8):  "entry_id"
+  Spalte J (Index 9):  "created_at"
+  Spalte K (Index 10): "deleted"
+  Spalte L (Index 11): "deleted_at"
+
+Bestehende Daten: Spalte K mit FALSE füllen.
+
+------------------------------------------------------------------------------
+[P1] Sheet: Bekannte Allergene
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: F (notizen, Index 5)
+Neue Spalten:
+
+  Spalte G (Index 6):  "entry_id"
+  Spalte H (Index 7):  "created_at"
+  Spalte I (Index 8):  "deleted"
+  Spalte J (Index 9):  "deleted_at"
+
+Bestehende Daten: Spalte I mit FALSE füllen.
+
+------------------------------------------------------------------------------
+[P1] Sheet: Tierarztbesuche
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: H (folge/Folgebesuch, Index 7)
+Neue Spalten:
+
+  Spalte I (Index 8):  "entry_id"
+  Spalte J (Index 9):  "created_at"
+  Spalte K (Index 10): "deleted"
+  Spalte L (Index 11): "deleted_at"
+
+Bestehende Daten: Spalte K mit FALSE füllen.
+
+------------------------------------------------------------------------------
+[P1] Sheet: Medikamente
+------------------------------------------------------------------------------
+
+Aktuelle letzte Spalte: I (notizen, Index 8)
+Neue Spalten:
+
+  Spalte J (Index 9):  "entry_id"
+  Spalte K (Index 10): "created_at"
+  Spalte L (Index 11): "deleted"
+  Spalte M (Index 12): "deleted_at"
+
+Bestehende Daten: Spalte L mit FALSE füllen.
+
+------------------------------------------------------------------------------
+[P2] NEUES Sheet: Hund_Gewicht – Erstellen (Tagebuch-Spreadsheet)
+------------------------------------------------------------------------------
+
+Für den Gewichtsverlauf in der Statistik.
+
+Schritte:
+1. Im Tagebuch-Spreadsheet neues Sheet "Hund_Gewicht" erstellen
+2. Zeile 1: "ID" | "Hund ID" | "Datum" | "Gewicht (kg)" | "Notizen" | "Erstellt"
+3. Zeile 2: "entry_id" | "hund_id" | "datum" | "gewicht_kg" | "notizen" | "created_at"
+4. Daten ab Zeile 3
+
+Daten manuell eintragen (vergangene Wiegedaten):
+  Spalte A: 1, 2, 3, ... (auto-increment)
+  Spalte B: 1 (Hund-ID)
+  Spalte C: DD.MM.YYYY
+  Spalte D: Gewicht in kg (z.B. 27.3)
+  Spalte E: Notizen (z.B. "nach Tierarztbesuch")
+  Spalte F: leer oder ISO-Datum
+
+Für Milow: Historische Gewichte können hier nachgetragen werden.
+
+------------------------------------------------------------------------------
+[P2] NEUES Sheet: Pollen_Log – Erstellen (Tagebuch-Spreadsheet)
+------------------------------------------------------------------------------
+
+Für separate Pollenarten-Einträge (Statistik: Pollen nach Typ auswählbar).
+
+Schritte:
+1. Neues Sheet "Pollen_Log" erstellen
+2. Zeile 1: "ID" | "Hund ID" | "Datum" | "Pollenart" | "Stufe" | "Quelle" | "Erstellt"
+3. Zeile 2: "entry_id" | "hund_id" | "datum" | "pollenart" | "stufe" | "source" | "created_at"
+
+Stufen-Skala:
+  0 = keine
+  1 = gering
+  2 = gering-mittel
+  3 = mittel
+  4 = mittel-stark
+  5 = stark
+
+Pollenarten (Freitextfeld, empfohlene Werte):
+  Birke, Erle, Hasel, Esche, Gräser, Roggen, Beifuß, Ambrosia, Olive, Ragweed
+
+Quelle-Werte:
+  DWD, Open-Meteo, manuell
+
+==============================================================================
+TEIL 3: CODE-ANPASSUNGEN NACH DEN SHEET-ÄNDERUNGEN
+==============================================================================
+
+Die folgenden JS-Änderungen sind NOTWENDIG damit die neuen Spalten genutzt werden.
+Reihenfolge: erst Sheets anpassen, dann Code.
+
+------------------------------------------------------------------------------
+[P1] ansicht.js – deleted-Filter
+------------------------------------------------------------------------------
+
+In der load()-Funktion wird dataRows gefiltert. Nach der Sheet-Anpassung:
+
+AKTUELL:
+  const dataRows = rows.slice(2).filter(r =>
+    r?.some(v => v !== null && v !== undefined && String(v).trim() !== '')
+  );
+
+ÄNDERN ZU (je nach Sheet-spezifischem deleted-Index):
+  const DELETED_COL = {
+    umwelt: 13, symptom: 9, futter: 11, ausschluss: 10,
+    allergen: 8, tierarzt: 10, medikamente: 11,
+  };
+  const delIdx = DELETED_COL[which] ?? -1;
+
+  const dataRows = rows.slice(2).filter(r =>
+    r?.some(v => v !== null && v !== undefined && String(v).trim() !== '') &&
+    (delIdx < 0 || String(r[delIdx]).toUpperCase() !== 'TRUE')
+  );
+
+------------------------------------------------------------------------------
+[P1] tagebuch.js – created_at und entry_id beim Schreiben mitsenden
+------------------------------------------------------------------------------
+
+In ALLEN submitXxx()-Funktionen am Ende des appendRow-Arrays ergänzen:
+
+AKTUELL (Beispiel submitUmwelt):
+  await appendRow('Umweltagebuch', [
+    getHundId(), fd(datum), ..., getBett(),
+    document.getElementById('u-notizen').value,
+  ], getCfg().tagebuchId);
+
+ÄNDERN ZU:
+  const now = new Date().toISOString().slice(0, 19);
+  const eid = now.replace(/[-:T]/g, '').slice(0, 14) + '_' + Math.random().toString(36).slice(2, 6);
+  await appendRow('Umweltagebuch', [
+    getHundId(), fd(datum), ..., getBett(),
+    document.getElementById('u-notizen').value,
+    eid,  // entry_id (Spalte L)
+    now,  // created_at (Spalte M)
+    'FALSE', // deleted (Spalte N)
+    '',      // deleted_at (Spalte O)
+  ], getCfg().tagebuchId);
+
+Diese Änderung für ALLE 7 submitXxx()-Funktionen durchführen.
+Jede Funktion hat einen anderen deleted-Spalten-Index – aber die Reihenfolge
+der neuen Felder bleibt immer: entry_id, created_at, 'FALSE', ''
+
+------------------------------------------------------------------------------
+[P2] cache.js – keine Änderungen notwendig
+------------------------------------------------------------------------------
+
+Cache liest alle Spalten roh und gibt string[][] zurück.
+Die Filterung nach deleted passiert in ansicht.js und statistik.js.
+
+------------------------------------------------------------------------------
+[P2] statistik.js – deleted-Filter
+------------------------------------------------------------------------------
+
+In der refresh()-Funktion, nach dem Parsen:
+
+  const allSym = parseRows(rSym, 2);
+  // NEU: deleted herausfiltern (Index 9 = Spalte J)
+  const sym = allSym.filter(r =>
+    matchHund(r, hundId) &&
+    inRange(col(r, 1), cutoff) &&
+    col(r, 9).toUpperCase() !== 'TRUE'
+  );
+
+Gleiches für umw (Index 13), fut (Index 11), aus (Index 10), all (Index 8), med (Index 11).
+
+------------------------------------------------------------------------------
+[P2] sheets.js – createSheet-Funktion (bereits in sheets.js vorhanden)
+------------------------------------------------------------------------------
+
+Die bestehende createSheet()-Funktion erstellt nur das Tabellenblatt.
+Erweiterung um Header-Setzung:
+
+HINZUFÜGEN (neue Funktion nach der bestehenden createSheet()):
+
+  /**
+   * Neues Sheet erstellen und sofort Header setzen.
+   * @param {string}   sheetName      - Name des neuen Blatts
+   * @param {string[]} displayHeaders - Zeile 1 (deutsch / Anzeige)
+   * @param {string[]} apiHeaders     - Zeile 2 (englisch / snake_case)
+   * @param {string}   spreadsheetId
+   */
+  export async function createSheetWithHeaders(sheetName, displayHeaders, apiHeaders, spreadsheetId) {
+    // 1. Sheet erstellen
+    await createSheet(sheetName, spreadsheetId);
+
+    // 2. Kurz warten (API braucht einen Moment)
+    await new Promise(r => setTimeout(r, 500));
+
+    // 3. Header in Zeile 1 und 2 schreiben
+    await writeRange(sheetName, 'A1',
+      [displayHeaders, apiHeaders],
+      spreadsheetId
+    );
+  }
+
+Verwendungsbeispiel (z.B. in stammdaten.js oder als Einrichtungs-Button):
+
+  await createSheetWithHeaders(
+    'Hund_Gewicht',
+    ['ID', 'Hund ID', 'Datum', 'Gewicht (kg)', 'Notizen', 'Erstellt'],
+    ['entry_id', 'hund_id', 'datum', 'gewicht_kg', 'notizen', 'created_at'],
+    getCfg().tagebuchId
+  );
+
+EINSCHRÄNKUNGEN der Google Sheets API:
+- Automatische Formatierung (Farben, Schriftgröße) ist möglich, aber komplex (batchUpdate)
+- Datenvalidierung (Dropdown-Listen im Sheet) ist per API möglich, aber aufwändig
+- Für die App ist es ausreichend, nur den Header zu setzen
+
+------------------------------------------------------------------------------
+[P3] rechner.js – Rezept-Mixing
+------------------------------------------------------------------------------
+
+Nach Erstellung von Rezept_Komponenten:
+
+1. store.js: loadAll() um Rezept_Komponenten erweitern:
+   const rKomp = await readSheet('Rezept_Komponenten', sid);
+   rezeptKomponenten = parseRows(rKomp, ['id','rezept_id','komponenten_typ','ref_id','gramm','notizen'], 2)
+     .map(r => ({ ...r, id: parseInt(r.id)||0, rezept_id: parseInt(r.rezept_id)||0,
+                  ref_id: parseInt(r.ref_id)||0, gramm: parseFloat(r.gramm)||0 }));
+
+2. store.js: Getter hinzufügen:
+   export function getRezeptKomponenten(rezeptId) {
+     return rezeptKomponenten.filter(k => k.rezept_id === rezeptId);
+   }
+
+3. rechner.js: Neue Funktion resolveRezept(rezeptId, visited = new Set()):
+   - Prüft ob rezeptId bereits in visited (Zyklus-Schutz)
+   - Holt Komponenten aus Store
+   - Für typ="zutat": direkt gramm + zutaten_id
+   - Für typ="rezept": rekursiv resolveRezept(ref_id, new Set([...visited, rezeptId]))
+   - Max. 5 Ebenen (depth-Zähler)
+   - Gibt { zutaten_id, gramm, zutat_name }[] zurück
+
+==============================================================================
+TEIL 4: SHEET-STRUKTUR ZUSAMMENFASSUNG
+==============================================================================
+
+STAMMDATEN-SPREADSHEET – Sheets nach Anpassung:
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Sheet               │ Spalten (Kurzform)                                       │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Hunde               │ A-H (bestehend) + I:created_at + J:deleted + K:deleted_at│
+│ Parameter           │ A-D (unverändert)                                        │
+│ Naehrstoffe         │ A-I (bestehend) + J:nrc_min + K:aafco_min + L:fediaf_min │
+│                     │ + M:upper_safe_limit + N:quelle                          │
+│ Toleranzen          │ A-F (bestehend) + G:recommended_pct                      │
+│ Bedarf              │ A-E (unverändert)                                        │
+│ Zutaten             │ A-E (bestehend) + F:created_at + G:deleted + H:deleted_at│
+│ Zutaten_Naehrstoffe │ A-D (bestehend) + E:source                              │
+│ Rezepte             │ A-E (bestehend) + F:deleted + G:deleted_at               │
+│ Rezept_Zutaten      │ A-E (unverändert)                                        │
+│ Hund_Kalorienbedarf │ A-D (unverändert)                                        │
+│ Rezept_Komponenten  │ NEU: A:id + B:rezept_id + C:typ + D:ref_id + E:gramm    │
+│                     │ + F:notizen                                              │
+│ Translations        │ NEU: A:key + B:lang + C:value + D:context               │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+TAGEBUCH-SPREADSHEET – Sheets nach Anpassung:
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Sheet               │ Letzte alte Spalte → Neue Spalten                        │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Umweltagebuch       │ K(11) → L:entry_id M:created_at N:deleted O:deleted_at  │
+│ Symptomtagebuch     │ G(7)  → H:entry_id I:created_at J:deleted K:deleted_at  │
+│ Futtertagebuch      │ I(9)  → J:entry_id K:created_at L:deleted M:deleted_at  │
+│ Ausschlussdiät      │ H(8)  → I:entry_id J:created_at K:deleted L:deleted_at  │
+│ Bekannte Allergene  │ F(6)  → G:entry_id H:created_at I:deleted J:deleted_at  │
+│ Tierarztbesuche     │ H(8)  → I:entry_id J:created_at K:deleted L:deleted_at  │
+│ Medikamente         │ I(9)  → J:entry_id K:created_at L:deleted M:deleted_at  │
+│ Hund_Gewicht        │ NEU: A:entry_id B:hund_id C:datum D:gewicht_kg E:notizen │
+│                     │ F:created_at                                             │
+│ Pollen_Log          │ NEU: A:entry_id B:hund_id C:datum D:pollenart E:stufe   │
+│                     │ F:source G:created_at                                    │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+In Klammern: 0-basierter Index der letzten alten Spalte (wie JS ihn liest).
+
+==============================================================================
+TEIL 5: CHECKLISTE
+==============================================================================
+
+PHASE 1 – Tagebuch-Sheets erweitern (kein Breaking Change):
+  [ ] Umweltagebuch:      Spalten L-O hinzufügen, N mit FALSE füllen
+  [ ] Symptomtagebuch:    Spalten H-K hinzufügen, J mit FALSE füllen
+  [ ] Futtertagebuch:     Spalten J-M hinzufügen, L mit FALSE füllen
+  [ ] Ausschlussdiät:     Spalten I-L hinzufügen, K mit FALSE füllen
+  [ ] Bekannte Allergene: Spalten G-J hinzufügen, I mit FALSE füllen
+  [ ] Tierarztbesuche:    Spalten I-L hinzufügen, K mit FALSE füllen
+  [ ] Medikamente:        Spalten J-M hinzufügen, L mit FALSE füllen
+  [ ] tagebuch.js: entry_id + created_at + 'FALSE' + '' zu ALLEN submitXxx() ergänzen
+  [ ] ansicht.js: deleted-Filter einbauen
+  [ ] statistik.js: deleted-Filter einbauen
+
+PHASE 2 – Stammdaten erweitern:
+  [ ] Hunde:              Spalten I-K hinzufügen
+  [ ] Zutaten:            Spalten F-H hinzufügen
+  [ ] Rezepte:            Spalten F-G hinzufügen
+  [ ] Naehrstoffe:        Spalten J-N hinzufügen (Werte schrittweise befüllen)
+  [ ] Toleranzen:         Spalte G hinzufügen
+
+PHASE 3 – Neue Sheets erstellen:
+  [ ] Rezept_Komponenten  (Stammdaten-Spreadsheet)
+  [ ] Translations        (Stammdaten-Spreadsheet)
+  [ ] Hund_Gewicht        (Tagebuch-Spreadsheet)
+  [ ] Pollen_Log          (Tagebuch-Spreadsheet)
+  [ ] store.js: Rezept_Komponenten laden
+  [ ] rechner.js: resolveRezept() implementieren
+  [ ] sheets.js: createSheetWithHeaders() hinzufügen
+  [ ] wetter.js: Pollen_Log-Eintrag beim Übernehmen schreiben
+  [ ] statistik.js: Gewichtsverlauf aus Hund_Gewicht laden
+
+==============================================================================
+HINWEISE ZUR FEHLERBEHANDLUNG
+==============================================================================
+
+Problem: Nach Spalten-Ergänzung zeigt ansicht.js falschen Content
+Ursache: sheet gibt jetzt mehr Spalten zurück – ansicht.js liest per Index
+Lösung:  Ansicht liest nur Spalten 0–10 (alt), neue Spalten werden ignoriert
+         → kein Problem, solange Neues NUR ans Ende angefügt wird
+
+Problem: Bestehende Einträge haben leeres deleted-Feld
+Ursache: Alte Zeilen haben Spalte N nicht gesetzt
+Lösung:  Im Filter: `col !== 'TRUE'` statt `col === 'FALSE'`
+         → leere Zelle = nicht gelöscht (default)
+         Dies ist bereits in der empfohlenen Filter-Implementierung berücksichtigt.
+
+Problem: Google Sheets API 429 (Quota exceeded)
+Ursache: Zu viele API-Calls (besonders bei preloadAll)
+Lösung:  cache.js TTL von 10 auf 15 Minuten erhöhen:
+         const TTL_MS = 15 * 60 * 1000;
+         Oder: preloadAll() erst beim ersten Öffnen des Statistik-Panels auslösen
+
+Problem: createSheet schlägt fehl obwohl Blatt existiert
+Ursache: Google Sheets API gibt Fehler wenn Name schon existiert
+Lösung:  In createSheetWithHeaders() vorher prüfen:
+         const existing = await getSheetsList(spreadsheetId);
+         if (existing.includes(sheetName)) return; // bereits vorhanden
+==============================================================================
+
+==============================================================================
+ERGÄNZUNG v2.1 – NACHTRÄGLICH IMPLEMENTIERTE FEATURES
+==============================================================================
+
+Diese Abschnitte ergänzen die ursprüngliche SHEET_ANPASSUNGEN.txt um Punkte
+die nach der Basisimplementierung hinzugekommen sind.
+
+------------------------------------------------------------------------------
+[P3] Toleranzen – recommended_pct (Spalte G)
+------------------------------------------------------------------------------
+
+Bereits in TEIL 1 als "optional" erwähnt. Hier der vollständige Kontext:
+
+Nach dem Hinzufügen von Spalte G "recommended_pct" in der Toleranzen-Tabelle:
+- store.js liest den Wert automatisch (Spalte 6, 0-basiert)
+- getTolerance() gibt { min, max, recommended } zurück
+- rechner.js zeigt eine grüne Markierungslinie im Nährstoffbalken
+- Der Tooltip zeigt "Empf: 100%" wenn ein Empfehlungswert hinterlegt ist
+
+Befüllung:
+  - Leer lassen = kein Marker (Standard, vor Migration)
+  - 100 = Empfehlung liegt genau beim Bedarf
+  - 120 = Empfehlung liegt 20% über Bedarf
+
+------------------------------------------------------------------------------
+[P3] Naehrstoffe – Spalten J–N (AAFCO / FEDIAF)
+------------------------------------------------------------------------------
+
+Nach dem Hinzufügen der Spalten J–N:
+
+  Spalte J (nrc_min_per_mkg):   NRC 2006 Mindestbedarf pro kg^0.75
+  Spalte K (aafco_min_pct_dm):  AAFCO Minimum als % Trockensubstanz
+  Spalte L (fediaf_min):        FEDIAF Minimum
+  Spalte M (upper_safe_limit):  Sicherer Höchstwert
+  Spalte N (quelle_ref):        Quellenangabe (z.B. "NRC 2006, Tab. 15-1")
+
+Das Nährstoff-Info-Popup (Antippen im Futterrechner) zeigt eine Tabelle
+mit diesen Werten automatisch sobald sie befüllt sind.
+Leere Spalten werden nicht angezeigt – kein Fehler wenn leer.
+
+Schrittweise befüllen möglich: zuerst nur critical nutrients wie Ca, P, Zn, Cu.
+
+Quellen für Werte:
+  - NRC 2006: Tabellen 15-1 (MBW-Basis) und 15-2 (DM-Basis)
+  - AAFCO 2022: "Dog Food Nutrient Profiles" (auf aafco.org)
+  - FEDIAF 2021: "Nutritional Guidelines" (auf fediaf.org)
+
+------------------------------------------------------------------------------
+[P3] Pollen-Skala 0–5 (ganzzahlig, Spec-konform)
+------------------------------------------------------------------------------
+
+Die interne Skala in wetter.js wurde auf ganzzahlige Werte 0–5 umgestellt:
+
+  0 = keine
+  1 = gering
+  2 = gering–mittel  (früher: 0.5 oder 1.5)
+  3 = mittel         (früher: 2)
+  4 = mittel–stark   (früher: 2.5)
+  5 = stark          (früher: 3)
+
+Diese Werte werden exakt so in Pollen_Log Spalte E (stufe) geschrieben.
+Der Statistik-Chart zeigt die Klartextbeschriftung (keine / gering / etc.).
+
+DWD-Mapping (raw → stufe):
+  '0'   → 0    '0-1' → 2    '1'   → 1
+  '1-2' → 2    '2'   → 3    '2-3' → 4    '3' → 5
+
+Open-Meteo-Mapping (gr/m³ → stufe):
+  <10   → 0    10–49  → 1   50–99  → 2
+  100–149 → 3  150–349 → 4  ≥350   → 5
+
+------------------------------------------------------------------------------
+[KOMPLETT-NEU] Tagebuch-Einträge editierbar
+------------------------------------------------------------------------------
+
+Alle 7 Tagebuch-Ansichten haben jetzt einen ✏️-Button pro Eintrag.
+Voraussetzung: Die Zeile hat eine entry_id (Spalte L/H/J/I/G/I/J je nach Sheet).
+
+Einträge VOR der Migration (kein entry_id) zeigen einen Hinweistext statt
+dem Edit-Formular: "Bitte direkt in Google Sheets bearbeiten."
+
+Keine Sheet-Änderung nötig – das Feature nutzt die bestehenden entry_id-Spalten.
+
+Wie es funktioniert:
+  1. Nutzer klickt ✏️ → editEntry('symptom', 'entry_id_wert')
+  2. ansicht.js sucht per entry_id die Zeile im Cache
+  3. Öffnet Modal mit vorbefüllten Feldern je nach Tab-Typ
+  4. Nutzer ändert Werte → saveEdit() schreibt via writeRange zurück
+  5. Nur Datenspalten (A bis letzter Inhalts-Index) werden überschrieben
+  6. Metaspalten (entry_id, created_at, deleted, deleted_at) bleiben unberührt
+  7. Cache wird invalidiert, Ansicht lädt neu
+
+------------------------------------------------------------------------------
+[AKTUALISIERT] Checkliste – finaler Stand
+------------------------------------------------------------------------------
+
+PHASE 1 – Tagebuch-Sheets erweitern (ALLE CODE-ÄNDERUNGEN BEREITS AKTIV):
+  [ ] Umweltagebuch:      Spalten L-O hinzufügen, N mit FALSE füllen
+  [ ] Symptomtagebuch:    Spalten H-K hinzufügen, J mit FALSE füllen
+  [ ] Futtertagebuch:     Spalten J-M hinzufügen, L mit FALSE füllen
+  [ ] Ausschlussdiät:     Spalten I-L hinzufügen, K mit FALSE füllen
+  [ ] Bekannte Allergene: Spalten G-J hinzufügen, I mit FALSE füllen
+  [ ] Tierarztbesuche:    Spalten I-L hinzufügen, K mit FALSE füllen
+  [ ] Medikamente:        Spalten J-M hinzufügen, L mit FALSE füllen
+  → Nach dieser Phase: Edit/Delete/Undo + Soft-Delete funktionieren vollständig
+
+PHASE 2 – Stammdaten erweitern:
+  [ ] Hunde:              Spalten I-K (created_at, deleted, deleted_at)
+  [ ] Zutaten:            Spalten F-H (created_at, deleted, deleted_at)
+  [ ] Rezepte:            Spalten F-G (deleted, deleted_at)
+  [ ] Toleranzen:         Spalte G (recommended_pct) – optional, kann leer bleiben
+  [ ] Naehrstoffe:        Spalten J-N – optional, schrittweise befüllen
+
+PHASE 3 – Neue Sheets (automatisch via App-Button in Einstellungen):
+  [AUTO] Einstellungen → "Neue Sheets anlegen" klicken
+       → legt Rezept_Komponenten, Translations, Hund_Gewicht, Pollen_Log an
+  [ ] Hund_Gewicht:   Historische Gewichtsdaten manuell eintragen
+  [ ] Pollen_Log:     Wird automatisch befüllt beim Übernehmen von Pollen in der App
+  [ ] Translations:   Übersetzungen nach Bedarf ergänzen (optional)
+
+DEPLOYMENT-REIHENFOLGE (empfohlen):
+  1. Alle JS-Dateien und index.html/styles.css in GitHub pushen
+  2. In der App: Einstellungen → "Neue Sheets anlegen"
+  3. Phase 1: 7 Tagebuch-Sheets um 4 Spalten erweitern
+  4. Phase 2: Stammdaten-Sheets erweitern (optional, nach Bedarf)
+==============================================================================

@@ -11,11 +11,14 @@
  * ║  Nach dem Laden erscheint eine Auswahl-UI. Der Nutzer        ║
  * ║  wählt welche Pollenarten + Stärke übernommen werden.        ║
  * ║                                                              ║
- * ║  Abhängigkeiten: config.js                                   ║
+ * ║  Abhängigkeiten: config.js, sheets.js                        ║
+ * ║  Optional: schreibt in Pollen_Log (Tagebuch-Spreadsheet)     ║
  * ╚══════════════════════════════════════════════════════════════╝
+
  */
 
 import { get as getCfg } from './config.js';
+import { appendRow }     from './sheets.js';
 
 // ── DWD Konstanten ───────────────────────────────────────────────
 const DWD_POLLEN_NAMES = {
@@ -23,13 +26,22 @@ const DWD_POLLEN_NAMES = {
   Beifuss: 'Beifuß', Esche: 'Esche',  Birke: 'Birke',
   Erle:    'Erle',   Ambrosia: 'Ambrosia',
 };
+/**
+ * Spec-konforme Skala (Spec Punkt 7):
+ *   0 = keine
+ *   1 = gering
+ *   2 = gering–mittel  (Zwischenstufe als eigener Wert)
+ *   3 = mittel
+ *   4 = mittel–stark   (Zwischenstufe als eigener Wert)
+ *   5 = stark / sehr stark
+ */
 const DWD_LEVEL_LABELS = {
-  '-1':'keine Daten', '0':'keine', '0-1':'keine–gering',
+  '-1':'keine Daten', '0':'keine', '0-1':'gering–mittel',
   '1':'gering', '1-2':'gering–mittel', '2':'mittel',
-  '2-3':'stark', '3':'sehr stark',
+  '2-3':'mittel–stark', '3':'stark',
 };
 const DWD_LEVEL_NUM = {
-  '-1':-1, '0':0, '0-1':0.5, '1':1, '1-2':1.5, '2':2, '2-3':2.5, '3':3,
+  '-1': -1, '0': 0, '0-1': 2, '1': 1, '1-2': 2, '2': 3, '2-3': 4, '3': 5,
 };
 
 // ── Open-Meteo Konstanten ────────────────────────────────────────
@@ -46,17 +58,19 @@ function omLevelLabel(val) {
   if (val === null || val === undefined) return null;
   if (val < 10)  return 'keine';
   if (val < 50)  return 'gering';
+  if (val < 100) return 'gering–mittel';
   if (val < 150) return 'mittel';
-  if (val < 500) return 'stark';
-  return 'sehr stark';
+  if (val < 350) return 'mittel–stark';
+  return 'stark';
 }
 function omLevelNum(val) {
   if (!val)      return -1;
   if (val < 10)  return 0;
   if (val < 50)  return 1;
-  if (val < 150) return 2;
-  if (val < 500) return 3;
-  return 4;
+  if (val < 100) return 2;
+  if (val < 150) return 3;
+  if (val < 350) return 4;
+  return 5;
 }
 
 // ── CORS-Proxies ─────────────────────────────────────────────────
@@ -282,7 +296,7 @@ function renderPollenSelector(dwdData, omData) {
   document.getElementById('pollen-none').addEventListener('click', () => {
     container.querySelectorAll('.pollen-select-btn').forEach(deactivateBtn);
   });
-  document.getElementById('pollen-apply').addEventListener('click', () => {
+  document.getElementById('pollen-apply').addEventListener('click', async () => {
     const selected = [...container.querySelectorAll('.pollen-select-btn[data-selected="1"]')];
     setValue('u-pollen', selected.length
       ? selected.map(b => `${b.dataset.name} (${b.dataset.level})`).join(', ')
@@ -291,6 +305,13 @@ function renderPollenSelector(dwdData, omData) {
     const src = document.getElementById('pollen-source');
     if (src) src.textContent = '(DWD + Open-Meteo)';
     container.remove();
+
+    // ── Pollen_Log schreiben (optional – Sheet muss existieren) ─
+    if (selected.length) {
+      _writePollenLog(selected).catch(e =>
+        console.warn('Pollen_Log write failed (Sheet noch nicht angelegt?):', e.message)
+      );
+    }
   });
 }
 
@@ -324,4 +345,61 @@ async function fetchWithProxies(targetUrl) {
     } catch (e) { /* nächsten Proxy */ }
   }
   throw 'CORS-Proxy nicht erreichbar';
+}
+
+// ════════════════════════════════════════════════════════════════
+//  POLLEN_LOG SCHREIBEN
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * Ausgewählte Pollen-Einträge in die Pollen_Log Tabelle schreiben.
+ * Jede Pollenart bekommt eine eigene Zeile.
+ *
+ * Mapping DWD/Open-Meteo levelNum → Pollen_Log-Stufe (0–5):
+ *   DWD:        0=keine, 0.5=keine–gering, 1=gering, 1.5=gering–mittel,
+ *               2=mittel, 2.5=stark, 3=sehr stark
+ *   Open-Meteo: 0=keine, 1=gering, 2=mittel, 3=stark, 4=sehr stark
+ * → Wir runden auf ganzzahlige 0–5 Stufe.
+ *
+ * Wird still aufgerufen – Fehler werden nur geloggt, nicht angezeigt.
+ * Sheet muss bereits existieren (Pollen_Log in Hund_Tagebuch).
+ *
+ * @param {HTMLElement[]} selectedBtns - Ausgewählte .pollen-select-btn Elemente
+ */
+async function _writePollenLog(selectedBtns) {
+  const cfg    = getCfg();
+  const tid    = cfg.tagebuchId;
+  if (!tid) return;
+
+  // Hund-ID aus dem Tagebuch-Select lesen
+  const hundId = parseInt(document.getElementById('tb-hund-select')?.value) || 1;
+
+  // Heutiges Datum in DD.MM.YYYY
+  const now  = new Date();
+  const pad  = n => String(n).padStart(2, '0');
+  const datum = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`;
+  const iso   = now.toISOString().slice(0, 19);
+
+  // Für jede ausgewählte Pollenart eine Zeile schreiben
+  for (const btn of selectedBtns) {
+    const pollenart = btn.dataset.name  || '';
+    const levelNum  = parseFloat(btn.dataset.levelnum ?? -1);
+    const source    = btn.dataset.source || 'DWD + Open-Meteo';
+
+    // levelNum → ganzzahlige Stufe 0–5
+    // DWD-Stufen können 0.5-Schritte haben → aufrunden
+    const stufe = levelNum < 0 ? 0 : Math.min(5, Math.ceil(levelNum));
+
+    if (!pollenart || stufe <= 0) continue;
+
+    await appendRow('Pollen_Log', [
+      '',        // entry_id – wird leer gelassen (auto-increment wäre nice-to-have)
+      hundId,    // hund_id
+      datum,     // datum DD.MM.YYYY
+      pollenart, // pollenart
+      stufe,     // stufe 0–5
+      source,    // source
+      iso,       // created_at
+    ], tid);
+  }
 }

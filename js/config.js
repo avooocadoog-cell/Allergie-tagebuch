@@ -17,7 +17,7 @@
  */
 
 import { setStatus }    from './ui.js';
-import { getSheetsList } from './sheets.js';
+import { getSheetsList, createSheetWithHeaders } from './sheets.js';
 
 // ── Default-Konfiguration ────────────────────────────────────────
 // Neue Nutzer ersetzen diese IDs durch ihre eigenen Google Sheets IDs
@@ -116,4 +116,75 @@ export function get() {
  */
 export function isConfigured() {
   return !!(cfg.clientId && cfg.stammdatenId && cfg.tagebuchId);
+}
+
+/**
+ * Alle neuen v2-Sheets in beiden Spreadsheets anlegen (idempotent).
+ * Bereits vorhandene Sheets werden übersprungen.
+ * Status wird im DOM-Element 'setup-sheets-status' angezeigt.
+ */
+export async function setupAllSheets() {
+  const el = document.getElementById('setup-sheets-status');
+  const setMsg = (msg) => { if (el) el.textContent = msg; };
+
+  if (!cfg.stammdatenId || !cfg.tagebuchId) {
+    setMsg('⚠️ Bitte erst Spreadsheet-IDs eintragen und speichern.');
+    return;
+  }
+
+  setMsg('⏳ Wird eingerichtet…');
+
+  // Definition aller neuen Sheets
+  // Format: [sheetName, [Anzeige-Header Zeile 1], [API-Header Zeile 2], spreadsheetId]
+  const sid = cfg.stammdatenId;
+  const tid = cfg.tagebuchId;
+
+  const sheets = [
+    // ── Stammdaten ──────────────────────────────────────────────
+    [
+      'Rezept_Komponenten',
+      ['ID','Rezept ID','Typ','Referenz ID','Gramm','Notizen'],
+      ['id','rezept_id','komponenten_typ','ref_id','gramm','notizen'],
+      sid,
+    ],
+    [
+      'Translations',
+      ['Schlüssel','Sprache','Wert','Kontext'],
+      ['key','lang','value','context'],
+      sid,
+    ],
+    // ── Tagebuch ─────────────────────────────────────────────────
+    [
+      'Hund_Gewicht',
+      ['ID','Hund ID','Datum','Gewicht (kg)','Notizen','Erstellt am'],
+      ['entry_id','hund_id','datum','gewicht_kg','notizen','created_at'],
+      tid,
+    ],
+    [
+      'Pollen_Log',
+      ['ID','Hund ID','Datum','Pollenart','Stufe (0–5)','Quelle','Erstellt am'],
+      ['entry_id','hund_id','datum','pollenart','stufe','source','created_at'],
+      tid,
+    ],
+  ];
+
+  let created = 0;
+  let skipped = 0;
+  const errors = [];
+
+  for (const [name, display, api, spreadsheetId] of sheets) {
+    try {
+      const wasCreated = await createSheetWithHeaders(name, display, api, spreadsheetId);
+      if (wasCreated) { created++; }
+      else            { skipped++;  }
+    } catch (e) {
+      errors.push(`${name}: ${e.message}`);
+    }
+  }
+
+  if (errors.length) {
+    setMsg(`⚠️ ${created} angelegt · ${skipped} vorhanden · Fehler: ${errors.join(' | ')}`);
+  } else {
+    setMsg(`✅ Fertig: ${created} Sheet${created !== 1 ? 's' : ''} angelegt · ${skipped} bereits vorhanden.`);
+  }
 }

@@ -28,6 +28,7 @@ import * as RECHNER    from './rechner.js';
 import * as STAMMDATEN from './stammdaten.js';
 import * as STATISTIK  from './statistik.js';
 import * as CACHE      from './cache.js';
+import * as I18N       from './i18n.js';
 
 // Callback registrieren damit auth.js nach Login onLogin() aufrufen kann
 // ohne main.js zirkular zu importieren
@@ -48,6 +49,7 @@ window.RECHNER    = RECHNER;
 window.STAMMDATEN = STAMMDATEN;
 window.STATISTIK  = STATISTIK;
 window.CACHE      = CACHE;
+window.I18N       = I18N;
 
 // APP-Objekt (für APP.currentHundId in HTML)
 window.APP = {
@@ -110,6 +112,17 @@ export async function onLogin() {
   RECHNER.initIngredientSelect();
   RECHNER.initCustomNutrGrid();
   UI.populateCategorySelect();
+
+  // i18n: Standard-Übersetzungen laden + Sheet-Daten im Hintergrund
+  I18N.loadDefaults();
+  I18N.load().then(() => {
+    I18N.applyAll();
+    // Sprachanzeige in Einstellungen aktualisieren
+    const cur = document.getElementById('lang-current');
+    const avail = document.getElementById('lang-available');
+    if (cur)   cur.textContent   = I18N.getLang();
+    if (avail) avail.textContent = `Verfügbar: ${I18N.getAvailableLangs().join(', ') || 'de'}`;
+  }).catch(() => {/* Sheet noch nicht vorhanden – kein Fehler */});
 
   // Ersten Hund vorauswählen
   const hunde = STORE.getHunde();
