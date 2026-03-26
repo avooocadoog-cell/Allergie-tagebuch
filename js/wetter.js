@@ -54,6 +54,142 @@ const OM_POLLEN_FIELDS = [
   { key:'ragweed_pollen', name:'Ragweed' },
 ];
 
+// ── Benutzerdefinierte Pollen (erweiterbar via localStorage) ─────
+const CUSTOM_POLLEN_KEY = 'hundapp_custom_pollen';
+
+function getCustomPollen() {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_POLLEN_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveCustomPollen(list) {
+  localStorage.setItem(CUSTOM_POLLEN_KEY, JSON.stringify(list));
+}
+
+/**
+ * Öffentliche Funktion: Pollen-Verwaltungs-Modal öffnen.
+ * Zeigt alle benutzerdefinierten Pollen + Formular zum Hinzufügen/Löschen.
+ */
+export function showPollenManager() {
+  const { openModal, closeModal, esc: escHtml } = window.UI || {};
+  if (!openModal) { alert('UI nicht geladen.'); return; }
+
+  const _esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  const builtIn = [
+    ...Object.values(DWD_POLLEN_NAMES),
+    ...OM_POLLEN_FIELDS.map(f => f.name),
+  ];
+  const uniqueBuiltIn = [...new Set(builtIn)].sort();
+  const custom = getCustomPollen();
+
+  const renderList = () => {
+    const allCustom = getCustomPollen();
+    const el = document.getElementById('pollen-mgr-list');
+    if (!el) return;
+    if (!allCustom.length) {
+      el.innerHTML = '<p style="color:var(--sub);font-size:13px">Keine eigenen Pollen angelegt.</p>';
+      return;
+    }
+    el.innerHTML = allCustom.map((name, i) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:14px">🌿 ${_esc(name)}</span>
+        <button onclick="WETTER._removeCustomPollen(${i})"
+          style="padding:4px 10px;font-size:12px;border:1px solid var(--c3);
+            border-radius:4px;background:transparent;color:var(--c3);
+            cursor:pointer;font-family:inherit">✕ Entfernen</button>
+      </div>`).join('');
+  };
+
+  openModal('🌿 Pollen verwalten', `
+    <div style="font-size:12px;color:var(--sub);margin-bottom:12px">
+      Eingebaute Pollenarten (DWD + Open-Meteo): <br>
+      <span style="font-size:11px">${uniqueBuiltIn.join(' · ')}</span>
+    </div>
+
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">Eigene Pollen hinzufügen</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input type="text" id="pollen-new-name" placeholder="z.B. Platane, Wegerich…"
+        style="flex:1;padding:9px 12px;font-size:14px;border:1px solid var(--border);
+          border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit">
+      <button onclick="WETTER._addCustomPollen()"
+        style="padding:9px 14px;font-size:14px;font-weight:600;border:none;
+          border-radius:var(--radius-sm);background:var(--c2);color:#fff;
+          cursor:pointer;font-family:inherit">+ Hinzufügen</button>
+    </div>
+
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">Eigene Pollenarten</div>
+    <div id="pollen-mgr-list"></div>
+    <div class="status" id="status-pollen-mgr"></div>
+  `);
+
+  renderList();
+  // Enter-Taste im Input
+  setTimeout(() => {
+    document.getElementById('pollen-new-name')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') WETTER._addCustomPollen();
+    });
+  }, 50);
+}
+
+/** Intern: Neuen Custom-Pollen hinzufügen */
+export function _addCustomPollen() {
+  const inp  = document.getElementById('pollen-new-name');
+  const name = inp?.value.trim();
+  if (!name) return;
+  const list = getCustomPollen();
+  if (list.includes(name)) {
+    document.getElementById('status-pollen-mgr').textContent = '⚠️ Pollenart bereits vorhanden.';
+    return;
+  }
+  list.push(name);
+  saveCustomPollen(list);
+  inp.value = '';
+  // Liste neu rendern
+  const allCustom = getCustomPollen();
+  const el = document.getElementById('pollen-mgr-list');
+  if (el) {
+    el.innerHTML = allCustom.map((n, i) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:14px">🌿 ${n}</span>
+        <button onclick="WETTER._removeCustomPollen(${i})"
+          style="padding:4px 10px;font-size:12px;border:1px solid var(--c3);
+            border-radius:4px;background:transparent;color:var(--c3);
+            cursor:pointer;font-family:inherit">✕ Entfernen</button>
+      </div>`).join('');
+  }
+  document.getElementById('status-pollen-mgr').textContent = `✓ „${name}" hinzugefügt.`;
+}
+
+/** Intern: Custom-Pollen per Index entfernen */
+export function _removeCustomPollen(idx) {
+  const list = getCustomPollen();
+  const name = list[idx];
+  if (!confirm(`„${name}" wirklich entfernen?`)) return;
+  list.splice(idx, 1);
+  saveCustomPollen(list);
+  // Neu rendern
+  const allCustom = getCustomPollen();
+  const el = document.getElementById('pollen-mgr-list');
+  if (el) {
+    if (!allCustom.length) {
+      el.innerHTML = '<p style="color:var(--sub);font-size:13px">Keine eigenen Pollen angelegt.</p>';
+    } else {
+      el.innerHTML = allCustom.map((n, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:14px">🌿 ${n}</span>
+          <button onclick="WETTER._removeCustomPollen(${i})"
+            style="padding:4px 10px;font-size:12px;border:1px solid var(--c3);
+              border-radius:4px;background:transparent;color:var(--c3);
+              cursor:pointer;font-family:inherit">✕ Entfernen</button>
+        </div>`).join('');
+    }
+  }
+}
+
+
 function omLevelLabel(val) {
   if (val === null || val === undefined) return null;
   if (val < 10)  return 'keine';
@@ -207,13 +343,17 @@ function renderPollenSelector(dwdData, omData) {
   // Alte UI entfernen
   document.getElementById('pollen-selector')?.remove();
 
-  // Alle Pollen-Namen vereinigen
+  // Alle Pollen-Namen vereinigen (DWD + Open-Meteo + Custom)
+  const customPollen = getCustomPollen();
   const allNames = [...new Set([
     ...dwdData.map(p => p.name),
     ...omData.map(p => p.name),
   ])].sort();
 
-  if (!allNames.length) {
+  // Custom-Pollen die noch nicht in allNames sind separat
+  const customOnly = customPollen.filter(n => !allNames.includes(n));
+
+  if (!allNames.length && !customOnly.length) {
     setValue('u-pollen', 'keine erhöhte Belastung');
     const src = document.getElementById('pollen-source');
     if (src) src.textContent = '(DWD + Open-Meteo)';
@@ -230,7 +370,7 @@ function renderPollenSelector(dwdData, omData) {
     border-radius:var(--radius);padding:12px;margin-bottom:1.25rem;
   `;
 
-  // Buttons für jede Pollenart
+  // Buttons für API-Pollenarten
   const btnsHtml = allNames.map(name => {
     const dwd  = dwdData.find(p => p.name === name);
     const om   = omData.find(p  => p.name === name);
@@ -253,13 +393,43 @@ function renderPollenSelector(dwdData, omData) {
     </button>`;
   }).join('');
 
+  // Buttons für Custom-Pollen (manuelle Stufenwahl)
+  const customBtnsHtml = customOnly.length ? `
+    <div style="grid-column:1/-1;font-size:10px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.04em;color:var(--sub);margin-top:8px;margin-bottom:2px">
+      Eigene Pollenarten (manuell)
+    </div>
+    ${customOnly.map(name => `
+      <div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;
+        padding:8px;border-radius:var(--radius-sm);border:2px solid var(--border);
+        background:var(--bg)">
+        <span style="flex:1;font-size:13px;font-weight:600">🌿 ${name}</span>
+        <select class="pollen-custom-level" data-name="${name}"
+          style="padding:5px 8px;font-size:12px;border:1px solid var(--border);
+            border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit">
+          <option value="-1">– nicht erfassen</option>
+          <option value="1">1 – gering</option>
+          <option value="2">2 – gering–mittel</option>
+          <option value="3">3 – mittel</option>
+          <option value="4">4 – mittel–stark</option>
+          <option value="5">5 – stark</option>
+        </select>
+      </div>`).join('')}` : '';
+
   container.innerHTML = `
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;
-      letter-spacing:.05em;color:var(--c2);margin-bottom:10px">
-      🌿 Pollen auswählen – tippe auf die du übernehmen möchtest
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;
+        letter-spacing:.05em;color:var(--c2)">
+        🌿 Pollen auswählen
+      </div>
+      <button onclick="WETTER.showPollenManager()"
+        style="padding:4px 10px;font-size:11px;border:1px solid var(--border);
+          border-radius:4px;background:var(--bg);color:var(--sub);
+          cursor:pointer;font-family:inherit">⚙️ Verwalten</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
       ${btnsHtml}
+      ${customBtnsHtml}
     </div>
     <div style="display:flex;gap:8px">
       <button id="pollen-all"
@@ -279,7 +449,7 @@ function renderPollenSelector(dwdData, omData) {
 
   pollenField.after(container);
 
-  // Event-Listener
+  // Event-Listener API-Pollen
   container.querySelectorAll('.pollen-select-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const active = btn.dataset.selected === '1';
@@ -289,17 +459,30 @@ function renderPollenSelector(dwdData, omData) {
     if (parseInt(btn.dataset.levelnum) >= 2) activateBtn(btn);
   });
 
-  container.getElementById
   document.getElementById('pollen-all').addEventListener('click', () => {
     container.querySelectorAll('.pollen-select-btn').forEach(activateBtn);
+    container.querySelectorAll('.pollen-custom-level').forEach(sel => {
+      if (sel.value === '-1') sel.value = '3'; // mittel als Standard
+    });
   });
   document.getElementById('pollen-none').addEventListener('click', () => {
     container.querySelectorAll('.pollen-select-btn').forEach(deactivateBtn);
+    container.querySelectorAll('.pollen-custom-level').forEach(sel => { sel.value = '-1'; });
   });
   document.getElementById('pollen-apply').addEventListener('click', async () => {
     const selected = [...container.querySelectorAll('.pollen-select-btn[data-selected="1"]')];
-    setValue('u-pollen', selected.length
-      ? selected.map(b => `${b.dataset.name} (${b.dataset.level})`).join(', ')
+
+    // Custom-Pollen mit gewählter Stufe sammeln
+    const customSelected = [...container.querySelectorAll('.pollen-custom-level')]
+      .filter(sel => parseInt(sel.value) > 0)
+      .map(sel => ({
+        dataset: { name: sel.dataset.name, level: ['','gering','gering–mittel','mittel','mittel–stark','stark'][parseInt(sel.value)] || sel.value, levelnum: sel.value, source: 'manuell' },
+      }));
+
+    const allSelected = [...selected, ...customSelected];
+
+    setValue('u-pollen', allSelected.length
+      ? allSelected.map(b => `${b.dataset.name} (${b.dataset.level})`).join(', ')
       : 'keine erhöhte Belastung'
     );
     const src = document.getElementById('pollen-source');
@@ -307,8 +490,8 @@ function renderPollenSelector(dwdData, omData) {
     container.remove();
 
     // ── Pollen_Log schreiben (optional – Sheet muss existieren) ─
-    if (selected.length) {
-      _writePollenLog(selected).catch(e =>
+    if (allSelected.length) {
+      _writePollenLog(allSelected).catch(e =>
         console.warn('Pollen_Log write failed (Sheet noch nicht angelegt?):', e.message)
       );
     }

@@ -53,7 +53,7 @@ const PARAM_DEFS = [
     extract:({umw})=>_byDate(umw,1,r=>parseFloat(g(r,8))),
   },
   {
-    key:'symptome', label:'Schweregrad (0–5)', emoji:'🔍',
+    key:'symptome', label:'Schweregrad Symptome (0–5)', emoji:'🔍',
     color:C.red, colorL:C.redL, yAxis:'y2', chartType:'bar',
     extract:({sym})=>_byDate(sym,1,r=>parseInt(g(r,4)),Math.max),
   },
@@ -95,11 +95,10 @@ export async function refresh(forceRefresh=false) {
   content.innerHTML='<div class="view-loading"><div class="spinner"></div>Lade Daten…</div>';
 
   try {
-    const [rSym,rUmw,rFut,rAus,rAll,rMed] = await Promise.all([
+    const [rSym,rUmw,rFut,rAll,rMed] = await Promise.all([
       getSheet('Symptomtagebuch',   'tagebuch',forceRefresh),
       getSheet('Umweltagebuch',     'tagebuch',forceRefresh),
       getSheet('Futtertagebuch',    'tagebuch',forceRefresh),
-      getSheet('Ausschlussdiät',    'tagebuch',forceRefresh),
       getSheet('Bekannte Allergene','tagebuch',forceRefresh),
       getSheet('Medikamente',       'tagebuch',forceRefresh),
     ]);
@@ -118,20 +117,19 @@ export async function refresh(forceRefresh=false) {
 
     const _pr = (raw,skip)=>_parseRows(raw,skip);
     const allSym=_pr(rSym,2); const allUmw=_pr(rUmw,2);
-    const allFut=_pr(rFut,2); const allAus=_pr(rAus,2);
+    const allFut=_pr(rFut,2);
     const allAll=_pr(rAll,2); const allMed=_pr(rMed,2);
     const allGew=_pr(rGew,2); const allPol=_pr(rPol,2);
 
     const sym=allSym.filter(r=>_matchH(r,hundId)&&_inRange(g(r,1),cutoff)&&notDel(9)(r));
     const umw=allUmw.filter(r=>_matchH(r,hundId)&&_inRange(g(r,1),cutoff)&&notDel(13)(r));
     const fut=allFut.filter(r=>_matchH(r,hundId)&&_inRange(g(r,1),cutoff)&&notDel(11)(r));
-    const aus=allAus.filter(r=>_matchH(r,hundId)&&notDel(10)(r));
     const all=allAll.filter(r=>_matchH(r,hundId)&&notDel(8)(r));
     const med=allMed.filter(r=>_matchH(r,hundId)&&notDel(11)(r));
     const gew=allGew.filter(r=>g(r,1)===String(hundId)&&_inRange(g(r,2),cutoff));
     const pol=allPol.filter(r=>g(r,1)===String(hundId)&&_inRange(g(r,2),cutoff));
 
-    _cachedData={sym,umw,fut,aus,all,med,gew,pol};
+    _cachedData={sym,umw,fut,all,med,gew,pol};
 
     // Pollen-Typen aus Daten ermitteln
     const discoveredPollen = [...new Set(pol.map(r=>g(r,3)).filter(Boolean))].sort();
@@ -161,14 +159,12 @@ export async function refresh(forceRefresh=false) {
         <canvas id="ch-konfig" height="240"></canvas>
       </div>
       ${_box('⚠️ Bekannte Allergene','<div id="st-allergene"></div>')}
-      ${_box('📋 Ausschlussdiät','<div id="st-aus-badges"></div>')}
       ${_box('🥩 Futter-Reaktionen','<div id="st-futter"></div>')}
       ${_box('💊 Medikamente','<div id="st-medis"></div>')}
     `;
 
     await _buildChart(_cachedData);
     _renderAllergene(all);
-    _renderAusschluss(aus);
     _renderFutter(fut);
     _renderMedis(med);
 
@@ -428,20 +424,6 @@ function _renderAllergene(all) {
       <div style="font-size:18px;color:${color};letter-spacing:2px">
         ${'●'.repeat(reakt)}${'○'.repeat(5-reakt)}</div></div>`;
   }).join(''):'<p style="color:var(--sub);font-size:13px">Keine Allergene erfasst.</p>';
-}
-
-function _renderAusschluss(aus) {
-  const el=document.getElementById('st-aus-badges'); if(!el) return;
-  const groups={};
-  aus.forEach(r=>{const s=g(r,4)||'Unbekannt';(groups[s]=groups[s]||[]).push(g(r,1));});
-  el.innerHTML=Object.entries(groups).map(([s,items])=>{
-    const c=s.includes('vertr')?C.green:s.includes('Reaktion')||s.includes('Gesperrt')?C.red:C.amber;
-    return `<div style="width:100%;margin-bottom:6px">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:${c};margin-bottom:3px">${esc(s)}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px">
-        ${items.map(z=>`<span class="badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(z)}</span>`).join('')}
-      </div></div>`;
-  }).join('')||'<p style="color:var(--sub);font-size:13px">Keine Ausschlussdiät-Einträge.</p>';
 }
 
 function _renderFutter(fut) {
