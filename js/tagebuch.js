@@ -289,8 +289,7 @@ function _buildFutterText() {
   // Freitext anhängen falls vorhanden
   const freitext = document.getElementById('f-futter-text')?.value.trim();
   if (freitext) lines.push(freitext);
-  return lines.join('
-');
+  return lines.join('\n');
 }
 
 /** 🥩 Futter-Eintrag speichern */
