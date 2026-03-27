@@ -1,0 +1,148 @@
+# Hund Manager – FAQ (v2.4)
+
+> Letzte Aktualisierung: 2026-03
+
+---
+
+## 🔑 Einrichtung & Login
+
+**Q: Wie melde ich mich an?**
+A: Öffne die App → Einstellungen → „Mit Google anmelden". Du benötigst ein Google-Konto mit Zugriff auf Google Sheets.
+
+**Q: Was muss ich in den Einstellungen eintragen?**
+A: Mindestens:
+- **Stammdaten-Spreadsheet-ID** (aus der URL deines Google Sheets: `.../spreadsheets/d/DIESE_ID/...`)
+- **Tagebuch-Spreadsheet-ID** (zweites Sheet für Tageseinträge)
+- **Breitengrad & Längengrad** für automatischen Wetter-Abruf
+- **DWD-Pollen-Region** (1–18, für deutsche Regionen)
+
+**Q: Woher bekomme ich die Spreadsheet-ID?**
+A: Öffne das Google Sheet in deinem Browser. Die ID steht in der URL zwischen `/d/` und `/edit`.
+
+**Q: Warum erscheint der Login-Screen immer wieder?**
+A: Der OAuth2-Token läuft nach ~1 Stunde ab. Beim nächsten Laden der App wird er automatisch erneuert. Falls das nicht klappt, einmal abmelden und neu anmelden.
+
+---
+
+## 📋 Google Sheets Struktur
+
+**Q: Welche Sheets muss ich anlegen?**
+A: Nach dem Login kannst du in den Einstellungen auf „Neue Sheets anlegen" klicken. Die App erstellt automatisch alle benötigten Sheets inkl. Kopfzeilen.
+
+**Q: Was bedeuten die zwei Header-Zeilen?**
+A: Zeile 1 = Anzeige-Header (deutsch, für dich lesbar). Zeile 2 = API-Header (englisch/snake_case, für die App). Daten beginnen ab Zeile 3.
+
+**Q: Kann ich die Sheets manuell bearbeiten?**
+A: Ja, aber nur ab Zeile 3. Zeilen 1–2 (Header) nicht verändern. Neue Spalten immer ans Ende anhängen.
+
+**Q: Warum gibt es zwei separate Spreadsheets?**
+A: `Hund_Stammdaten` enthält unveränderliche Grunddaten (Hunde, Zutaten, Nährstoffe, Rezepte). `Hund_Tagebuch` enthält täglich wachsende Einträge. Getrennt für bessere Performance und Übersichtlichkeit.
+
+---
+
+## 🐕 Hunde & Gewicht
+
+**Q: Wie trage ich ein Gewicht ein?**
+A: Stammdaten → Hunde → „⚖️ Gewicht" beim jeweiligen Hund. Das Gewicht wird in der Statistik als Verlaufskurve angezeigt.
+
+**Q: Kann ich den Kalorienbedarf manuell festlegen?**
+A: Ja. Stammdaten → Hund bearbeiten → Feld „⚡ Kcal-Bedarf/Tag". Leer lassen = App berechnet automatisch (RER × Faktor). Ein eingetragener Wert überschreibt die Berechnung komplett.
+
+**Q: Wie wird der Kalorienbedarf automatisch berechnet?**
+A: `Kcal = 70 × (Gewicht in kg)^0.75 × RER-Faktor`. Den RER-Faktor kannst du in den Parametern anpassen (Standard: 1.6).
+
+---
+
+## 🥩 Zutaten & Nährstoffe
+
+**Q: Wie gebe ich Nährwerte für eine Zutat ein?**
+A: Stammdaten → Zutaten → Zutat anlegen oder bearbeiten → Abschnitt „🧪 Nährwerte pro 100g Frischgewicht" aufklappen. Alle 39 NRC-Nährstoffe können direkt eingetragen werden.
+
+**Q: Was passiert wenn ich ein Nährstoff-Feld leer lasse?**
+A: Der Wert wird nicht gespeichert und gilt als „nicht erfasst". Im Futterrechner erscheint dieser Nährstoff dann als 0 (roter Balken, wenn ein Bedarfswert hinterlegt ist).
+
+**Q: Kann ich Nährwerte nachträglich ändern?**
+A: Ja. Zutat bearbeiten → Nährwert-Abschnitt öffnen → Wert ändern → Speichern. Bestehende Werte werden beim Öffnen automatisch geladen.
+
+**Q: Wie werden Kochverluste berechnet?**
+A: Wenn eine Zutat im Rezept als „gekocht" markiert ist, wird ein pauschaler Faktor von 0.75 auf alle Nährwerte angewendet.
+
+---
+
+## 🧮 Futterrechner
+
+**Q: Was ist Rezept-Mixing?**
+A: Ein Rezept kann aus anderen Rezepten zusammengesetzt werden (z.B. „Wochenmix = 60% Rezept A + 40% Rezept B"). Die Nährstoffe werden rekursiv aufgelöst (max. 5 Ebenen tief).
+
+**Q: Was bedeuten die Balkenfarben bei Nährstoffen?**
+A: Grün = ok (80–150% des Bedarfs), Gelb = zu wenig (<80%), Orange = zu viel (>150%), Rot = gar nicht vorhanden (0%).
+
+**Q: Was ist die grüne Markierungslinie im Balken?**
+A: Das ist der `recommended_pct`-Wert aus den Toleranzen – die persönliche Empfehlung. Einstellbar unter Stammdaten → Toleranzen.
+
+**Q: Wie stelle ich individuelle Toleranzen ein?**
+A: Stammdaten → Tab „Toleranzen" → Hund auswählen → Min%, Max%, Empf% je Nährstoff. Standard: Min=80%, Max=150%.
+
+---
+
+## 🌿 Pollen & Wetter
+
+**Q: Warum lädt Wetter/Pollen manchmal nicht?**
+A: Die DWD-Daten werden über CORS-Proxies abgerufen. Wenn beide Proxies nicht erreichbar sind, schlägt der Abruf fehl. Open-Meteo funktioniert direkt (kein Proxy nötig).
+
+**Q: Wie füge ich eigene Pollenarten hinzu (z.B. Platane)?**
+A: Tagebuch → Umwelt-Tab → Wetter laden → Im Pollen-Selector auf „⚙️ Verwalten" tippen → Neue Pollenart eingeben. Die Pollenart wird in `localStorage` gespeichert und erscheint ab sofort in der Auswahl.
+
+**Q: Wie wähle ich eigene Pollen für den Chart?**
+A: Statistik → „🌿 Pollen (X/Y)"-Button → Popup öffnet sich → Pollen auswählen → „Übernehmen". Eigene Pollen erscheinen mit dem Badge „Manuell", Pollen aus dem Pollen_Log mit „Daten".
+
+**Q: Was ist der Unterschied zwischen `pollen` im Umweltagebuch und `Pollen_Log`?**
+A: Das `pollen`-Feld im Umweltagebuch ist ein Freitext-Feld (Rückwärtskompatibilität). `Pollen_Log` speichert jede Pollenart als eigene Zeile mit Stärke-Wert und ermöglicht die detaillierte Auswertung in der Statistik.
+
+---
+
+## 📊 Statistik
+
+**Q: Warum sehe ich das rote Band für Symptome im Chart?**
+A: Das rote Band zeigt den täglichen maximalen Schweregrad (0–5) als gefüllte Fläche von 0 bis zum Wert. Je höher die Fläche, desto schlimmer der Symptomtag.
+
+**Q: Wie zeige ich Pollen im Statistik-Chart an?**
+A: Parameter-Bereich → „🌿 Pollen"-Button → Popup → gewünschte Pollenarten anhaken → „Übernehmen". Nur Pollenarten mit Daten im ausgewählten Zeitraum werden im Chart angezeigt.
+
+**Q: Warum fehlt die Ausschlussdiät-Box manchmal?**
+A: Die Box erscheint nur, wenn für den ausgewählten Hund Einträge im Ausschlussdiät-Sheet vorhanden sind.
+
+**Q: Wie aktualisiere ich die Statistik-Daten?**
+A: „↺ Aktualisieren"-Button oben rechts. Der Cache-Status zeigt an, wann die Daten zuletzt geladen wurden (TTL: 10 Minuten).
+
+**Q: Was bedeuten die Y-Achsen im Chart?**
+A: Links (Y): Temperatur °C, Luftfeuchtigkeit %, Gewicht kg. Rechts (Y2): Schweregrad 0–5, Pollen-Stufe 0–5.
+
+---
+
+## 💾 Daten & Datenschutz
+
+**Q: Wo werden meine Daten gespeichert?**
+A: Ausschließlich in deinen eigenen Google Sheets. Die App hat keinen eigenen Server.
+
+**Q: Was speichert die App im Browser?**
+A: `localStorage`: Google OAuth-Token, E-Mail, App-Konfiguration (Spreadsheet-IDs, Standort), eigene Pollenarten. `sessionStorage`: Tagebuch-Cache (TTL 10 Min, wird beim Tab-Schließen gelöscht).
+
+**Q: Kann ich gelöschte Einträge wiederherstellen?**
+A: Ja, für kurze Zeit. Nach dem Löschen erscheint ein „↺ Rückgängig"-Banner (8 Sekunden für Zutaten, länger für Tagebuch-Einträge). Danach kann der Eintrag direkt im Google Sheet wiederhergestellt werden (`deleted`-Spalte auf `FALSE` setzen).
+
+**Q: Werden Daten wirklich gelöscht?**
+A: Nein – die App verwendet Soft-Delete. Einträge werden als `deleted=TRUE` markiert, bleiben aber im Sheet erhalten. Für echtes Löschen musst du die Zeile direkt in Google Sheets entfernen.
+
+---
+
+## 🔧 Technisch
+
+**Q: Warum funktioniert die App nach einem Update nicht mehr?**
+A: Hard-Refresh im Browser (Strg+Shift+R / Cmd+Shift+R) oder PWA deinstallieren und neu installieren.
+
+**Q: Kann ich die App auf mehreren Geräten nutzen?**
+A: Ja. Alle Daten liegen in Google Sheets und sind auf jedem Gerät über den Browser zugänglich. Eigene Pollenarten (localStorage) müssen auf jedem Gerät separat angelegt werden.
+
+**Q: Was passiert wenn das Sheet-Sheet nicht existiert?**
+A: Die App zeigt einen Hinweis „Sheet noch nicht angelegt". In Einstellungen → „Neue Sheets anlegen" erstellt die App alle fehlenden Sheets automatisch.
