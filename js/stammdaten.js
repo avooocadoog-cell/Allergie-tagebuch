@@ -17,7 +17,7 @@ import { get as getCfg }                    from './config.js';
 import { openModal, closeModal, setStatus,
          syncHundSelects, esc }             from './ui.js';
 import { getHunde, getZutaten, addHund,
-         updateHund, addZutat }             from './store.js';
+         updateHund, addZutat, getNaehrstoffe, addZutatNutr } from './store.js';
 
 // ── Aktuell geöffneter Tab ───────────────────────────────────────
 let currentTab = 'hunde';
@@ -255,9 +255,48 @@ export function loadZutaten() {
 }
 
 export function showZutatModal(zutatId) {
-  const cats    = [...new Set(getZutaten().map(z => z.kategorie).filter(Boolean))].sort();
-  const z       = zutatId ? (getZutaten().find(x => x.zutaten_id === zutatId) || {}) : {};
-  const isEdit  = !!zutatId;
+  const cats   = [...new Set(getZutaten().map(z => z.kategorie).filter(Boolean))].sort();
+  const z      = zutatId ? (getZutaten().find(x => x.zutaten_id === zutatId) || {}) : {};
+  const isEdit = !!zutatId;
+  const naehr  = getNaehrstoffe();
+
+  // Nährstoffe nach Gruppe sortiert
+  const gruppenOrder = ['Makronährstoffe','Aminosäuren','Fettsäuren','Mineralstoffe','Vitamine'];
+  const gruppen = {};
+  naehr.forEach(n => {
+    const gk = n.gruppe || 'Sonstiges';
+    (gruppen[gk] = gruppen[gk] || []).push(n);
+  });
+  const sortedGruppen = [
+    ...gruppenOrder.filter(g => gruppen[g]),
+    ...Object.keys(gruppen).filter(g => !gruppenOrder.includes(g)),
+  ];
+
+  const nutrHtml = sortedGruppen.map(grp => {
+    const items = gruppen[grp];
+    if (!items?.length) return '';
+    return `
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+          color:var(--c2);margin:8px 0 6px;padding-top:6px;border-top:1px solid var(--border)">${esc(grp)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          ${items.map(n => `
+            <div>
+              <label style="font-size:10px;color:var(--sub);display:block;margin-bottom:2px">
+                ${esc(n.name)}<span style="opacity:.6"> (${esc(n.einheit || 'g')})</span>
+              </label>
+              <input type="number" step="any" min="0"
+                id="nutr-${n.naehrstoff_id}"
+                data-nutr-id="${n.naehrstoff_id}"
+                data-nutr-name="${esc(n.name)}"
+                placeholder="–"
+                style="width:100%;padding:5px 7px;font-size:12px;border:1px solid var(--border);
+                  border-radius:4px;background:var(--bg);color:var(--text);
+                  font-family:inherit;text-align:right;box-sizing:border-box">
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
 
   openModal(isEdit ? `🥩 ${esc(z.name || '')} bearbeiten` : 'Neue Zutat', `
     <div class="field"><label>Name</label>
@@ -274,12 +313,56 @@ export function showZutatModal(zutatId) {
         <option value="ja"   ${(z.aktiv || 'ja') === 'ja'   ? 'selected' : ''}>✅ Aktiv</option>
         <option value="nein" ${z.aktiv === 'nein'            ? 'selected' : ''}>🚫 Inaktiv</option>
       </select></div>
-    ${isEdit ? '' : '<p style="font-size:12px;color:var(--sub);margin-bottom:.5rem">Nährstoffe können danach im Futterrechner über „Neue Zutat manuell erfassen" hinzugefügt werden.</p>'}
-    <button class="btn-primary" onclick="STAMMDATEN.saveZutat(${zutatId || 'null'})">
+
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;
+          cursor:pointer;user-select:none;margin-bottom:4px"
+        onclick="const s=document.getElementById('nutr-section');
+                 const open=s.style.display!=='none';
+                 s.style.display=open?'none':'block';
+                 document.getElementById('nutr-toggle-arrow').textContent=open?'▶':'▼'">
+        <div style="font-size:13px;font-weight:600">🧪 Nährwerte pro 100g Frischgewicht</div>
+        <span id="nutr-toggle-arrow" style="font-size:11px;color:var(--sub)">${isEdit ? '▼' : '▶'}</span>
+      </div>
+      <div id="nutr-section" style="display:${isEdit ? 'block' : 'none'}">
+        <div style="font-size:11px;color:var(--sub);margin-bottom:8px">
+          Felder leer lassen = nicht erfasst. Ausgefüllte Werte werden direkt im Futterrechner verwendet.
+        </div>
+        ${nutrHtml}
+      </div>
+    </div>
+
+    <button class="btn-primary" style="margin-top:14px" onclick="STAMMDATEN.saveZutat(${zutatId || 'null'})">
       ${isEdit ? '💾 Änderungen speichern' : 'Speichern'}
     </button>
     <div class="status" id="status-zutat"></div>
   `);
+
+  // Bei Bearbeitung bestehende Nährwerte eintragen
+  if (isEdit) {
+    import('./store.js').then(({ getNutrMap }) => {
+      const map = getNutrMap(zutatId, z.name) || {};
+      Object.entries(map).forEach(([nutrName, wert]) => {
+        const n = naehr.find(n => n.name === nutrName);
+        if (n) {
+          const inp = document.getElementById(`nutr-${n.naehrstoff_id}`);
+          if (inp && wert != null && wert !== '') inp.value = wert;
+        }
+      });
+    });
+  }
+}
+
+/** Füllt Nährstoff-Inputs aus einem {name: wert}-Map (für async-Nachladen) */
+function _fillNutrInputs(map) {
+  const naehr = getNaehrstoffe();
+  Object.entries(map).forEach(([nutrName, wert]) => {
+    const n = naehr.find(n => n.name === nutrName);
+    if (n) {
+      const inp = document.getElementById(`nutr-${n.naehrstoff_id}`);
+      if (inp && wert != null && wert !== '') inp.value = wert;
+    }
+  });
 }
 
 export async function saveZutat(existingId) {
@@ -312,12 +395,72 @@ export async function saveZutat(existingId) {
       await appendRow('Zutaten', [newId, name, hersteller, kategorie, aktiv, now, 'FALSE', ''], sid);
       addZutat({ zutaten_id: newId, name, hersteller, kategorie, aktiv });
     }
+
+    // ── Nährwerte speichern ─────────────────────────────────────
+    const zutatId = existingId || newId;
+    await _saveZutatNaehrstoffe(zutatId, sid);
+
     setStatus('status-zutat', 'ok', '✓ Gespeichert!');
     // Futterrechner-Dropdown aktualisieren
     const { initIngredientSelect } = await import('./rechner.js');
     initIngredientSelect();
     setTimeout(() => { closeModal(); loadZutaten(); }, 900);
   } catch (e) { setStatus('status-zutat', 'err', 'Fehler: ' + e.message); }
+}
+
+/**
+ * Liest alle ausgefüllten Nährstoff-Inputs aus dem Modal und schreibt
+ * sie in Zutaten_Naehrstoffe. Bestehende Zeilen werden überschrieben,
+ * neue angehängt. Leere Inputs werden übersprungen.
+ */
+async function _saveZutatNaehrstoffe(zutatId, sid) {
+  const inputs = document.querySelectorAll('#nutr-section input[data-nutr-id]');
+  if (!inputs.length) return;
+
+  const rows = await readSheet('Zutaten_Naehrstoffe', sid);
+
+  for (const inp of inputs) {
+    const raw = inp.value.trim();
+    if (raw === '' || raw === null) continue;
+    const wert        = parseFloat(raw.replace(',', '.'));
+    if (isNaN(wert))  continue;
+    const nutrId      = parseInt(inp.dataset.nutrId);
+    const nutrName    = inp.dataset.nutrName || '';
+
+    // Vorhandene Zeile suchen (zutaten_id + naehrstoff_id)
+    const idx = rows.findIndex(r =>
+      String(r[0]).trim() === String(zutatId) &&
+      String(r[1]).trim() === String(nutrId)
+    );
+
+    if (idx >= 0) {
+      // Update wert_pro_100g (Spalte D)
+      await writeRange('Zutaten_Naehrstoffe', `D${idx + 1}`, [[wert]], sid);
+      rows[idx][3] = wert; // lokale Kopie aktuell halten
+    } else {
+      // Neu anlegen
+      await appendRow('Zutaten_Naehrstoffe',
+        [zutatId, nutrId, nutrName, wert, 'manual'], sid);
+      rows.push([zutatId, nutrId, nutrName, wert, 'manual']);
+    }
+  }
+
+  // Store-Cache aktualisieren (zutatNutr)
+  const naehr = getNaehrstoffe();
+  const newEntries = [];
+  inputs.forEach(inp => {
+    const raw = inp.value.trim();
+    if (!raw) return;
+    const wert = parseFloat(raw.replace(',', '.'));
+    if (isNaN(wert)) return;
+    newEntries.push({
+      zutaten_id:   zutatId,
+      naehrstoff_id: parseInt(inp.dataset.nutrId),
+      naehrstoff_name: inp.dataset.nutrName || '',
+      wert_pro_100g: wert,
+    });
+  });
+  if (newEntries.length) addZutatNutr(newEntries);
 }
 
 // ── Undo-Stack für Zutaten-Löschungen ───────────────────────────
