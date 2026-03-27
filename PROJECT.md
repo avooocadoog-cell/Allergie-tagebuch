@@ -1,7 +1,7 @@
-# Hund Manager – Projektbeschreibung (v2.3)
+# Hund Manager – Projektbeschreibung (v2.4)
 
 > **Dieses Dokument als Kontext in jeden Prompt einfügen, wenn nur einzelne Module geteilt werden.**
-> Letzte Aktualisierung: 2026-03 · Status: v2.3 – Nährwerte im Zutat-Modal, erweiterbare Pollen, Statistik-Bereinigung
+> Letzte Aktualisierung: 2026-03 · Status: v2.4 – Pollen-Popup, Symptom-Flächenband, Ausschlussdiät zurück
 
 ---
 
@@ -35,6 +35,10 @@
 /
 ├── index.html              ← HTML-Gerüst + <script type="module" src="main.js">
 ├── styles.css              ← Design System (CSS Custom Properties, Dark Mode, Mobile-first)
+├── PROJECT.md              ← Dieses Dokument – Architektur, Konventionen, Implementierungsstand
+├── FEATURE.md              ← Vollständige Feature-Übersicht (für Nutzer + als Kontext)
+├── FAQ.md                  ← Häufige Fragen & Antworten (für Nutzer + als Kontext)
+├── styles.css              ← Design System (CSS Custom Properties, Dark Mode, Mobile-first)
 ├── main.js                 ← App-Einstieg, globale window-Exports, APP-Objekt, i18n-Init
 ├── config.js               ← localStorage-Konfiguration + setupAllSheets()
 ├── sheets.js               ← Alle Google Sheets API Calls + createSheetWithHeaders()
@@ -48,7 +52,7 @@
 ├── tagebuch.js             ← Submit-Handler 7 Typen + Multi-Futter mit Kcal-Berechnung
 ├── ansicht.js              ← Entry-Cards + Soft-Delete + Edit-Modal + Undo-Banner
 ├── stammdaten.js           ← CRUD Hunde/Zutaten/Toleranzen + Kcal-Bedarf + Gewicht + Nährwerte im Zutat-Modal
-├── statistik.js            ← Konfigurierbarer Chart: Bänder, Schweregrad-Symptome-Balken, individuelle Pollen-Typen (inkl. Custom)
+├── statistik.js            ← Konfigurierbarer Chart: Temp-Band, Symptome-Flächenband (rot), Pollen-Popup-Dialog, Ausschlussdiät-Liste
 └── i18n.js                 ← Mehrsprachigkeit: t(), setLang(), applyAll(), loadDefaults()
 ```
 
@@ -493,12 +497,17 @@ Statistik-Panel:
   ├── Hund-Select + Zeitraum-Select
   ├── KPI-Kacheln (Symptomtage, Ø Schweregrad, Pollentage)
   ├── Parameter-Auswahl (Toggle-Buttons): Temp-Band, Temp innen, Feuchte außen/innen,
-  │   Schweregrad Symptome, Gewicht, Custom-Pollen-Typen aus Pollen_Log
-  ├── Konfigurierbarer Mixed Chart (Line + Bar, Y-links: Klima/Gewicht, Y-rechts: Symptome 0–5/Pollen 0–5)
-  ├── Bekannte Allergene (Liste mit Reaktionsstärke)
+  │   Schweregrad Symptome, Gewicht
+  ├── 🌿 Pollen-Button → öffnet Bottom-Sheet-Popup zur Auswahl (Pollen_Log + Custom-Pollen)
+  ├── Konfigurierbarer Mixed Chart:
+  │   - Temp-Band: oranges Flächenband (fill zwischen Min/Max)
+  │   - Schweregrad Symptome: ROTES FLÄCHENBAND (fill:'origin', von 0 bis Wert)
+  │   - Pollen: Balken (y2-Achse, 0–5)
+  │   - Sonstige: Linien
+  ├── Bekannte Allergene (Liste mit Reaktionsstärke-Punkte-Anzeige)
+  ├── Ausschlussdiät (Liste mit Status-Badges, nur wenn Daten vorhanden)
   ├── Futter-Reaktionen (Liste, nur Einträge mit Reaktion/Provokation)
-  └── Medikamente (Liste)
-  ✗ Ausschlussdiät-Sektion entfernt (v2.3)
+  └── Medikamente (Liste mit Von–Bis)
 
 Stammdaten-Panel: 4 Tabs (Hunde / Zutaten [Edit + Undo + Nährwerte] / Parameter / Toleranzen) + Modals
   └── Zutat-Modal: Basisfelder + einklappbarer Nährwert-Abschnitt (alle 39 NRC-Nährstoffe, 2-spaltig nach Gruppe)
@@ -566,7 +575,13 @@ Alle Features bis v2.3 sind vollständig implementiert.
 **v2.3:**
 - **Nährwerte im Zutat-Modal** (stammdaten.js): Alle 39 NRC-Nährstoffe direkt beim Anlegen/Bearbeiten einer Zutat einpflegbar. Eingaben werden in `Zutaten_Naehrstoffe` geschrieben (Update oder Append). Bestehende Werte werden beim Öffnen aus Store geladen. Abschnitt ist ein-/ausklappbar.
 - **Erweiterbare Pollen** (wetter.js): Custom-Pollen per `localStorage` (`hundapp_custom_pollen`). `showPollenManager()` für Anlegen/Löschen. Eigene Pollen erscheinen im Pollen-Selector mit manueller Stufenwahl und werden in Pollen_Log geschrieben → sichtbar in Tagebuch und Statistik.
-- **Statistik bereinigt** (statistik.js): Ausschlussdiät-Sektion vollständig entfernt (Sheet wird nicht mehr geladen). PARAM_DEF-Label: „Schweregrad (0–5)" → „Schweregrad Symptome (0–5)".
+- **Statistik bereinigt** (statistik.js): Ausschlussdiät-Sektion entfernt, PARAM_DEF-Label: „Schweregrad (0–5)" → „Schweregrad Symptome (0–5)".
+
+**v2.4:**
+- **Pollen-Popup** (statistik.js): Statt Inline-Toggle-Buttons öffnet ein „🌿 Pollen (X/Y)"-Button einen Bottom-Sheet-Popup-Dialog. Zeigt alle Pollen-Typen aus Pollen_Log UND Custom-Pollen aus localStorage. Badge „Daten" vs. „Manuell". Alle/Keine + Übernehmen-Button.
+- **Schweregrad Symptome als rotes Flächenband** (statistik.js): `chartType:'area'` mit `fill:'origin'` – gefüllte rote Fläche von 0 bis zum Tageswert. Deutliche visuelle Hervorhebung von Symptomtagen.
+- **Ausschlussdiät in Statistik zurück** (statistik.js): Wird als Liste angezeigt (wie Medikamente), mit Status-Badges (verträglich/Reaktion/Gesperrt/Test). Box erscheint nur wenn Daten für den Hund vorhanden sind.
+- **FEATURE.md + FAQ.md** erstellt: Vollständige Feature-Dokumentation und FAQ als eigenständige Dateien im Repo.
 
 ### 📋 Sheets – noch manuell anzupassen
 Siehe SHEET_ANPASSUNGEN.txt für vollständige Anleitung.
@@ -596,19 +611,60 @@ Bestehende Daten: deleted-Spalte mit FALSE füllen.
 ## Typischer Prompt bei Einzelmodul-Arbeit
 
 ```
-Kontext: Hund Manager v2.3 – Web-App auf GitHub Pages, Google Sheets als Datenbank,
+Kontext: Hund Manager v2.4 – Web-App auf GitHub Pages, Google Sheets als Datenbank,
 Vanilla ES Modules, kein Framework. Vollständige Projektbeschreibung: [PROJECT.md]
 
 Ich teile jetzt [modul.js]. Bitte [Aufgabe beschreiben].
 Andere relevante Module: [z.B. sheets.js, store.js, cache.js]
-Aktualisiere PROJECT.md als zukünftige Referenz.
+Aktualisiere PROJECT.md, FEATURE.md und FAQ.md als zukünftige Referenz.
 Bei Umstrukturierung der hinterlegten Spreadsheets bitte informieren.
 ```
 
+---
+
+## Instruktionen für Claude bei jedem Code-Update
+
+> Diese Regeln gelten für **jede** Session in der Code-Änderungen vorgenommen werden.
+
+### ✅ Pflicht nach jeder Änderung
+
+1. **PROJECT.md aktualisieren:**
+   - Versionsnummer erhöhen (v2.x → v2.x+1)
+   - Datum auf aktuelles Datum setzen
+   - Modul-Beschreibung in der Dateistruktur anpassen
+   - UI-Struktur aktualisieren falls sich Panels/Tabs ändern
+   - Implementierungsstand: neue Version als Block `**vX.X:**` mit Bullet-Points hinzufügen
+   - „Wichtige Hinweise für neue Prompts" aktualisieren
+
+2. **FEATURE.md aktualisieren:**
+   - Neue Features in der passenden Kategorie ergänzen
+   - Geänderte Features anpassen (z.B. Label-Änderungen, Verhalten)
+   - Entfernte Features aus der Liste streichen
+
+3. **FAQ.md aktualisieren:**
+   - Neue FAQs für neue Features hinzufügen
+   - Antworten auf bestehende Fragen anpassen wenn sich Verhalten ändert
+   - Neue Fehlerfälle oder typische Nutzer-Fragen ergänzen
+
+4. **Sheet-Änderungen melden:**
+   - Wenn neue Spalten, Sheets oder Spalten-Reihenfolgen geändert werden → explizit im Chat mitteilen mit genauer Anleitung was in Google Sheets manuell geändert werden muss
+
+5. **Änderungsübersicht auf Englisch im Chat:**
+   - Nach jeder Änderungssession eine kompakte Übersicht **auf Englisch** posten:
+   ```
+   ## Changes in vX.X
+   **Modified:** [file] – [what changed]
+   **Added:** [file/feature] – [description]
+   **Removed:** [feature] – [reason]
+   **Sheet changes required:** [yes/no + details]
+   ```
+
 ### Wichtige Hinweise für neue Prompts
 
-- `stammdaten.js` importiert jetzt `getNaehrstoffe` und `addZutatNutr` aus `store.js`
+- `stammdaten.js` importiert `getNaehrstoffe` und `addZutatNutr` aus `store.js`
 - `wetter.js` exportiert zusätzlich: `showPollenManager`, `_addCustomPollen`, `_removeCustomPollen`
+- `statistik.js` exportiert zusätzlich: `showPollenPopup`
 - Custom-Pollen werden in `localStorage['hundapp_custom_pollen']` als JSON-Array gespeichert
-- `statistik.js` lädt das Sheet `Ausschlussdiät` nicht mehr — bei Prompt-Kontext entsprechend beachten
-- PARAM_DEF-Key `symptome` hat Label „Schweregrad Symptome (0–5)" (nicht mehr „Schweregrad (0–5)")
+- `statistik.js` lädt `Ausschlussdiät`-Sheet wieder (mit `.catch(()=>[])` als Fallback)
+- PARAM_DEF `symptome` hat `chartType:'area'` (rotes Flächenband, `fill:'origin'`)
+- Pollen-Auswahl in Statistik ist ein Popup-Dialog (`showPollenPopup()`), kein Inline-Toggle mehr
