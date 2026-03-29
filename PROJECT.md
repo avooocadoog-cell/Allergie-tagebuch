@@ -1,7 +1,10 @@
-# Hund Manager – Projektbeschreibung (v2.4)
+# Hund Manager – Projektbeschreibung (v2.5)
 
 > **Dieses Dokument als Kontext in jeden Prompt einfügen, wenn nur einzelne Module geteilt werden.**
-> Letzte Aktualisierung: 2026-03 · Status: v2.4 – Pollen-Popup, Symptom-Flächenband, Ausschlussdiät zurück
+> Letzte Aktualisierung: 2026-03-29 · Status: v2.5 – Kcal-Bugfix, Portionen im Tagebuch, Ausschlussdiät 0–3, VALIDATION.md
+
+> **Coding-Konvention:** Module werden gezielt angepasst – kein komplettes Neuschreiben ganzer Dateien.
+> Änderungen immer als minimale, chirurgische Eingriffe in die relevanten Funktionen.
 
 ---
 

@@ -415,7 +415,14 @@
         <p class="section-title">📋 Ausschlussdiät – Zutat</p>
         <div class="info-banner warn">⚠️ <strong>Verdachtsfälle</strong> – Noch nicht bestätigt.</div>
         <div class="field"><label>Zutat</label><input type="text" id="a-zutat" placeholder="z.B. Rind, Karotte…"></div>
-        <div class="field"><label>Verdacht</label><div class="toggle-grid three"><div class="tog-btn" id="averd-1" onclick="FORM.toggleAVerd('1')">1 – leicht</div><div class="tog-btn" id="averd-2" onclick="FORM.toggleAVerd('2')">2 – mittel</div><div class="tog-btn" id="averd-3" onclick="FORM.toggleAVerd('3')">3 – stark</div></div></div>
+        <div class="field"><label>Verdacht / Reaktionsstufe</label>
+          <div class="toggle-grid four">
+            <div class="tog-btn" id="averd-0" onclick="FORM.toggleAVerd('0')">0 – Sicher</div>
+            <div class="tog-btn" id="averd-1" onclick="FORM.toggleAVerd('1')">1 – Leichter Verdacht</div>
+            <div class="tog-btn" id="averd-2" onclick="FORM.toggleAVerd('2')">2 – Mittlere Reaktion</div>
+            <div class="tog-btn" id="averd-3" onclick="FORM.toggleAVerd('3')">3 – Starke Reaktion</div>
+          </div>
+        </div>
         <div class="field"><label>Kategorie</label><select id="a-kategorie"><option value="">– wählen –</option><option>Fleisch</option><option>Fisch</option><option>Gemüse</option><option>Obst</option><option>Getreide</option><option>Milchprodukt</option><option>Öl / Fett</option><option>Supplement</option><option>Sonstiges</option></select></div>
         <div class="field"><label>Status</label><select id="a-status"><option value="">– wählen –</option><option>Getestet – verträglich</option><option>Getestet – Reaktion</option><option>In Test</option><option>Noch nicht getestet</option><option>Gesperrt</option></select></div>
         <div class="field"><label>Erstmals gegeben</label><div class="date-row"><input type="date" id="a-datum"><button class="btn-small" onclick="UI.setToday('a-datum')">Heute</button></div></div>
