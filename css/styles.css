@@ -157,6 +157,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 /* Toggle-Buttons */
 .toggle-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
 .toggle-grid.three{grid-template-columns:1fr 1fr 1fr}
+.toggle-grid.four{grid-template-columns:1fr 1fr;gap:6px}
 .toggle-grid.five{grid-template-columns:repeat(5,1fr)}
 .toggle-grid.six{grid-template-columns:repeat(6,1fr)}
 .tog-btn{
