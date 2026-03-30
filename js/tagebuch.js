@@ -146,7 +146,7 @@ export async function submitSymptom() {
 
 /** 🥩 Futter-Position hinzufügen (UI-Aktion) */
 export function addFutterItem() {
-  _futterItems.push({ rezeptId: null, rezeptName: '', gramm: 0, kcal: 0, components: [] });
+  _futterItems.push({ rezeptId: null, rezeptName: '', gramm: 0, kcal: 0, portionen: 1, components: [] });
   renderFutterItems();
 }
 
@@ -161,17 +161,39 @@ export function futterItemRezeptChanged(idx) {
   const sel = document.getElementById(`fi-rezept-${idx}`);
   const val = parseInt(sel?.value);
   if (!val) {
-    _futterItems[idx] = { rezeptId: null, rezeptName: '', gramm: _futterItems[idx]?.gramm||0, kcal: 0, components: [] };
+    _futterItems[idx] = { rezeptId: null, rezeptName: '', gramm: _futterItems[idx]?.gramm||0, kcal: 0, portionen: 1, components: [] };
   } else {
     const zutaten = getRezeptZutaten(val);
     const rzp = getRezepte().find(r => r.rezept_id === val);
+    const baseGramm = zutaten.reduce((s, c) => s + (c.gramm || 0), 0);
+    const portionen = _futterItems[idx]?.portionen || 1;
     _futterItems[idx] = {
       rezeptId: val,
       rezeptName: rzp?.name || '',
-      gramm: _futterItems[idx]?.gramm || 0,
+      gramm: Math.round(baseGramm * portionen),
       kcal: 0,
+      portionen,
       components: zutaten,
+      baseGramm,
     };
+  }
+  // Gramm-Input synchronisieren
+  const grammInp = document.getElementById(`fi-gramm-${idx}`);
+  if (grammInp) grammInp.value = _futterItems[idx].gramm || '';
+  futterItemGrammChanged(idx);
+}
+
+/** Portionen für eine Position ändern → Gramm automatisch berechnen */
+export function futterItemPortionenChanged(idx) {
+  const inp = document.getElementById(`fi-portionen-${idx}`);
+  const portionen = parseFloat(inp?.value) || 1;
+  const item = _futterItems[idx];
+  if (!item) return;
+  item.portionen = portionen;
+  if (item.rezeptId && item.baseGramm > 0) {
+    item.gramm = Math.round(item.baseGramm * portionen);
+    const grammInp = document.getElementById(`fi-gramm-${idx}`);
+    if (grammInp) grammInp.value = item.gramm;
   }
   futterItemGrammChanged(idx);
 }
@@ -185,16 +207,23 @@ export function futterItemGrammChanged(idx) {
   item.gramm = gramm;
 
   // Kcal berechnen wenn Rezept gewählt
+  // Priorität: gespeicherter Energie-Nährwert > Makro-Formel (konsistent mit rechner.js)
+  // Kochverlustfaktor NICHT auf Makronährstoffe anwenden.
   if (item.rezeptId && item.components.length) {
     const params    = getParameter();
     const kProt     = parseFloat(String(params['kcal_faktor_protein'] || '3.5').replace(',','.')) || 3.5;
     const kFett     = parseFloat(String(params['kcal_faktor_fett']    || '8.5').replace(',','.')) || 8.5;
     const totalBase = item.components.reduce((s, c) => s + c.gramm, 0);
     let kcalBase = 0;
+    let hasEnergie = false;
     item.components.forEach(c => {
-      const nm   = getNutrMap(c.zutaten_id, c.zutat_name);
-      const fakt = c.gekocht ? 0.75 : 1;
-      kcalBase  += ((nm['Rohprotein']||0) * kProt + (nm['Fett']||0) * kFett) * c.gramm / 100 * fakt;
+      const nm = getNutrMap(c.zutaten_id, c.zutat_name);
+      if ((nm['Energie'] || 0) > 0) {
+        kcalBase += nm['Energie'] * c.gramm / 100;
+        hasEnergie = true;
+      } else {
+        kcalBase += ((nm['Rohprotein']||0) * kProt + (nm['Fett']||0) * kFett) * c.gramm / 100;
+      }
     });
     const scale = totalBase > 0 ? gramm / totalBase : 0;
     item.kcal   = Math.round(kcalBase * scale);
@@ -216,6 +245,7 @@ export function renderFutterItems() {
 
   let html = '';
   _futterItems.forEach((item, idx) => {
+    const baseGramm = item.baseGramm || (item.components.reduce((s,c)=>s+c.gramm,0)) || 0;
     html += `<div style="background:var(--bg2);border:1px solid var(--border);
       border-radius:var(--radius);padding:10px;margin-bottom:8px">
       <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">
@@ -225,15 +255,39 @@ export function renderFutterItems() {
           <option value="">— Rezept wählen —</option>
           ${rezepte.map(r => `<option value="${r.rezept_id}" ${item.rezeptId===r.rezept_id?'selected':''}>${r.name}</option>`).join('')}
         </select>
-        <input type="number" id="fi-gramm-${idx}" value="${item.gramm||''}" placeholder="g"
-          min="0" step="1" inputmode="decimal"
-          onchange="TAGEBUCH.futterItemGrammChanged(${idx})"
-          style="width:70px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);
-            background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;text-align:center">
         <button onclick="TAGEBUCH.removeFutterItem(${idx})"
           style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);
             background:var(--bg);color:var(--danger-text,#e76f51);cursor:pointer;font-size:14px">✕</button>
       </div>
+      ${item.rezeptId ? `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--sub);margin-bottom:3px">Portionen</div>
+          <input type="number" id="fi-portionen-${idx}" value="${item.portionen||1}" placeholder="1"
+            min="0.25" step="0.25" inputmode="decimal"
+            onchange="TAGEBUCH.futterItemPortionenChanged(${idx})"
+            style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);
+              background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;text-align:center">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--sub);margin-bottom:3px">Gramm${baseGramm>0?` (Basis: ${baseGramm}g)`:''}</div>
+          <input type="number" id="fi-gramm-${idx}" value="${item.gramm||''}" placeholder="g"
+            min="0" step="1" inputmode="decimal"
+            onchange="TAGEBUCH.futterItemGrammChanged(${idx})"
+            style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);
+              background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;text-align:center">
+        </div>
+      </div>` : `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--sub);margin-bottom:3px">Gramm</div>
+          <input type="number" id="fi-gramm-${idx}" value="${item.gramm||''}" placeholder="g"
+            min="0" step="1" inputmode="decimal"
+            onchange="TAGEBUCH.futterItemGrammChanged(${idx})"
+            style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);
+              background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;text-align:center">
+        </div>
+      </div>`}
       ${item.rezeptId && item.gramm > 0 ? `
         <div style="font-size:12px;color:var(--sub);margin-bottom:4px">
           ⚡ ${item.kcal} kcal

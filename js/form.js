@@ -118,12 +118,16 @@ export function toggleProv(val) {
 }
 
 /**
- * Ausschluss-Verdacht (Einzelauswahl 1–3, zweites Klicken hebt auf).
- * @param {'1'|'2'|'3'} val
+ * Ausschluss-Verdacht (Einzelauswahl 0–3, zweites Klicken hebt auf).
+ * 0 = keine Symptome / sicher
+ * 1 = leichter Verdacht
+ * 2 = mittlere Reaktion
+ * 3 = starke Reaktion
+ * @param {'0'|'1'|'2'|'3'} val
  */
 export function toggleAVerd(val) {
   aVerdState = aVerdState === val ? '' : val;
-  ['1','2','3'].forEach(v => {
+  ['0','1','2','3'].forEach(v => {
     document.getElementById('averd-' + v)?.classList.toggle('sel', aVerdState === v);
   });
 }

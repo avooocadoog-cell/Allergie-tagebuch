@@ -119,6 +119,36 @@ export async function load(which, forceRefresh = false) {
 
 const g = (row, i) => (row[i] ?? '').toString().trim();
 
+/**
+ * Synthetischen Schlüssel für Zeilen ohne entry_id erzeugen.
+ * Format: _SYN_ + encodeURIComponent-Felder getrennt durch ~
+ * Für Ausschlussdiät: hund_id|zutat|verdacht|kategorie
+ */
+function _synKey(r) {
+  return '_SYN_' + [g(r,0), g(r,1), g(r,2), g(r,3)].map(encodeURIComponent).join('~');
+}
+
+/**
+ * Zeile in rows-Array anhand entry_id ODER synthetischem Schlüssel finden.
+ * @param {Array[]} rows    - Rohzeilen ab Index 0 (Daten ab Index 2)
+ * @param {string}  eid     - entry_id oder _SYN_-Schlüssel
+ * @param {number}  eidIdx  - 0-basierter Index der entry_id-Spalte
+ */
+function _findRow(rows, eid, eidIdx) {
+  if (eid.startsWith('_SYN_')) {
+    const parts = eid.slice(5).split('~').map(decodeURIComponent);
+    for (let i = 2; i < rows.length; i++) {
+      const r = rows[i];
+      if (r && g(r,0) === parts[0] && g(r,1) === parts[1] && g(r,2) === parts[2] && g(r,3) === parts[3]) return i;
+    }
+    return -1;
+  }
+  for (let i = 2; i < rows.length; i++) {
+    if (String(rows[i]?.[eidIdx] ?? '').trim() === eid) return i;
+  }
+  return -1;
+}
+
 function renderRows(which, rows) {
   if (which === 'ausschluss') return renderAusschluss(rows);
   const fns = {
@@ -210,30 +240,73 @@ function renderFutter(r, which) {
   </div>`;
 }
 
+const AUSSCHLUSS_VERDACHT_LABEL = {
+  '0': '✅ Sicher',
+  '1': '🟡 Leichter Verdacht',
+  '2': '🟠 Mittlerer Verdacht',
+  '3': '🔴 Starke Reaktion',
+};
+const AUSSCHLUSS_VERDACHT_CLS = { '0':'badge-ok', '1':'badge-warn', '2':'badge-warn', '3':'badge-bad' };
+
+/** Aktiver Verdacht-Filter für Ausschlussdiät (Modul-State) */
+let _ausschlussFilter = '';
+
+/** Filter setzen und Ansicht neu rendern (wird von HTML aufgerufen) */
+export async function filterAusschluss(val) {
+  _ausschlussFilter = val;
+  load('ausschluss');
+}
+
 function renderAusschluss(rows) {
-  const cats = {};
-  rows.forEach(r => { const k=g(r,3)||'Sonstiges'; (cats[k]=cats[k]||[]).push(r); });
-  let html = '<div class="divider"><span>Übersicht</span></div>';
-  Object.keys(cats).sort().forEach(kat => {
-    html += `<div style="margin-bottom:10px">
-      <div style="font-size:11px;color:var(--sub);text-transform:uppercase;margin-bottom:5px">${esc(kat)}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">`;
-    cats[kat].forEach(r => {
-      const s=g(r,4); const cls=s.includes('vertr')?'badge-ok':s.includes('Reaktion')||s.toLowerCase().includes('gesperrt')?'badge-bad':'badge-warn';
-      html += `<span class="badge ${cls}">${esc(g(r,1))}</span>`;
-    });
-    html += '</div></div>';
+  const FILTER_OPTS = [
+    { val: '', label: 'Alle' },
+    { val: '0', label: '✅ Sicher' },
+    { val: '1', label: '🟡 Leichter Verdacht' },
+    { val: '2', label: '🟠 Mittlerer Verdacht' },
+    { val: '3', label: '🔴 Starke Reaktion' },
+  ];
+
+  const filtered = _ausschlussFilter === ''
+    ? rows
+    : rows.filter(r => String(g(r, 2)) === _ausschlussFilter);
+
+  // Filter-Chips
+  let html = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
+  FILTER_OPTS.forEach(opt => {
+    const active = opt.val === _ausschlussFilter;
+    const count  = opt.val === '' ? rows.length : rows.filter(r => String(g(r,2)) === opt.val).length;
+    html += `<button onclick="ANSICHT.filterAusschluss('${opt.val}')"
+      style="padding:5px 11px;border-radius:20px;border:1px solid var(--border);
+        font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;
+        background:${active ? 'var(--c2)' : 'var(--bg)'};
+        color:${active ? '#fff' : 'var(--text)'};
+        font-weight:${active ? '600' : '400'}">
+      ${opt.label} <span style="opacity:.7">(${count})</span>
+    </button>`;
   });
-  html += `<div class="divider"><span>Alle Einträge (${rows.length})</span></div>`;
-  rows.forEach(r => {
-    const eid = g(r, 8);  // entry_id Spalte I
-    const s=g(r,4); const cls=s.includes('vertr')?'badge-ok':s.includes('Reaktion')||s.toLowerCase().includes('gesperrt')?'badge-bad':'badge-warn';
+  html += `</div>`;
+
+  html += `<div class="divider"><span>${filtered.length} Einträge</span></div>`;
+
+  if (!filtered.length) {
+    html += `<div style="padding:20px;text-align:center;color:var(--sub);font-size:13px">Keine Einträge für diesen Filter.</div>`;
+    return html;
+  }
+
+  [...filtered].reverse().forEach(r => {
+    const eid    = g(r, 8) || _synKey(r);
+    const s      = g(r, 4);
+    const sCls   = s.includes('vertr') ? 'badge-ok' : s.includes('Reaktion') || s.toLowerCase().includes('gesperrt') ? 'badge-bad' : 'badge-warn';
+    const verd   = String(g(r, 2));
+    const vLabel = AUSSCHLUSS_VERDACHT_LABEL[verd] || (verd ? `Stufe ${esc(verd)}` : '');
+    const vCls   = AUSSCHLUSS_VERDACHT_CLS[verd] || 'badge-warn';
     html += `<div class="entry-card">
       ${editBtn('ausschluss', eid)}${deleteBtn('ausschluss', eid)}
-      <div class="ec-date">${esc(g(r,1))}${g(r,5)?' – seit '+esc(g(r,5)):''}</div>
-      ${s?`<div class="ec-row"><span class="ec-key">Status</span><span class="ec-val badge ${cls}">${esc(s)}</span></div>`:''}
-      ${g(r,2)?`<div class="ec-row"><span class="ec-key">Verdacht</span><span class="ec-val badge badge-warn">⚠️ Stufe ${esc(g(r,2))}</span></div>`:''}
-      ${g(r,6)?row('Reaktion',esc(g(r,6))):''}
+      <div class="ec-date">${esc(g(r,1))}${g(r,5) ? ' – seit ' + esc(g(r,5)) : ''}</div>
+      ${g(r,3) ? `<div class="ec-row"><span class="ec-key">Kategorie</span><span class="ec-val">${esc(g(r,3))}</span></div>` : ''}
+      ${s ? `<div class="ec-row"><span class="ec-key">Status</span><span class="ec-val badge ${sCls}">${esc(s)}</span></div>` : ''}
+      ${vLabel ? `<div class="ec-row"><span class="ec-key">Verdacht</span><span class="ec-val badge ${vCls}">${vLabel}</span></div>` : ''}
+      ${g(r,6) ? row('Reaktion', esc(g(r,6))) : ''}
     </div>`;
   });
   return html;
@@ -311,14 +384,7 @@ export async function softDelete(which, entryId) {
     const { getSheet, invalidate } = await import('./cache.js');
     const rows = await getSheet(sheetName, 'tagebuch', true);
 
-    // Zeile mit dieser entry_id finden (Daten ab Index 2)
-    let rowIndex = -1;
-    for (let i = 2; i < rows.length; i++) {
-      if (String(rows[i]?.[eidIdx] ?? '').trim() === entryId) {
-        rowIndex = i;
-        break;
-      }
-    }
+    const rowIndex = _findRow(rows, entryId, eidIdx);
 
     if (rowIndex < 0) {
       alert('Eintrag nicht gefunden. Bitte Ansicht aktualisieren.');
@@ -446,21 +512,12 @@ export async function editEntry(which, entryId) {
   try {
     const rows = await getSheet(sheetName, 'tagebuch', false);
 
-    // Zeile per entry_id suchen
-    let rowIndex = -1;
-    for (let i = 2; i < rows.length; i++) {
-      if (String(rows[i]?.[eidIdx] ?? '').trim() === entryId) {
-        rowIndex = i;
-        break;
-      }
-    }
+    const rowIndex = _findRow(rows, entryId, eidIdx);
 
     if (rowIndex < 0) {
-      // Fallback: kein entry_id → Hinweis
       openModal('⚠️ Bearbeiten nicht möglich',
         `<p style="color:var(--sub);font-size:13px">
-          Dieser Eintrag hat noch keine entry_id (wurde vor der v2-Migration erstellt).<br><br>
-          Bitte bearbeite ihn direkt in Google Sheets.
+          Eintrag nicht gefunden. Bitte Ansicht aktualisieren.
         </p>
         <button class="btn-primary" onclick="UI.closeModal()">OK</button>`
       );
@@ -529,9 +586,28 @@ function _buildEditForm(which, r, rowIndex, entryId) {
            + field('Notizen', 'notizen', g(r,8), 'text', 3);
 
   } else if (which === 'ausschluss') {
+    const verdachtOpts = [
+      ['','– wählen –'],['0','0 – Keine Symptome / Sicher'],
+      ['1','1 – Leichter Verdacht / Geringe Symptome'],
+      ['2','2 – Mittlerer Verdacht'],['3','3 – Starke Reaktion'],
+    ].map(([v,l]) => `<option value="${v}" ${g(r,2)==v?'selected':''}>${l}</option>`).join('');
+
+    const katOpts = ['','Fleisch','Fisch','Gemüse','Obst','Getreide','Milchprodukt','Öl / Fett','Supplement','Sonstiges']
+      .map(v => `<option value="${v}" ${g(r,3)===v?'selected':''}>${v||'– wählen –'}</option>`).join('');
+
+    const statOpts = ['','Getestet – verträglich','Getestet – Reaktion','In Test','Noch nicht getestet','Gesperrt']
+      .map(v => `<option value="${v}" ${g(r,4)===v?'selected':''}>${v||'– wählen –'}</option>`).join('');
+
+    const selStyle = `width:100%;padding:8px;border:1px solid var(--border);
+      border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit;font-size:14px`;
+
     fields = field('Zutat', 'zutat', g(r,1))
-           + field('Kategorie', 'kategorie', g(r,3))
-           + field('Status', 'status', g(r,4))
+           + `<div class="ef-field"><label>Kategorie</label>
+               <select id="ef-kategorie" style="${selStyle}">${katOpts}</select></div>`
+           + `<div class="ef-field"><label>Verdacht / Reaktion</label>
+               <select id="ef-verdacht" style="${selStyle}">${verdachtOpts}</select></div>`
+           + `<div class="ef-field"><label>Status</label>
+               <select id="ef-status" style="${selStyle}">${statOpts}</select></div>`
            + field('Datum', 'datum', g(r,5), 'date')
            + field('Reaktion', 'reaktion', g(r,6), 'text', 3)
            + field('Notizen', 'notizen', g(r,7), 'text', 3);
@@ -611,48 +687,49 @@ export async function saveEdit(which, entryId) {
     ];
   } else if (which === 'symptom') {
     const rows = await getSheet(sheetName, 'tagebuch', false);
-    const row  = rows.find((r,i) => i >= 2 && String(r[eidIdx]??'').trim() === entryId);
-    if (!row) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const ri = _findRow(rows, entryId, eidIdx);
+    if (ri < 0) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const row = rows[ri];
     newValues = [ g(row,0), fd('datum'), v('kategorie'), v('beschreibung'), v('schweregrad'), v('koerperstelle'), v('notizen') ];
   } else if (which === 'futter') {
     const rows = await getSheet(sheetName, 'tagebuch', false);
-    const row  = rows.find((r,i) => i >= 2 && String(r[eidIdx]??'').trim() === entryId);
-    if (!row) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const ri = _findRow(rows, entryId, eidIdx);
+    if (ri < 0) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const row = rows[ri];
     newValues = [ g(row,0), fd('datum'), v('futter'), v('produkt'), g(row,4), g(row,5), g(row,6), v('beschreibung'), v('notizen') ];
   } else if (which === 'ausschluss') {
     const rows = await getSheet(sheetName, 'tagebuch', false);
-    const row  = rows.find((r,i) => i >= 2 && String(r[eidIdx]??'').trim() === entryId);
-    if (!row) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
-    newValues = [ g(row,0), v('zutat'), g(row,2), v('kategorie'), v('status'), fd('datum'), v('reaktion'), v('notizen') ];
+    const ri = _findRow(rows, entryId, eidIdx);
+    if (ri < 0) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const row = rows[ri];
+    const verdacht = document.getElementById('ef-verdacht')?.value ?? g(row,2);
+    newValues = [ g(row,0), v('zutat'), verdacht, v('kategorie'), v('status'), fd('datum'), v('reaktion'), v('notizen') ];
   } else if (which === 'allergen') {
     const rows = await getSheet(sheetName, 'tagebuch', false);
-    const row  = rows.find((r,i) => i >= 2 && String(r[eidIdx]??'').trim() === entryId);
-    if (!row) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const ri = _findRow(rows, entryId, eidIdx);
+    if (ri < 0) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const row = rows[ri];
     newValues = [ g(row,0), v('allergen'), v('kategorie'), v('reaktion'), v('symptome'), v('notizen') ];
   } else if (which === 'tierarzt') {
     const rows = await getSheet(sheetName, 'tagebuch', false);
-    const row  = rows.find((r,i) => i >= 2 && String(r[eidIdx]??'').trim() === entryId);
-    if (!row) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const ri = _findRow(rows, entryId, eidIdx);
+    if (ri < 0) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const row = rows[ri];
     newValues = [ g(row,0), fd('datum'), v('arzt'), v('anlass'), v('untersuchungen'), v('ergebnis'), v('therapie'), fd('folge') ];
   } else if (which === 'medikamente') {
     const rows = await getSheet(sheetName, 'tagebuch', false);
-    const row  = rows.find((r,i) => i >= 2 && String(r[eidIdx]??'').trim() === entryId);
-    if (!row) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const ri = _findRow(rows, entryId, eidIdx);
+    if (ri < 0) { setStatus('status-edit','err','Zeile nicht gefunden.'); return; }
+    const row = rows[ri];
     newValues = [ g(row,0), v('name'), v('typ'), v('dosierung'), v('haeufigkeit'), fd('von'), fd('bis'), v('verordnet'), v('notizen') ];
   }
 
   if (!newValues) { setStatus('status-edit','err','Unbekannter Typ.'); return; }
 
   try {
-    // Zeile im Sheet suchen
+    // Zeile im Sheet suchen (mit _findRow für synthetische Keys)
     const allRows = await getSheet(sheetName, 'tagebuch', true);
-    let sheetRowIdx = -1;
-    for (let i = 2; i < allRows.length; i++) {
-      if (String(allRows[i]?.[eidIdx] ?? '').trim() === entryId) {
-        sheetRowIdx = i;
-        break;
-      }
-    }
+    const sheetRowIdx = _findRow(allRows, entryId, eidIdx);
     if (sheetRowIdx < 0) { setStatus('status-edit','err','Zeile nicht mehr im Sheet.'); return; }
 
     const sheetRow    = sheetRowIdx + 1;  // 1-basiert

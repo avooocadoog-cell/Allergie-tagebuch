@@ -639,9 +639,11 @@ export function recalc() {
     });
   });
 
-  // Kalorien
-  const kcalIst    = (totals['Rohprotein'] || 0) * (params['kcal_faktor_protein'] || 3.5)
-                   + (totals['Fett'] || 0)        * (params['kcal_faktor_fett']    || 8.5);
+  // Kalorien: gespeicherter Energie-Nährwert hat Vorrang vor Makro-Formel
+  const kcalIst    = (totals['Energie'] > 0)
+    ? totals['Energie']
+    : (totals['Rohprotein'] || 0) * (params['kcal_faktor_protein'] || 3.5)
+    + (totals['Fett'] || 0)       * (params['kcal_faktor_fett']    || 8.5);
   const kp         = getKalorienParam(currentHundId);
   const kcalBedarf = (kp.kcalManual > 0) ? kp.kcalManual
                    : kp.rerFaktor70 * Math.pow(kg, kp.rerExponent) * kp.rerFaktor;
