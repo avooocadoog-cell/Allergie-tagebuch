@@ -529,14 +529,23 @@ function _buildEditForm(which, r, rowIndex, entryId) {
       ['1','1 – Leichter Verdacht / Geringe Symptome'],
       ['2','2 – Mittlere Reaktion'],['3','3 – Starke Reaktion'],
     ].map(([v,l]) => `<option value="${v}" ${g(r,2)==v?'selected':''}>${l}</option>`).join('');
+
+    const katOpts = ['','Fleisch','Fisch','Gemüse','Obst','Getreide','Milchprodukt','Öl / Fett','Supplement','Sonstiges']
+      .map(v => `<option value="${v}" ${g(r,3)===v?'selected':''}>${v||'– wählen –'}</option>`).join('');
+
+    const statOpts = ['','Getestet – verträglich','Getestet – Reaktion','In Test','Noch nicht getestet','Gesperrt']
+      .map(v => `<option value="${v}" ${g(r,4)===v?'selected':''}>${v||'– wählen –'}</option>`).join('');
+
+    const selStyle = `width:100%;padding:8px;border:1px solid var(--border);
+      border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit;font-size:14px`;
+
     fields = field('Zutat', 'zutat', g(r,1))
-           + field('Kategorie', 'kategorie', g(r,3))
+           + `<div class="ef-field"><label>Kategorie</label>
+               <select id="ef-kategorie" style="${selStyle}">${katOpts}</select></div>`
            + `<div class="ef-field"><label>Verdacht / Reaktion</label>
-               <select id="ef-verdacht" style="width:100%;padding:8px;border:1px solid var(--border);
-                 border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit">
-                 ${verdachtOpts}
-               </select></div>`
-           + field('Status', 'status', g(r,4))
+               <select id="ef-verdacht" style="${selStyle}">${verdachtOpts}</select></div>`
+           + `<div class="ef-field"><label>Status</label>
+               <select id="ef-status" style="${selStyle}">${statOpts}</select></div>`
            + field('Datum', 'datum', g(r,5), 'date')
            + field('Reaktion', 'reaktion', g(r,6), 'text', 3)
            + field('Notizen', 'notizen', g(r,7), 'text', 3);

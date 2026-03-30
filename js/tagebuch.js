@@ -207,18 +207,23 @@ export function futterItemGrammChanged(idx) {
   item.gramm = gramm;
 
   // Kcal berechnen wenn Rezept gewählt
-  // WICHTIG: Kochverlustfaktor (0.75) wird NICHT auf Makronährstoffe angewandt –
-  // nur B-Vitamine verlieren durch Kochen, nicht Protein/Fett (konsistent mit rechner.js).
+  // Priorität: gespeicherter Energie-Nährwert > Makro-Formel (konsistent mit rechner.js)
+  // Kochverlustfaktor NICHT auf Makronährstoffe anwenden.
   if (item.rezeptId && item.components.length) {
     const params    = getParameter();
     const kProt     = parseFloat(String(params['kcal_faktor_protein'] || '3.5').replace(',','.')) || 3.5;
     const kFett     = parseFloat(String(params['kcal_faktor_fett']    || '8.5').replace(',','.')) || 8.5;
     const totalBase = item.components.reduce((s, c) => s + c.gramm, 0);
     let kcalBase = 0;
+    let hasEnergie = false;
     item.components.forEach(c => {
       const nm = getNutrMap(c.zutaten_id, c.zutat_name);
-      // Kein Kochverlust auf Kcal – Protein und Fett bleiben erhalten
-      kcalBase += ((nm['Rohprotein']||0) * kProt + (nm['Fett']||0) * kFett) * c.gramm / 100;
+      if ((nm['Energie'] || 0) > 0) {
+        kcalBase += nm['Energie'] * c.gramm / 100;
+        hasEnergie = true;
+      } else {
+        kcalBase += ((nm['Rohprotein']||0) * kProt + (nm['Fett']||0) * kFett) * c.gramm / 100;
+      }
     });
     const scale = totalBase > 0 ? gramm / totalBase : 0;
     item.kcal   = Math.round(kcalBase * scale);
