@@ -6,6 +6,14 @@
 > Vor jeder Implementierung: PROJECT.md als Kontext einfügen + das betreffende Modul mitliefern.
 
 ---
+## Idee 1 – kleinere Optimierungen 
+
+### Beschreibung
+Statistik Modul entfernen der beaknnten Allergene -> tagebuch Ausschlussdiät bleibt erhalten, dort ist es besser umgesetzt 
+Ausschlusdät aus dem Statistik modul entfernen -> tagebuch Ausschlussdiät bleibt erhalten, dort ist es besser umgesetzt 
+Einstellungen Symbol ist gedoppelt (Zahnrad + Einst Zahnrad + Einst)
+
+
 
 ## Idee 2 – Verdachts-Korrelationsanalyse
 
