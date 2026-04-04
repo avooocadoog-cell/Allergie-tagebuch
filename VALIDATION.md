@@ -1,8 +1,8 @@
-# Hund Manager – Softwarevalidierung (v1.0.0)
+# Hund Manager – Softwarevalidierung (v1.1.0)
 
 > **Zweck:** Manuelle und automatisierte Testszenarien zur Verifikation aller implementierten Features.
-> Letzte Aktualisierung: 2026-03-31
-> Version: v1.0.0
+> Letzte Aktualisierung: 2026-04-04
+> Version: v1.1.0
 
 ---
 
@@ -289,7 +289,71 @@
 
 ---
 
-## Regressionstests nach v1.0.0
+## Modul 10: USDA / Open Food Facts Import (stammdaten.js)
+
+### T-IMPORT-01 – USDA Suche mit gültigem Key
+**Vorbedingung:** USDA API-Key in Einstellungen eingetragen
+
+**Schritte:**
+1. Stammdaten → Zutaten → Neue Zutat
+2. „🔍 Nährwerte importieren" aufklappen
+3. Quelle: USDA · Suchbegriff: „chicken breast raw"
+4. Suchen → Ergebnis antippen
+
+**Erwartetes Ergebnis:**
+- Ergebnisliste mit bis zu 8 Treffern erscheint
+- Nach Antippen werden Nährstoff-Inputs befüllt (z.B. Rohprotein, Rohfett)
+- Nährstoff-Abschnitt öffnet sich automatisch
+- Statusmeldung: „X Nährstoffe übernommen"
+
+### T-IMPORT-02 – USDA ohne API-Key
+**Schritte:**
+1. USDA API-Key in Einstellungen leer lassen
+2. Zutat-Modal → Import-Abschnitt → Suchen
+
+**Erwartetes Ergebnis:**
+- Fehlermeldung: „USDA API-Key fehlt. Bitte in Einstellungen eintragen."
+- Kein API-Call wird gemacht
+
+### T-IMPORT-03 – Open Food Facts Suche (ohne Key)
+**Schritte:**
+1. Quelle auf „Open Food Facts" wechseln
+2. Suchbegriff: „Rindfleisch"
+3. Suchen → Ergebnis antippen
+
+**Erwartetes Ergebnis:**
+- Ergebnisse erscheinen ohne API-Key
+- Nährstoffe werden in Inputs übernommen
+- Manuelle Anpassung danach möglich
+
+### T-IMPORT-04 – EPA + DHA Zusammenführung (USDA)
+**Schritte:**
+1. USDA Suche nach „salmon raw"
+2. Ergebnis übernehmen
+
+**Erwartetes Ergebnis:**
+- Nährstoff-Input für „EPA + DHA" ist befüllt (Summe aus EPA + DHA)
+- Kein separater EPA- oder DHA-Input bleibt leer durch falsche Zuweisung
+
+### T-IMPORT-05 – Doppeltes Einstellungs-Symbol
+**Schritte:**
+1. App öffnen → Top-Navigation prüfen
+
+**Erwartetes Ergebnis:**
+- Einstellungs-Button zeigt genau einmal „⚙️ Einst." – kein doppeltes Symbol
+
+### T-IMPORT-06 – Statistik ohne Bekannte Allergene / Ausschlussdiät
+**Schritte:**
+1. Statistik-Panel öffnen
+
+**Erwartetes Ergebnis:**
+- Kein „⚠️ Bekannte Allergene"-Block sichtbar
+- Kein „🍽️ Ausschlussdiät"-Block sichtbar
+- Futter-Reaktionen und Medikamente weiterhin sichtbar
+- Chart + KPIs unverändert funktional
+
+
+## Regressionstests nach v1.1.0
 
 Folgende Tests müssen nach jedem Release mindestens einmal durchgeführt werden:
 

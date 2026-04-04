@@ -1,7 +1,7 @@
-# Hund Manager – Projektbeschreibung (v1.0.0)
+# Hund Manager – Projektbeschreibung (v1.1.0)
 
 > **Dieses Dokument als Kontext in jeden Prompt einfügen, wenn nur einzelne Module geteilt werden.**
-> Letzte Aktualisierung: 2026-03-31 · Status: v1.0.0 – Kcal-Bugfix, Portionen im Tagebuch, Ausschlussdiät 0–3, VALIDATION.md
+> Letzte Aktualisierung: 2026-04-04 · Status: v1.1.0 – USDA-Import, UI-Bereinigungen (Statistik, Nav-Bug)
 
 > **Coding-Konvention:** Module werden gezielt angepasst – kein komplettes Neuschreiben ganzer Dateien.
 > Änderungen immer als minimale, chirurgische Eingriffe in die relevanten Funktionen.
@@ -46,7 +46,7 @@
 │   └── styles.css          ← Design System (CSS Custom Properties, Dark Mode, Mobile-first)
 ├── js/
 ├── main.js                 ← App-Einstieg, globale window-Exports, APP-Objekt, i18n-Init
-├── config.js               ← localStorage-Konfiguration + setupAllSheets()
+├── config.js               ← localStorage-Konfiguration + setupAllSheets() + usdaApiKey
 ├── sheets.js               ← Alle Google Sheets API Calls + createSheetWithHeaders()
 ├── auth.js                 ← Google OAuth2 Login/Logout, Token-Verwaltung
 ├── cache.js                ← Tagebuch-Lese-Cache (sessionStorage, TTL 10 Min)
@@ -57,8 +57,8 @@
 ├── rechner.js              ← Futterrechner + Rezept-Mix + recommended_pct Marker
 ├── tagebuch.js             ← Submit-Handler 7 Typen + Multi-Futter mit Kcal-Berechnung
 ├── ansicht.js              ← Entry-Cards + Soft-Delete + Edit-Modal + Undo-Banner
-├── stammdaten.js           ← CRUD Hunde/Zutaten/Toleranzen + Kcal-Bedarf + Gewicht + Nährwerte im Zutat-Modal
-├── statistik.js            ← Konfigurierbarer Chart: Temp-Band, Symptome-Flächenband (rot), Pollen-Popup-Dialog, Ausschlussdiät-Liste
+├── stammdaten.js           ← CRUD Hunde/Zutaten/Toleranzen + Kcal-Bedarf + Gewicht + Nährwerte im Zutat-Modal + USDA/OFF-Import
+├── statistik.js            ← Konfigurierbarer Chart: Temp-Band, Symptome-Flächenband (rot), Pollen-Popup-Dialog
 └── i18n.js                 ← Mehrsprachigkeit: t(), setLang(), applyAll(), loadDefaults()
 ```
 
@@ -510,14 +510,12 @@ Statistik-Panel:
   │   - Schweregrad Symptome: ROTES FLÄCHENBAND (fill:'origin', von 0 bis Wert)
   │   - Pollen: Balken (y2-Achse, 0–5)
   │   - Sonstige: Linien
-  ├── Bekannte Allergene (Liste mit Reaktionsstärke-Punkte-Anzeige)
-  ├── Ausschlussdiät (Liste mit Status-Badges, nur wenn Daten vorhanden)
   ├── Futter-Reaktionen (Liste, nur Einträge mit Reaktion/Provokation)
   └── Medikamente (Liste mit Von–Bis)
 
 Stammdaten-Panel: 4 Tabs (Hunde / Zutaten [Edit + Undo + Nährwerte] / Parameter / Toleranzen) + Modals
   └── Zutat-Modal: Basisfelder + einklappbarer Nährwert-Abschnitt (alle 39 NRC-Nährstoffe, 2-spaltig nach Gruppe)
-Einstellungen-Panel: Google-Config + Sprache (i18n) + Sheet-Setup + Verbindungstest
+Einstellungen-Panel: Google-Config + USDA-API-Key + Sprache (i18n) + Sheet-Setup + Verbindungstest
 ```
 
 ---
@@ -548,7 +546,7 @@ Einstellungen-Panel: Google-Config + Sprache (i18n) + Sheet-Setup + Verbindungst
 
 ---
 
-## Implementierungsstand v1.0.0 (aktuell)
+## Implementierungsstand v1.1.0 (aktuell)
 
 Versionierung X.Y.Z
 X wird nur durch den Nutzer freigegeben
@@ -593,6 +591,14 @@ Z Bugfixes
 - **Ausschlussdiät in Statistik zurück** (statistik.js): Wird als Liste angezeigt (wie Medikamente), mit Status-Badges (verträglich/Reaktion/Gesperrt/Test). Box erscheint nur wenn Daten für den Hund vorhanden sind.
 - **FEATURE.md + FAQ.md** erstellt: Vollständige Feature-Dokumentation und FAQ als eigenständige Dateien im Repo.
 - **Dokumentations-Fixes:** `verdacht`-Skala korrigiert (0–3), styles.css-Duplikat entfernt, Kochverlust präzisiert (nur B-Vitamine), EPA+DHA-Namenskonvention dokumentiert, VALIDATION.md um T-RECHN-06 erweitert.
+
+
+**v1.1.0:**
+- **USDA / Open Food Facts Import** (stammdaten.js + config.js + index.html): Neuer einklappbarer „🔍 Nährwerte importieren"-Abschnitt im Zutat-Modal oberhalb der manuellen Nährstoff-Eingabe. Radio-Button-Auswahl zwischen USDA FoodData Central (API-Key erforderlich) und Open Food Facts (kein Key). Suche liefert bis zu 8 Treffer, Klick übernimmt Nährstoffe in die Inputs. Mapping-Tabellen für USDA-Nutrient-Namen → NRC-Namen; EPA + DHA werden zusammengeführt. USDA API-Key in config.js (`usdaApiKey`) + neuem Einstellungs-Abschnitt in index.html.
+- **Bekannte Allergene aus Statistik entfernt** (statistik.js): Sektion war doppelt; führende Stelle ist Tagebuch → Allergen-Tab. Sheet-Load, Render-Funktion und HTML-Box entfernt.
+- **Ausschlussdiät aus Statistik entfernt** (statistik.js): Aus gleichem Grund; führende Stelle ist Tagebuch → Ausschluss-Tab. Sheet-Load, Render-Funktion und HTML-Box entfernt.
+- **Pollen-Vorauswahl** (statistik.js): Standardmäßig werden jetzt alle verfügbaren Pollenarten aktiviert (vorher: nur Pollenarten aus Bekannten Allergenen).
+- **Doppeltes Einstellungs-Symbol** (index.html): Dupliziertes `⚙️ Einst.` in der Top-Navigation entfernt.
 
 
 ## Typischer Prompt bei Einzelmodul-Arbeit
@@ -660,6 +666,9 @@ Bei Umstrukturierung der hinterlegten Spreadsheets bitte informieren.
 - `wetter.js` exportiert zusätzlich: `showPollenManager`, `_addCustomPollen`, `_removeCustomPollen`
 - `statistik.js` exportiert zusätzlich: `showPollenPopup`
 - Custom-Pollen werden in `localStorage['hundapp_custom_pollen']` als JSON-Array gespeichert
-- `statistik.js` lädt `Ausschlussdiät`-Sheet wieder (mit `.catch(()=>[])` als Fallback)
+- `statistik.js` lädt `Ausschlussdiät`- und `Bekannte Allergene`-Sheets **nicht mehr** (seit v1.1.0)
 - PARAM_DEF `symptome` hat `chartType:'area'` (rotes Flächenband, `fill:'origin'`)
+- `stammdaten.js` exportiert zusätzlich: `runImportSearch`, `applyImportResult`
+- USDA API-Key: `get().usdaApiKey` aus `config.js`, editierbar in Einstellungen
 - Pollen-Auswahl in Statistik ist ein Popup-Dialog (`showPollenPopup()`), kein Inline-Toggle mehr
+- Pollen-Vorauswahl: alle verfügbaren Pollenarten standardmäßig aktiv (kein Abgleich mit Allergenen mehr)
