@@ -1,6 +1,6 @@
-# Hund Manager – Feature-Übersicht (v1.0.0)
+# Hund Manager – Feature-Übersicht (v1.3.1)
 
-> Letzte Aktualisierung: 2026-03
+> Letzte Aktualisierung: 2026-04-04
 
 ---
 
@@ -24,6 +24,8 @@
 | Zutat soft-löschen | Soft-Delete mit Undo-Banner (8 Sek.) |
 | Undo letzter Löschung | Bis zu 5 Löschungen rückgängig machbar |
 | Automatischer Futterrechner-Sync | Dropdown im Rechner wird nach Speichern sofort aktualisiert |
+| **Nährstoff-Import USDA + OFF parallel** | Beide Quellen gleichzeitig abgerufen · Zwei-Spalten-Ergebnisliste · Werte pro Quelle über jedem Feld sichtbar |
+| **Import überschreibt keine Werte** | Nur leere Felder werden befüllt – vorhandene Einträge bleiben erhalten |
 
 ---
 
@@ -88,9 +90,9 @@
 | Feuchte außen/innen | Gestrichelte Linien |
 | **Schweregrad Symptome** | **Rotes gefülltes Band (fill from 0)** – deutliche visuelle Hervorhebung |
 | Gewicht | Linie (nur wenn Hund_Gewicht-Daten vorhanden) |
-| Pollen-Popup | **Popup-Dialog** mit allen Pollen-Typen aus Pollen_Log + eigenen Pollen |
-| Bekannte Allergene | Liste mit Reaktionsstärke-Anzeige |
-| Ausschlussdiät | Liste mit Status-Badges (nur wenn Daten vorhanden) |
+| Pollen-Popup | **Popup-Dialog** mit allen Pollen-Typen aus Pollen_Log + eigenen Pollen; alle standardmäßig aktiviert |
+| **Symptom-Muster** | **Heatmap Wochentag (Mo–So) + Monat (Jan–Dez)** · Ø Schweregrad als farbige Kacheln · ab 14 Einträgen |
+| **Korrelationsanalyse** | Pollen / Außentemperatur / Luftfeuchte vs. Ø Schweregrad · gruppiert · Gruppen mit Ø > 2.0 orange · min. 3 Datenpunkte |
 | Futter-Reaktionen | Liste (nur Einträge mit Reaktion oder Provokation) |
 | Medikamente | Liste mit Zeitraum |
 | Cache-Status | Anzeige ob Daten aus Cache oder frisch geladen |
@@ -106,6 +108,8 @@
 | Standort | Lat/Lon für Wetter-API |
 | DWD-Region | Pollen-Region aus 18 deutschen Regionen |
 | Neue Sheets anlegen | Automatisch via Knopf (Rezept_Komponenten, Translations, Hund_Gewicht, Pollen_Log) |
+| USDA API-Key | Key für automatischen Nährstoff-Import aus USDA FoodData Central |
+| **💾 Einstellungen speichern** | Expliziter Speichern-Button mit Bestätigungs-Feedback (zusätzlich zum Auto-Save) |
 | Sprache | Deutsch / Englisch (i18n) |
 | Verbindungstest | Prüft Sheets-API-Zugang |
 

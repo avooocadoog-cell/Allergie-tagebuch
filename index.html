@@ -84,7 +84,6 @@
     </button>
     <button class="top-nav-btn" id="tnav-einst"      onclick="UI.switchTopPanel('einst')">
       <span class="nav-icon">⚙️</span>Einst.
-      <span class="nav-icon">⚙️</span>Einst.
     </button>
   </nav>
 
@@ -553,8 +552,28 @@
         <input type="number" id="cfg-pollen-region" placeholder="50 (Berlin)" oninput="CONFIG.save()">
         <div style="font-size:11px;color:var(--sub);margin-top:4px">Berlin=50 · Hamburg=10 · München=91 · Frankfurt=82</div>
       </div>
+      <button class="btn-primary" style="margin-top:4px" onclick="CONFIG.saveWithFeedback()">
+        💾 Einstellungen speichern
+      </button>
+      <div id="cfg-save-status" style="font-size:12px;min-height:1.4em;margin-top:6px"></div>
       <button class="btn-primary" onclick="CONFIG.testConnection()">🔌 Verbindung testen</button>
       <div class="status" id="status-conn"></div>
+    </div>
+
+    <div class="settings-box">
+      <h3>🌾 USDA FoodData Central API</h3>
+      <p style="font-size:13px;color:var(--sub);line-height:1.6;margin-bottom:12px">
+        Kostenloser API-Key für automatischen Nährstoff-Import beim Anlegen von Zutaten.<br>
+        Registrierung: <a href="https://fdc.nal.usda.gov/api-key-signup" target="_blank" style="color:var(--c2)">fdc.nal.usda.gov/api-key-signup</a>
+      </p>
+      <div class="field">
+        <label>USDA API-Key</label>
+        <input type="text" id="cfg-usda-key" placeholder="DEMO_KEY oder eigener API-Key" oninput="CONFIG.save()"
+          style="font-family:monospace;font-size:13px">
+        <div style="font-size:11px;color:var(--sub);margin-top:4px">
+          Mit „DEMO_KEY" testen (stark limitiert) · Kostenloser Key: ca. 1000 Anfragen/Tag
+        </div>
+      </div>
     </div>
 
     <div class="settings-box">

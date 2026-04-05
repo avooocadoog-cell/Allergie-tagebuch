@@ -1,13 +1,13 @@
-# Hund Manager – Feature-Ideen & Implementierungsprompts (v1.0.0)
+# Hund Manager – Feature-Ideen & Implementierungsprompts (v1.3.1)
 
-> Letzte Aktualisierung: 2026-03-31
+> Letzte Aktualisierung: 2026-04-04
 > Status: Ideen – noch nicht implementiert
 > Jede Idee ist als eigenständiger Prompt formuliert und kann einzeln beauftragt werden.
 > Vor jeder Implementierung: PROJECT.md als Kontext einfügen + das betreffende Modul mitliefern.
 
 ---
 
-## Idee 1 – Kleinere Optimierungen
+## ✅ Idee 1 – Kleinere Optimierungen (implementiert in v1.1.0)
 
 ### Beschreibung
 Drei unabhängige UI-Bereinigungen, die zusammen als ein Arbeitspaket erledigt werden können:
@@ -55,7 +55,7 @@ Sheet-Änderungen: keine.
 
 ---
 
-## Idee 2 – Zutat-Datenbank-Import (USDA / Open Food Facts)
+## ✅ Idee 2 – Zutat-Datenbank-Import (USDA / Open Food Facts) (implementiert in v1.1.0)
 
 ### Beschreibung
 Nährstoffwerte automatisch aus öffentlichen APIs laden statt manuell eintippen. Die USDA FoodData Central API ist kostenlos nutzbar (API-Key erforderlich, kostenlose Registrierung). Open Food Facts ist vollständig offen ohne Key. Besonders zeitsparend für Gemüse, Öle und Nahrungsergänzungsmittel.
@@ -114,7 +114,7 @@ Sheet-Änderungen: keine. Neue Konfiguration: usda_api_key in localStorage.
 
 ---
 
-## Idee 3 – Symptom-Muster-Erkennung (Wochentag / Monat)
+## ✅ Idee 3 – Symptom-Muster-Erkennung (Wochentag / Monat) (implementiert in v1.2.0)
 
 ### Beschreibung
 Einfache Heatmap-Auswertung: An welchen Wochentagen und in welchen Monaten sind die Symptome im Schnitt stärker? Könnte z.B. einen Zusammenhang mit wiederkehrenden Aktivitäten (Hundesport dienstags, Waldspaziergänge am Wochenende) sichtbar machen. Rein aus Symptomtagebuch-Daten – kein neues Sheet.
@@ -166,7 +166,7 @@ Sheet-Änderungen: keine.
 
 ---
 
-## Idee 4 – Verdachts-Korrelationsanalyse
+## ✅ Idee 4 – Verdachts-Korrelationsanalyse (implementiert in v1.3.0)
 
 ### Beschreibung
 Automatische statistische Auswertung des Zusammenhangs zwischen Umweltfaktoren (Pollen, Temperatur, Feuchtigkeit) und Symptomschweregraden. Beispiel: „An Tagen mit Birken-Pollen ≥ 3 hatte Milow im Schnitt Schweregrad 2.8". Die Rohdaten liegen bereits vollständig in den Sheets vor – es fehlt nur die Auswertungslogik.
@@ -486,10 +486,10 @@ Sheet-Änderungen: keine.
 
 | # | Idee | Aufwand | Betroffene Module | Neues Sheet |
 |---|------|---------|-------------------|-------------|
-| 1 | Kleinere Optimierungen | Gering | statistik.js, index.html | Nein |
-| 2 | USDA-Import | Hoch | stammdaten.js, config.js, index.html | Nein |
-| 3 | Symptom-Muster | Gering | statistik.js | Nein |
-| 4 | Korrelationsanalyse | Gering | statistik.js | Nein |
+| ~~1~~ | ~~Kleinere Optimierungen~~ | ✅ umgesetzt in v1.1.0 | statistik.js, index.html | Nein |
+| ~~2~~ | ~~USDA-Import~~ | ✅ umgesetzt in v1.1.0 | stammdaten.js, config.js, index.html | Nein |
+| ~~3~~ | ~~Symptom-Muster~~ | ✅ umgesetzt in v1.2.0 | statistik.js | Nein |
+| ~~4~~ | ~~Korrelationsanalyse~~ | ✅ umgesetzt in v1.3.0 | statistik.js | Nein |
 | 5 | Reaktions-Score | Mittel | statistik.js, store.js | Nein |
 | 6 | Phasentracker | Hoch | tagebuch.js, ansicht.js, statistik.js, index.html | Ja – Ausschluss_Phasen |
 | 7 | Tierarzt-PDF | Mittel | Neues export.js, statistik.js, main.js, styles.css | Nein |

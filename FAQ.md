@@ -1,6 +1,6 @@
-# Hund Manager – FAQ (v1.0.0)
+# Hund Manager – FAQ (v1.3.1)
 
-> Letzte Aktualisierung: 2026-03
+> Letzte Aktualisierung: 2026-04-04
 
 ---
 
@@ -91,6 +91,40 @@ A: Nein. Der Kochverlust gilt **ausschließlich für B-Vitamine** (B1, B2, B3, B
 
 ---
 
+## 🌾 Nährstoff-Import (USDA / Open Food Facts)
+
+**Q: Wie importiere ich Nährwerte automatisch?**
+A: Stammdaten → Zutaten → Zutat anlegen oder bearbeiten → Abschnitt „🔍 Nährwerte importieren" aufklappen → Quelle wählen (USDA oder Open Food Facts) → Suchbegriff eingeben → Ergebnis antippen. Die Nährstoffe werden in die Eingabefelder übernommen.
+
+**Q: Woher bekomme ich einen USDA API-Key?**
+A: Kostenlose Registrierung unter [fdc.nal.usda.gov/api-key-signup](https://fdc.nal.usda.gov/api-key-signup). Den Key in Einstellungen → „USDA API-Key" eintragen. Zum schnellen Testen funktioniert auch „DEMO_KEY" (stark limitiert).
+
+**Q: Was ist der Unterschied zwischen USDA und Open Food Facts?**
+A: USDA FoodData Central enthält sehr präzise Nährstoffdaten für Rohzutaten (Fleisch, Gemüse, Öle) – erfordert API-Key. Open Food Facts hat einen breiteren Produktkatalog (Fertigprodukte, Marken) und benötigt keinen Key. Für BARF-Zutaten ist USDA in der Regel genauer.
+
+**Q: Werden beim Import vorhandene Nährwerte überschrieben?**
+A: Nein. Ab v1.3.1 werden nur leere Felder befüllt. Felder die bereits einen Wert enthalten bleiben unverändert.
+
+**Q: Wie sehe ich USDA und Open Food Facts Werte gleichzeitig?**
+A: Nach dem Import-Abruf erscheinen die Werte beider Quellen als kleine Vorschau direkt über jedem Nährstoff-Eingabefeld (blau = USDA, grün = OFF). So kannst du die Quellen vergleichen bevor du auf „Leere Felder befüllen" tippst.
+
+**Q: Kann ich aus USDA und OFF gleichzeitig importieren?**
+A: Ja. Wähle je eine Trefferliste aus USDA und eine aus Open Food Facts aus. Beim Befüllen werden leere Felder bevorzugt mit USDA-Werten gefüllt; wo USDA keinen Wert hat, wird der OFF-Wert verwendet.
+
+**Q: Ich sehe den Fehler „newId is not defined" beim Speichern einer Zutat.**
+A: Dieser Bug ist in v1.3.1 behoben. Bitte die aktuellen Dateien auf GitHub deployen.
+
+**Q: Werden die Einstellungen automatisch gespeichert?**
+A: Ja – jedes Feld speichert beim Tippen automatisch (oninput). Der neue „💾 Einstellungen speichern"-Button bietet zusätzlich eine explizite Speicherbestätigung mit kurzer Meldung.
+
+
+**Q: Werden alle 39 Nährstoffe importiert?**
+A: Nein – nur Nährstoffe die von der jeweiligen API geliefert werden und einem NRC-Nährstoffnamen zugeordnet werden können. Fehlende Felder bleiben leer und können manuell ergänzt werden. EPA und DHA werden automatisch zum kombinierten Eintrag „EPA + DHA" zusammengefasst.
+
+**Q: Kann ich importierte Werte noch anpassen?**
+A: Ja. Nach dem Import werden die Werte in die normalen Eingabefelder eingetragen – du kannst sie beliebig ändern, bevor du auf „Speichern" tippst.
+
+
 ## 🌿 Pollen & Wetter
 
 **Q: Warum lädt Wetter/Pollen manchmal nicht?**
@@ -115,8 +149,8 @@ A: Das rote Band zeigt den täglichen maximalen Schweregrad (0–5) als gefüllt
 **Q: Wie zeige ich Pollen im Statistik-Chart an?**
 A: Parameter-Bereich → „🌿 Pollen"-Button → Popup → gewünschte Pollenarten anhaken → „Übernehmen". Nur Pollenarten mit Daten im ausgewählten Zeitraum werden im Chart angezeigt.
 
-**Q: Warum fehlt die Ausschlussdiät-Box manchmal?**
-A: Die Box erscheint nur, wenn für den ausgewählten Hund Einträge im Ausschlussdiät-Sheet vorhanden sind.
+**Q: Wo sehe ich die Ausschlussdiät und die Bekannten Allergene?**
+A: Diese Informationen werden in der Statistik nicht mehr angezeigt – die führende Stelle ist das Tagebuch (Ansicht → 📋 Ausschl. bzw. ⚠️ Allergen). Dort sind alle Einträge mit Edit- und Lösch-Funktion vollständig verfügbar.
 
 **Q: Wie aktualisiere ich die Statistik-Daten?**
 A: „↺ Aktualisieren"-Button oben rechts. Der Cache-Status zeigt an, wann die Daten zuletzt geladen wurden (TTL: 10 Minuten).
