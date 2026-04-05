@@ -829,8 +829,7 @@ function _renderKorrelation(data) {
   fut.forEach(r => {
     const txt = g(r,2); // Spalte C = futter-Freitext
     if (!txt) return;
-    txt.split(/[,
-;]+/).forEach(t => {
+    txt.split(/[,;\n]+/).forEach(t => {
       const trimmed = t.trim();
       if (trimmed.length > 1 && trimmed.length < 60) futterSet.add(trimmed);
     });
