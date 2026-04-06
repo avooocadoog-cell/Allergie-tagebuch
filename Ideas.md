@@ -210,6 +210,11 @@ Melde Sheet-Änderungen explizit (erwartet: keine).
 
 ## Idee 5 – Reaktions-Score pro Zutat
 
+Optimierung 
+in den stammdaten für Hundefutter vergleiche ob es bereits einen identisch eitnrag gib
+in der Korrelationsanalyse eine sortierung einfügen die es nsch Häufigkeit und Korrelation sortieren kann
+
+
 ### Beschreibung
 Automatisch aus den Tagebuchdaten berechnen: Wie oft folgte auf einen Futtertageintrag mit Zutat X innerhalb von 48 Stunden ein Symptomeintrag mit Schweregrad > 2? Das ergibt einen datenbasierten Verdachtsscore unabhängig von manuellen Einschätzungen. Wird als sortierte Liste mit Score-Balken in der Statistik angezeigt.
 
