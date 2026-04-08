@@ -1,8 +1,8 @@
-# Hund Manager – Softwarevalidierung (v1.3.2)
+# Hund Manager – Softwarevalidierung (v1.4.0)
 
 > **Zweck:** Manuelle und automatisierte Testszenarien zur Verifikation aller implementierten Features.
-> Letzte Aktualisierung: 2026-04-04
-> Version: v1.3.2
+> Letzte Aktualisierung: 2026-04-08
+> Version: v1.4.0
 
 ---
 
@@ -519,7 +519,54 @@
 - Chart + KPIs unverändert funktional
 
 
-## Regressionstests nach v1.3.2
+
+## Modul X: Zutaten-Reaktionsscores (statistik.js)
+
+### T-RSCORE-01 – Sektion sichtbar mit ausreichend Daten
+**Vorbedingung:** Futtertagebuch hat ≥ 3 Einträge derselben Zutat. Symptomtagebuch hat Einträge mit Schweregrad > 2.
+
+**Schritte:**
+1. Statistik öffnen → Hund wählen → Laden
+2. Nach unten scrollen bis „🧪 Zutaten-Reaktionsscores"
+
+**Erwartetes Ergebnis:**
+- Sektion ist vorhanden (eingeklappt)
+- Aufklappen zeigt mindestens eine Zutat mit Score-Balken
+
+### T-RSCORE-02 – Score-Berechnung nachvollziehbar
+**Vorbedingung:** Zutat „Pferd" wurde 5× eingetragen. An 2 der folgenden Tage (+1/+2) lag Schweregrad > 2 vor.
+
+**Erwartetes Ergebnis:**
+- Score für „Pferd" = 40% (2/5 × 100)
+- Balkenfarbe: gelb (20–50%)
+
+### T-RSCORE-03 – Mindest-Beobachtungen
+**Vorbedingung:** Zutat wurde nur 2× eingetragen.
+
+**Erwartetes Ergebnis:**
+- Diese Zutat erscheint NICHT in der Liste
+
+### T-RSCORE-04 – Sektion leer ohne Futterdaten
+**Vorbedingung:** Futtertagebuch ist leer oder hat keine strukturierten Einträge.
+
+**Erwartetes Ergebnis:**
+- `<div id="st-reaktionsscore">` ist leer (kein Block sichtbar)
+
+### T-RSCORE-05 – Rezept-Badge
+**Vorbedingung:** Ein gespeichertes Rezept heißt „Känguru-Mix". Im Futtertagebuch ist „Känguru-Mix" mehrfach eingetragen.
+
+**Erwartetes Ergebnis:**
+- Eintrag „Känguru-Mix" zeigt blaues „Rezept"-Badge
+
+### T-RSCORE-06 – Sektion erscheint nicht in Statistik ohne Symptome
+**Vorbedingung:** Symptomtagebuch ist leer oder alle Schweregrade ≤ 2.
+
+**Erwartetes Ergebnis:**
+- `st-reaktionsscore` bleibt leer (kein Block)
+
+---
+
+## Regressionstests nach v1.4.0
 
 Folgende Tests müssen nach jedem Release mindestens einmal durchgeführt werden:
 
@@ -532,6 +579,8 @@ Folgende Tests müssen nach jedem Release mindestens einmal durchgeführt werden
 7. T-AUTH-02 (Token-Ablauf)
 8. T-RECHN-02 (Ca:P-Verhältnis)
 9. T-RECHN-06 (EPA+DHA-Namenskonvention – Sheet-Prüfung)
+10. T-RSCORE-01 (Reaktionsscore sichtbar)
+11. T-RSCORE-03 (Mindest-Beobachtungen)
 
 ---
 

@@ -1,7 +1,7 @@
-# Hund Manager – Projektbeschreibung (v1.3.2)
+# Hund Manager – Projektbeschreibung (v1.4.0)
 
 > **Dieses Dokument als Kontext in jeden Prompt einfügen, wenn nur einzelne Module geteilt werden.**
-> Letzte Aktualisierung: 2026-04-04 · Status: v1.3.2 – Einheitenkonvertierung Import, Korrelation auswählbar (Pollen/Klima/Futter), Symptom-Chart 0-Fill
+> Letzte Aktualisierung: 2026-04-08 · Status: v1.4.0 – Zutaten-Reaktionsscores, alle MD-Dateien aktualisiert
 
 > **Coding-Konvention:** Module werden gezielt angepasst – kein komplettes Neuschreiben ganzer Dateien.
 > Änderungen immer als minimale, chirurgische Eingriffe in die relevanten Funktionen.
@@ -58,7 +58,7 @@
 ├── tagebuch.js             ← Submit-Handler 7 Typen + Multi-Futter mit Kcal-Berechnung
 ├── ansicht.js              ← Entry-Cards + Soft-Delete + Edit-Modal + Undo-Banner
 ├── stammdaten.js           ← CRUD Hunde/Zutaten/Toleranzen + Kcal-Bedarf + Gewicht + Nährwerte im Zutat-Modal + USDA/OFF paralleler Import mit Einheitenkonvertierung
-├── statistik.js            ← Konfigurierbarer Chart: Temp-Band, Symptome-Flächenband (rot, 0-Fill, Punkte), Pollen-Popup-Dialog, Symptom-Muster-Heatmap, Korrelationsanalyse (auswählbare Faktoren)
+├── statistik.js            ← Konfigurierbarer Chart: Temp-Band, Symptome-Flächenband (rot, 0-Fill, Punkte), Pollen-Popup-Dialog, Symptom-Muster-Heatmap, Korrelationsanalyse (auswählbare Faktoren), Zutaten-Reaktionsscores (48h-Fenster)
 └── i18n.js                 ← Mehrsprachigkeit: t(), setLang(), applyAll(), loadDefaults()
 ```
 
@@ -512,6 +512,7 @@ Statistik-Panel:
   │   - Sonstige: Linien
   ├── Symptom-Muster (Heatmap Wochentag Mo–So + Monat Jan–Dez, ab 14 Einträgen, ein-/ausklappbar)
   ├── Korrelationsanalyse (alle Pollenarten, 7 Klimafaktoren, Futtermittel – Toggle-Buttons auswählbar, min. 3 Datenpunkte, ein-/ausklappbar)
+  ├── Zutaten-Reaktionsscores (🧪 48h-Fenster, Score-Balken grün/gelb/rot, Rezept-Badge, min. 3 Beobachtungen, ein-/ausklappbar)
   ├── Futter-Reaktionen (Liste, nur Einträge mit Reaktion/Provokation)
   └── Medikamente (Liste mit Von–Bis)
 
@@ -548,7 +549,7 @@ Einstellungen-Panel: Google-Config + USDA-API-Key + 💾 Speichern-Button + Spra
 
 ---
 
-## Implementierungsstand v1.3.2 (aktuell)
+## Implementierungsstand v1.4.0 (aktuell)
 
 Versionierung X.Y.Z
 X wird nur durch den Nutzer freigegeben
@@ -593,6 +594,12 @@ Z Bugfixes
 - **Ausschlussdiät in Statistik zurück** (statistik.js): Wird als Liste angezeigt (wie Medikamente), mit Status-Badges (verträglich/Reaktion/Gesperrt/Test). Box erscheint nur wenn Daten für den Hund vorhanden sind.
 - **FEATURE.md + FAQ.md** erstellt: Vollständige Feature-Dokumentation und FAQ als eigenständige Dateien im Repo.
 - **Dokumentations-Fixes:** `verdacht`-Skala korrigiert (0–3), styles.css-Duplikat entfernt, Kochverlust präzisiert (nur B-Vitamine), EPA+DHA-Namenskonvention dokumentiert, VALIDATION.md um T-RECHN-06 erweitert.
+
+
+**v1.4.0:**
+- **Zutaten-Reaktionsscores** (statistik.js): Neue ein-/ausklappbare Sektion „🧪 Zutaten-Reaktionsscores" unterhalb der Korrelationsanalyse. Berechnet für jede eingetragene Zutat/jedes Futtermittel den Anteil der Gaben, nach denen innerhalb von 48h Symptome mit Schweregrad > 2 aufgetreten sind. Liest Futtertagebuch (Freitext C + Produkt D) und Symptomtagebuch aus Cache – kein neuer API-Call. Mindestens 3 Beobachtungen erforderlich. Score-Balken mit Farbstufen (grün <20%, gelb 20–50%, rot >50%). Rezept-Badge für Einträge die mit gespeicherten Rezepten übereinstimmen. Top-20 sortiert nach Score absteigend. Disclaimer-Box (kein medizinischer Befund). Standardmäßig eingeklappt.
+- **MD-Dokumentation aktualisiert**: PROJECT.md, FEATURE.md, FAQ.md, Ideas.md, VALIDATION.md auf v1.4.0 gebracht. Alle bestehenden Features geprüft und erhalten.
+- `statistik.js` importiert jetzt zusätzlich `getRezepte` aus `store.js`.
 
 
 **v1.3.2:**
@@ -684,6 +691,8 @@ Bei Umstrukturierung der hinterlegten Spreadsheets bitte informieren.
 - `statistik.js` exportiert zusätzlich: `showPollenPopup`
 - Custom-Pollen werden in `localStorage['hundapp_custom_pollen']` als JSON-Array gespeichert
 - `statistik.js` lädt `Ausschlussdiät`- und `Bekannte Allergene`-Sheets **nicht mehr** (seit v1.1.0)
+- `statistik.js` importiert `getRezepte` aus `store.js` (seit v1.4.0) – für Rezept-Badge im Reaktionsscore
+- `_renderReaktionsScore(data, hundId)` – rendert Zutaten-Reaktionsscore-Sektion; nutzt `getRezepte(hundId)` für Badge-Erkennung
 - `_renderSymptomMuster(sym)` – rendert Wochentag/Monat-Heatmap; `_heatmapRow()`, `_heatColor()` als Hilfsfunktionen
 - `_renderKorrelation(data)` – rendert Korrelationsanalyse mit auswählbaren Faktoren; `window._korrSelected` (Set), `window._korrFaktoren` (Array)
 - `toggleKorrFaktor(key)` – exportiertes Funktion → `window.STATISTIK.toggleKorrFaktor`; re-rendert nur Tabellen, kein Reload

@@ -1,6 +1,6 @@
-# Hund Manager – FAQ (v1.3.2)
+# Hund Manager – FAQ (v1.4.0)
 
-> Letzte Aktualisierung: 2026-04-04
+> Letzte Aktualisierung: 2026-04-08
 
 ---
 
@@ -173,6 +173,28 @@ A: Ja, für kurze Zeit. Nach dem Löschen erscheint ein „↺ Rückgängig"-Ban
 
 **Q: Werden Daten wirklich gelöscht?**
 A: Nein – die App verwendet Soft-Delete. Einträge werden als `deleted=TRUE` markiert, bleiben aber im Sheet erhalten. Für echtes Löschen musst du die Zeile direkt in Google Sheets entfernen.
+
+---
+
+## 🧪 Zutaten-Reaktionsscores
+
+**Q: Was zeigt der Zutaten-Reaktionsscore?**
+A: Der Score gibt an, wie häufig nach einer Gabe eines bestimmten Futtermittels innerhalb von 48 Stunden Symptome mit Schweregrad > 2 aufgetreten sind. Beispiel: Score 40% = 4 von 10 Malen war innerhalb von 2 Tagen danach ein stärkeres Symptom im Tagebuch.
+
+**Q: Ist der Score ein verlässlicher medizinischer Hinweis?**
+A: Nein – es handelt sich ausschließlich um eine statistische Korrelation, keinen Kausalnachweis. Viele andere Faktoren (Pollen, Wetter, Stress) können gleichzeitig vorgelegen haben. Der Score ist ein Hinweis für eigene Beobachtungen, kein Befund.
+
+**Q: Warum werden nicht alle Futtermittel angezeigt?**
+A: Einträge mit weniger als 3 Beobachtungen werden nicht ausgewertet, da die Datenbasis zu klein ist. Je mehr Einträge im Futtertagebuch vorhanden sind, desto aussagekräftiger wird der Score.
+
+**Q: Was bedeutet das blaue „Rezept"-Badge?**
+A: Das Badge zeigt an, dass dieser Eintrag mit einem gespeicherten Rezept des Hundes übereinstimmt (Rezeptname aus dem Futterrechner).
+
+**Q: Was bedeuten die Balkenfarben?**
+A: Grün = Score unter 20% (kein auffälliger Zusammenhang), Gelb = 20–50% (erhöhte Aufmerksamkeit), Rot = über 50% (deutlicher statistischer Zusammenhang – aber kein Beweis).
+
+**Q: Warum ist die Sektion leer / nicht sichtbar?**
+A: Die Sektion erscheint nur wenn im Futtertagebuch strukturierte Einträge vorhanden sind (Text im Futter-Feld) und mindestens eine Zutat mindestens 3× vorkommt. Bei reinen Freitext-Notizen ohne klare Zutatennamen kann nichts ausgewertet werden.
 
 ---
 

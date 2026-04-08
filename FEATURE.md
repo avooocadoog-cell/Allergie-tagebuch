@@ -1,6 +1,6 @@
-# Hund Manager – Feature-Übersicht (v1.3.2)
+# Hund Manager – Feature-Übersicht (v1.4.0)
 
-> Letzte Aktualisierung: 2026-04-04
+> Letzte Aktualisierung: 2026-04-08
 
 ---
 
@@ -94,6 +94,7 @@
 | Pollen-Popup | **Popup-Dialog** mit allen Pollen-Typen aus Pollen_Log + eigenen Pollen; alle standardmäßig aktiviert |
 | **Symptom-Muster** | **Heatmap Wochentag (Mo–So) + Monat (Jan–Dez)** · Ø Schweregrad als farbige Kacheln · ab 14 Einträgen |
 | **Korrelationsanalyse** | Alle Pollenarten, 7 Klimafaktoren, Futtermittel frei auswählbar · Gruppen mit Ø > 2.0 orange · min. 3 Datenpunkte |
+| **Zutaten-Reaktionsscores** | **🧪 Score = Anteil der Gaben mit Symptomen (Schweregrad > 2) innerhalb 48h** · Score-Balken grün/gelb/rot · Rezept-Badge · min. 3 Beobachtungen · eingeklappt |
 | Futter-Reaktionen | Liste (nur Einträge mit Reaktion oder Provokation) |
 | Medikamente | Liste mit Zeitraum |
 | Cache-Status | Anzeige ob Daten aus Cache oder frisch geladen |
