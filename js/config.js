@@ -182,6 +182,12 @@ export async function setupAllSheets() {
       ['entry_id','hund_id','datum','pollenart','stufe','source','created_at'],
       tid,
     ],
+    [
+      'Ausschluss_Phasen',
+      ['ID','Hund ID','Phasentyp','Zutat','Startdatum','Enddatum (geplant)','Ergebnis','Notizen','Erstellt am','Gelöscht','Gelöscht am'],
+      ['entry_id','hund_id','phase_typ','zutat','start_datum','end_datum','ergebnis','notizen','created_at','deleted','deleted_at'],
+      tid,
+    ],
   ];
 
   let created = 0;

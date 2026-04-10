@@ -29,6 +29,7 @@ import * as STAMMDATEN from './stammdaten.js';
 import * as STATISTIK  from './statistik.js';
 import * as CACHE      from './cache.js';
 import * as I18N       from './i18n.js';
+import * as EXPORT     from './export.js';
 
 // Callback registrieren damit auth.js nach Login onLogin() aufrufen kann
 // ohne main.js zirkular zu importieren
@@ -50,6 +51,7 @@ window.STAMMDATEN = STAMMDATEN;
 window.STATISTIK  = STATISTIK;
 window.CACHE      = CACHE;
 window.I18N       = I18N;
+window.EXPORT     = EXPORT;
 
 // APP-Objekt (für APP.currentHundId in HTML)
 window.APP = {

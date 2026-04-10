@@ -2,7 +2,7 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════╗
   ║  HUND MANAGER – Universelle Hundeernährungs- & Gesundheits-App  ║
-  ║  Version 1.4.0 | ES Modules | Multi-Hund | Google Sheets Backend  ║
+  ║  Version 1.8.0 | ES Modules | Multi-Hund | Google Sheets Backend  ║
   ║                                                                  ║
   ║ please check                                                    ║
   ║FAQ.md                                                            ║
@@ -120,7 +120,13 @@
       <div id="fr-recipe-cards">
         <div class="view-loading"><div class="spinner"></div>Rezepte werden geladen…</div>
       </div>
-      <button class="btn-primary" onclick="RECHNER.newRecipe()" style="margin-top:.5rem">+ Neues Rezept erstellen</button>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:.5rem">
+        <button class="btn-primary" onclick="RECHNER.newRecipe()">+ Neues Rezept erstellen</button>
+        <button onclick="RECHNER.initVergleich();document.getElementById('fr-list').style.display='none';document.getElementById('fr-vergleich').style.display='block'"
+          style="padding:10px 12px;font-size:13px;font-weight:700;border:1px solid var(--c2);
+            border-radius:var(--radius-sm);background:var(--c4);color:var(--c2);
+            cursor:pointer;font-family:inherit;white-space:nowrap">⚖️ Vergleich</button>
+      </div>
     </div>
 
     <!-- Rezept-Editor -->
@@ -275,6 +281,59 @@
         </button>
       </div>
     </div><!-- end fr-editor -->
+
+    <!-- ⚖️ Vergleich-Panel -->
+    <div id="fr-vergleich" style="display:none;padding:1rem">
+      <button class="fr-back" onclick="document.getElementById('fr-vergleich').style.display='none';document.getElementById('fr-list').style.display='block'">← Zurück zur Übersicht</button>
+      <div class="section-title" style="margin:10px 0 14px">⚖️ Rezept-Nährstoffvergleich</div>
+
+      <!-- Konfiguration -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:14px">
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:4px">Hundgewicht (kg)</label>
+          <input type="number" id="fr-cmp-weight" value="27" min="1" max="80" step="0.1"
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);
+              background:var(--bg);color:var(--text);font-family:inherit;font-size:14px">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--c2);display:block;margin-bottom:4px">Rezept A</label>
+            <select id="fr-cmp-a"
+              style="width:100%;padding:8px 10px;border:2px solid var(--c2);border-radius:var(--radius-sm);
+                background:var(--bg);color:var(--text);font-family:inherit;font-size:13px">
+              <option value="">— wählen —</option>
+            </select>
+            <input type="number" id="fr-cmp-g-a" placeholder="Gramm (optional)" min="0" step="10"
+              style="width:100%;margin-top:6px;padding:7px 10px;border:1px solid var(--border);
+                border-radius:var(--radius-sm);background:var(--bg);color:var(--text);
+                font-family:inherit;font-size:12px">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#f59e0b;display:block;margin-bottom:4px">Rezept B</label>
+            <select id="fr-cmp-b"
+              style="width:100%;padding:8px 10px;border:2px solid #f59e0b;border-radius:var(--radius-sm);
+                background:var(--bg);color:var(--text);font-family:inherit;font-size:13px">
+              <option value="">— wählen —</option>
+            </select>
+            <input type="number" id="fr-cmp-g-b" placeholder="Gramm (optional)" min="0" step="10"
+              style="width:100%;margin-top:6px;padding:7px 10px;border:1px solid var(--border);
+                border-radius:var(--radius-sm);background:var(--bg);color:var(--text);
+                font-family:inherit;font-size:12px">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="RECHNER.calcVergleich()" style="width:100%;padding:11px">
+          ⚖️ Vergleichen
+        </button>
+      </div>
+
+      <!-- Ergebnis -->
+      <div id="fr-cmp-result">
+        <p style="color:var(--sub);font-size:13px;text-align:center;padding:1rem">
+          Zwei Rezepte wählen und „Vergleichen" tippen.
+        </p>
+      </div>
+    </div>
+
   </div><!-- end panel-rechner -->
 
   <!-- ════════════════════════════════════════════════════════════
@@ -306,6 +365,7 @@
         <button class="tab" onclick="UI.switchTab('symptom')">🔍 Sympt.</button>
         <button class="tab" onclick="UI.switchTab('futter')">🥩 Futter</button>
         <button class="tab" onclick="UI.switchTab('ausschluss')">📋 Ausschl.</button>
+        <button class="tab" onclick="UI.switchTab('phasen'); TAGEBUCH.renderPhasenBanner(); TAGEBUCH.loadPhasenListe()">📅 Phasen</button>
         <button class="tab" onclick="UI.switchTab('allergen')">⚠️ Allergen</button>
         <button class="tab" onclick="UI.switchTab('tierarzt')">🏥 Tierarzt</button>
         <button class="tab" onclick="UI.switchTab('medikamente')">💊 Medik.</button>
@@ -429,6 +489,64 @@
         <div class="status" id="status-a"></div>
       </div>
 
+
+      <!-- Phasentracker -->
+      <div id="tab-phasen" class="section">
+        <p class="section-title">📅 Ausschlussdiät – Phasentracker</p>
+        <div class="info-banner" style="background:rgba(59,130,246,.08);border-color:var(--c2);color:var(--text);margin-bottom:12px">
+          📋 Plane und verfolge Eliminations- und Provokationsphasen strukturiert.
+        </div>
+
+        <!-- Aktive Phase Banner -->
+        <div id="phasen-banner"></div>
+
+        <!-- Formular -->
+        <div class="field"><label>Phasentyp *</label>
+          <select id="ph-typ" onchange="TAGEBUCH.onPhasTypChanged()">
+            <option value="">– wählen –</option>
+            <option value="elimination">🔵 Elimination (Ausschlussphase)</option>
+            <option value="provokation">🟡 Provokation (Testphase)</option>
+            <option value="ergebnis">✅ Ergebnis / Auswertung</option>
+          </select>
+        </div>
+        <div class="field" id="ph-zutat-row" style="display:none"><label>Getestete Zutat</label>
+          <input type="text" id="ph-zutat" placeholder="z.B. Rind, Karotte…">
+        </div>
+        <div class="field"><label>Startdatum *</label>
+          <div class="date-row">
+            <input type="date" id="ph-start" onchange="TAGEBUCH.onPhasStartChanged()">
+            <button class="btn-small" onclick="UI.setToday('ph-start'); TAGEBUCH.onPhasStartChanged()">Heute</button>
+          </div>
+        </div>
+        <div class="field"><label>Enddatum (geplant) *</label>
+          <div class="date-row">
+            <input type="date" id="ph-end">
+          </div>
+          <div style="font-size:11px;color:var(--sub);margin-top:3px">Vorschlag: Elimination = 6 Wo · Provokation = 2 Wo · Ergebnis = 1 Wo</div>
+        </div>
+        <div class="field"><label>Ergebnis</label>
+          <select id="ph-ergebnis">
+            <option value="offen">⏳ Offen (noch laufend)</option>
+            <option value="verträglich">✅ Verträglich</option>
+            <option value="reaktion">❌ Reaktion</option>
+          </select>
+        </div>
+        <div class="field"><label>Notizen</label>
+          <textarea id="ph-notizen" placeholder="z.B. Basisprotein: Pferd, keine weiteren Zutaten…"></textarea>
+        </div>
+        <button class="btn-primary" id="btn-ph" onclick="TAGEBUCH.submitPhase()">📅 Phase speichern</button>
+        <div class="status" id="status-ph"></div>
+
+        <!-- Phasenliste -->
+        <div style="margin-top:1.5rem">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+            color:var(--sub);margin-bottom:10px">Bisherige Phasen</div>
+          <div id="phasen-liste">
+            <div class="view-empty"><div class="icon">📅</div>Lade…</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Allergen -->
       <div id="tab-allergen" class="section">
         <p class="section-title">⚠️ Bekannte Allergene</p>
@@ -479,6 +597,7 @@
         <button class="tab" onclick="UI.switchViewTab('v-symptom')">🔍 Sympt.</button>
         <button class="tab" onclick="UI.switchViewTab('v-futter')">🥩 Futter</button>
         <button class="tab" onclick="UI.switchViewTab('v-ausschluss')">📋 Ausschl.</button>
+        <button class="tab" onclick="UI.switchViewTab('v-phasen'); TAGEBUCH.renderPhasenBanner(); TAGEBUCH.loadPhasenListe()">📅 Phasen</button>
         <button class="tab" onclick="UI.switchViewTab('v-allergen')">⚠️ Allergen</button>
         <button class="tab" onclick="UI.switchViewTab('v-tierarzt')">🏥 Tierarzt</button>
         <button class="tab" onclick="UI.switchViewTab('v-medikamente')">💊 Medik.</button>
@@ -488,6 +607,7 @@
       <div id="v-symptom"     class="section"><button class="refresh-btn" onclick="ANSICHT.load('symptom', true)">↺ Aktualisieren</button><div id="v-symptom-content"><div class="view-empty"><div class="icon">🔍</div>Tippe auf Aktualisieren.</div></div></div>
       <div id="v-futter"      class="section"><button class="refresh-btn" onclick="ANSICHT.load('futter', true)">↺ Aktualisieren</button><div id="v-futter-content"><div class="view-empty"><div class="icon">🥩</div>Tippe auf Aktualisieren.</div></div></div>
       <div id="v-ausschluss"  class="section"><button class="refresh-btn" onclick="ANSICHT.load('ausschluss', true)">↺ Aktualisieren</button><div id="v-ausschluss-content"><div class="view-empty"><div class="icon">📋</div>Tippe auf Aktualisieren.</div></div></div>
+      <div id="v-phasen" class="section"><div id="phasen-banner-view"></div><div id="phasen-liste-view" style="padding-top:4px"></div></div>
       <div id="v-allergen"    class="section"><button class="refresh-btn" onclick="ANSICHT.load('allergen', true)">↺ Aktualisieren</button><div id="v-allergen-content"><div class="view-empty"><div class="icon">⚠️</div>Tippe auf Aktualisieren.</div></div></div>
       <div id="v-tierarzt"    class="section"><button class="refresh-btn" onclick="ANSICHT.load('tierarzt', true)">↺ Aktualisieren</button><div id="v-tierarzt-content"><div class="view-empty"><div class="icon">🏥</div>Tippe auf Aktualisieren.</div></div></div>
       <div id="v-medikamente" class="section"><button class="refresh-btn" onclick="ANSICHT.load('medikamente', true)">↺ Aktualisieren</button><div id="v-medikamente-content"><div class="view-empty"><div class="icon">💊</div>Tippe auf Aktualisieren.</div></div></div>
@@ -619,11 +739,11 @@
     <div class="settings-box">
       <h3>ℹ️ App-Info</h3>
       <p style="font-size:12px;color:var(--sub);line-height:1.8">
-        Version 1.4.0 · Multi-Hund · ES Modules<br>
+        Version 1.8.0 · Multi-Hund · ES Modules<br>
         Datenbank: Google Sheets (Hund_Stammdaten + Hund_Tagebuch)<br>
         NRC 2006 Bedarfswerte · 39 Nährstoffe · Toleranzen individuell anpassbar<br>
         Wetter: DWD via BrightSky API · Pollen: DWD OpenData + Open-Meteo<br>
-        USDA FoodData + Open Food Facts Import · Reaktionsscore · Korrelationsanalyse
+        USDA Import · Reaktionsscore · Phasentracker · Rezept-Vergleich · Hunde-Vergleich · Tierarzt-PDF-Export
       </p>
     </div>
   </div>

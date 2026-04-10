@@ -611,3 +611,268 @@ Folgende Tests müssen nach jedem Release mindestens einmal durchgeführt werden
 7. T-UNDO-01 (Undo)
 8. T-RECHN-02 (Ca:P-Verhältnis)
 9. T-RECHN-06 (EPA+DHA-Namenskonvention)
+
+---
+
+## Tests v1.5.0 – Phasentracker
+
+### T-PHAS-01 – Sheet anlegen
+**Schritte:**
+1. Einstellungen → „⚙️ Neue Sheets anlegen" tippen
+
+**Erwartetes Ergebnis:**
+- Meldung „Ausschluss_Phasen" angelegt oder bereits vorhanden
+- Sheet erscheint im Tagebuch-Spreadsheet mit 2 Header-Zeilen (DE + snake_case) und 11 Spalten
+
+---
+
+### T-PHAS-02 – Phase anlegen
+**Schritte:**
+1. Tagebuch → Tab „📅 Phasen"
+2. Phasentyp „Elimination" wählen → Enddatum-Vorschlag prüfen (+42 Tage)
+3. Phasentyp „Provokation" wählen → Zutat-Feld erscheint + Enddatum +14 Tage
+4. Startdatum ändern → Enddatum passt sich automatisch an
+5. Pflichtfelder ausfüllen → „📅 Phase speichern"
+
+**Erwartetes Ergebnis:**
+- Zutat-Feld nur bei Provokation sichtbar
+- Enddatum-Vorschlag je Typ korrekt
+- Zeile in `Ausschluss_Phasen` mit `deleted=FALSE`
+- Statusmeldung „✓ Phase gespeichert!"
+
+---
+
+### T-PHAS-03 – Aktiver-Phase-Banner
+**Vorbedingung:** Phase mit Ergebnis=„offen" und Enddatum in der Zukunft vorhanden
+
+**Erwartetes Ergebnis:**
+- Farbiger Banner mit Phasentyp-Label (blau/gelb/grün)
+- Fortschrittsbalken zeigt verstrichene vs. Gesamtdauer
+- „noch X Tage" korrekt berechnet
+- Letzter abgeschlossener Phasenstatus (falls vorhanden) unterhalb angezeigt
+
+**Negativtest:** Enddatum in der Vergangenheit oder Ergebnis ≠ „offen" → kein Banner
+
+---
+
+### T-PHAS-04 – Soft-Delete + Undo
+**Schritte:**
+1. Phase in der Phasenliste über 🗑 löschen
+2. Undo-Banner erscheint → „↺ Rückgängig" tippen
+
+**Erwartetes Ergebnis:**
+- Phase verschwindet aus der Liste
+- Sheet: `deleted=TRUE`, `deleted_at` gesetzt
+- Nach Undo: Phase wieder sichtbar, `deleted=FALSE`, `deleted_at` leer
+- Undo-Banner verschwindet nach 8 Sekunden automatisch
+
+---
+
+### T-PHAS-05 – Phasen-Timeline in Statistik
+**Vorbedingung:** Mind. 1 Phase für den gewählten Hund vorhanden
+
+**Schritte:**
+1. Statistik-Panel → Hund wählen
+2. Sektion „📅 Phasen-Timeline" suchen und aufklappen
+
+**Erwartetes Ergebnis:**
+- Sektion erscheint zwischen Reaktionsscore-Sektion und Futter-Reaktionen
+- Alle Phasen des Hundes chronologisch (neueste zuerst)
+- Typ-Badge (blau/gelb/grün) + Ergebnis-Badge korrekt
+- Gelöschte Phasen werden nicht angezeigt
+
+---
+
+### T-PHAS-06 – Validierung Pflichtfelder
+**Schritte:**
+1. Formular ohne Phasentyp speichern
+2. Formular ohne Startdatum speichern
+3. Provokation ohne Zutat speichern
+
+**Erwartetes Ergebnis:**
+- Fehlermeldung bei fehlendem Phasentyp: „Bitte Phasentyp wählen."
+- Fehlermeldung bei fehlendem Startdatum: „Bitte Startdatum angeben."
+- Fehlermeldung bei fehlender Zutat (Provokation): „Bitte Zutat für Provokation angeben."
+
+---
+
+## Tests v1.6.0 – Tierarzt-PDF-Export
+
+### T-EXPORT-01 – Dialog öffnen
+**Schritte:**
+1. Statistik-Panel öffnen → Hund wählen
+2. Button „📄 Tierarzt-Export" oben rechts tippen
+
+**Erwartetes Ergebnis:**
+- Modal-Dialog öffnet sich mit 4 Zeitraum-Buttons (30 / 60 / 90 / 180 Tage)
+- Standard „90 Tage" ist vorausgewählt (blau hervorgehoben)
+- „✕"-Button schließt Dialog ohne Export
+
+---
+
+### T-EXPORT-02 – Zeitraum wählen
+**Schritte:**
+1. Dialog öffnen → „30 Tage" auswählen → anderen Button wählen
+
+**Erwartetes Ergebnis:**
+- Nur ein Button aktiv (blau) – vorherige Auswahl wird deselektiert
+- Ausgewählter Zeitraum wird beim Export übergeben
+
+---
+
+### T-EXPORT-03 – Bericht erstellen
+**Vorbedingung:** Popup-Erlaubnis im Browser erteilt, mind. ein Datensatz vorhanden
+
+**Schritte:**
+1. Dialog → Zeitraum wählen → „Bericht erstellen & drucken"
+
+**Erwartetes Ergebnis:**
+- Neuer Browser-Tab öffnet sich mit vollständigem HTML-Bericht
+- Druckdialog startet automatisch
+- Bericht enthält: Deckblatt, Symptomtabelle, Allergene, Ausschlussdiät, Medikamente, Futtereinträge
+- Disclaimer und Footer mit Exportdatum vorhanden
+
+---
+
+### T-EXPORT-04 – Leere Sektionen
+**Vorbedingung:** Hund ohne Symptome oder Medikamente
+
+**Erwartetes Ergebnis:**
+- Leere Sektionen zeigen „Keine … erfasst." in kursiv
+- Keine JavaScript-Fehler, Bericht wird trotzdem vollständig erstellt
+
+---
+
+### T-EXPORT-05 – Popup blockiert
+**Schritte:**
+1. Popups im Browser blockieren → Export versuchen
+
+**Erwartetes Ergebnis:**
+- Alert-Meldung: „Popup wurde blockiert. Bitte Popups für diese Seite erlauben…"
+- Export-Button wird wieder aktiviert
+
+---
+
+### T-EXPORT-06 – Deckblatt-Daten
+**Erwartetes Ergebnis:**
+- Name, Rasse, Geschlecht, Geburtsdatum korrekt aus Stammdaten
+- Letztes Gewicht mit Datum (aus Hund_Gewicht)
+- Gewählter Zeitraum und Exportdatum korrekt
+
+---
+
+## Tests v1.7.0 – Rezept-Nährstoffvergleich
+
+### T-CMP-01 – Panel öffnen
+**Schritte:**
+1. Futterrechner → Rezeptliste → Button „⚖️ Vergleich" tippen
+
+**Erwartetes Ergebnis:**
+- Rezeptliste verschwindet, Vergleichs-Panel erscheint
+- Beide Dropdowns gefüllt mit Rezepten des aktuellen Hundes
+- Gewichtsfeld übernimmt Wert aus Hauptrechner
+- „← Zurück" führt zur Rezeptliste
+
+---
+
+### T-CMP-02 – Validierung: gleiche Rezepte
+**Schritte:**
+1. Beide Dropdowns auf dasselbe Rezept setzen → „Vergleichen"
+
+**Erwartetes Ergebnis:**
+- Fehlermeldung: „Bitte zwei verschiedene Rezepte wählen."
+- Kein Absturz, kein leeres Ergebnis
+
+---
+
+### T-CMP-03 – Vergleich berechnen
+**Vorbedingung:** Zwei Rezepte mit Nährwert-Daten vorhanden
+
+**Schritte:**
+1. Rezept A und B wählen → optional Gramm eintragen → „Vergleichen"
+
+**Erwartetes Ergebnis:**
+- Kennzahlen-Header: Gesamtmenge, Kcal, Ca:P, Omega 6:3 für beide Rezepte nebeneinander
+- Ca:P und Omega 6:3 mit Ampel-Badge (ok/warn)
+- Alle 39 Nährstoffe in Gruppenstruktur
+- Ampelfarben korrekt (grün=ok, gelb=zu niedrig, orange=zu hoch)
+- Delta-Spalte: Differenz A–B in %, farbcodiert
+
+---
+
+### T-CMP-04 – Gramm-Eingabe
+**Schritte:**
+1. Gramm-Felder für A und B unterschiedlich befüllen → Vergleichen
+
+**Erwartetes Ergebnis:**
+- Nährstoffe skalieren entsprechend der eingegebenen Grammzahl
+- Gesamtmenge in Kennzahlen korrekt
+
+---
+
+### T-CMP-05 – Rezepte ohne Nährwerte
+**Vorbedingung:** Rezept mit Zutaten ohne Nährwert-Einträge
+
+**Erwartetes Ergebnis:**
+- Nährstoffe dieser Zutat werden als 0 dargestellt
+- Kein JavaScript-Fehler
+- Delta-Spalte zeigt „–" wenn kein Bedarf definiert
+
+---
+
+## Tests v1.8.0 – Mehrere Hunde Statistik-Vergleich
+
+### T-H2-01 – Zweites Dropdown befüllt
+**Vorbedingung:** Mind. 2 Hunde im System
+
+**Schritte:**
+1. Statistik-Panel öffnen
+2. „↕ Vergleich mit:"-Dropdown prüfen
+
+**Erwartetes Ergebnis:**
+- Dropdown enthält alle Hunde außer dem aktuell gewählten Hund 1
+- Standard-Option „– kein Vergleich –" ist vorausgewählt
+- Bei Wechsel von Hund 1 verschwindet der neue Hund 1 aus der Vergleichsliste
+
+---
+
+### T-H2-02 – Vergleichsband erscheint
+**Vorbedingung:** Parameter „Schweregrad Symptome" aktiv, Hund 2 hat Symptomeinträge im Zeitraum
+
+**Schritte:**
+1. Hund 2 wählen → Chart prüfen
+
+**Erwartetes Ergebnis:**
+- Blaues Flächenband (rgba 59,130,246) für Hund 2 im Chart sichtbar
+- Legende zeigt „🔵 [Hund-2-Name] (Schweregrad)" zusätzlich
+- Rotes Band von Hund 1 bleibt unverändert
+
+---
+
+### T-H2-03 – Kein Vergleich = kein zweites Dataset
+**Schritte:**
+1. Hund 2 wählen → zurück auf „– kein Vergleich –" setzen
+
+**Erwartetes Ergebnis:**
+- Blaues Band verschwindet sofort
+- Chart enthält nur noch Hund-1-Daten
+- Kein Performanceproblem / kein unnötiger API-Call
+
+---
+
+### T-H2-04 – Nur ein Hund im System
+**Vorbedingung:** Nur ein Hund angelegt
+
+**Erwartetes Ergebnis:**
+- „↕ Vergleich mit:"-Dropdown zeigt nur „– kein Vergleich –"
+- Kein Fehler, normale Statistik-Funktion unberührt
+
+---
+
+### T-H2-05 – Hund 2 ohne Symptome im Zeitraum
+**Vorbedingung:** Hund 2 hat keine Symptomeinträge im gewählten Zeitraum
+
+**Erwartetes Ergebnis:**
+- Kein blaues Band (leeres Dataset)
+- Kein JavaScript-Fehler
+- KPI-Kacheln zeigen weiterhin Hund-1-Daten

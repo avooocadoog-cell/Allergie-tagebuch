@@ -88,11 +88,14 @@ export async function load() {
   const panel = document.getElementById('panel-statistik');
   if (!panel) return;
   panel.innerHTML = _buildShell();
-  const hundSel = document.getElementById('stat-hund');
+  const hundSel  = document.getElementById('stat-hund');
+  const hund2Sel = document.getElementById('stat-hund2');
   getHunde().forEach(h=>{
     const opt=document.createElement('option');
     opt.value=h.hund_id; opt.textContent=h.name;
     hundSel?.appendChild(opt);
+    const opt2=opt.cloneNode(true);
+    hund2Sel?.appendChild(opt2);
   });
   _buildParamButtons();
   refresh();
@@ -114,6 +117,15 @@ export async function refresh(forceRefresh=false) {
     ]);
     const rGew=await getSheet('Hund_Gewicht','tagebuch',forceRefresh).catch(()=>[]);
     const rPol=await getSheet('Pollen_Log',  'tagebuch',forceRefresh).catch(()=>[]);
+
+    // Zweiter Hund (Vergleich)
+    const hundId2 = parseInt(document.getElementById('stat-hund2')?.value)||0;
+    let sym2=[];
+    if(hundId2 && hundId2!==hundId){
+      const rSym2=await getSheet('Symptomtagebuch','tagebuch',forceRefresh).catch(()=>[]);
+      const allSym2=_parseRows(rSym2,2);
+      sym2=allSym2.filter(r=>_matchH(r,hundId2)&&_inRange(g(r,1),cutoff)&&notDel(9)(r));
+    }
 
     const age=getAge('Symptomtagebuch');
     if(cacheEl) cacheEl.textContent = age!==null&&age<30
@@ -138,7 +150,7 @@ export async function refresh(forceRefresh=false) {
     const gew=allGew.filter(r=>g(r,1)===String(hundId)&&_inRange(g(r,2),cutoff));
     const pol=allPol.filter(r=>g(r,1)===String(hundId)&&_inRange(g(r,2),cutoff));
 
-    _cachedData={sym,umw,fut,med,gew,pol};
+    _cachedData={sym,umw,fut,med,gew,pol,sym2};
 
     const discoveredPollen=[...new Set(pol.map(r=>g(r,3)).filter(Boolean))].sort();
     _pollenTypes=discoveredPollen;
@@ -169,6 +181,7 @@ export async function refresh(forceRefresh=false) {
       </div>
       <div id="st-muster"></div>
       <div id="st-korrelation"></div>
+      <div id="st-phasen"></div>
       <div id="st-reaktion"></div>
       ${_box('🥩 Futter-Reaktionen','<div id="st-futter"></div>')}
       ${_box('💊 Medikamente','<div id="st-medis"></div>')}
@@ -178,6 +191,7 @@ export async function refresh(forceRefresh=false) {
     _renderSymptomMuster(sym);
     _renderKorrelation(_cachedData);
     _renderReaktionsscore(fut, sym);
+    _renderPhasenTimeline(hundId);
     _renderFutter(fut);
     _renderMedis(med);
 
@@ -187,6 +201,17 @@ export async function refresh(forceRefresh=false) {
 }
 
 export function forceRefresh() { invalidateAll(); _cachedData=null; refresh(true); }
+
+export function onHund2Changed() {
+  _cachedData=null;
+  // Aktuell gewählten Hund 1 aus Hund2-Liste ausblenden/zeigen
+  const h1 = parseInt(document.getElementById('stat-hund')?.value)||0;
+  document.querySelectorAll('#stat-hund2 option').forEach(opt=>{
+    if(opt.value && parseInt(opt.value)===h1) opt.style.display='none';
+    else opt.style.display='';
+  });
+  refresh();
+}
 
 export async function toggleParam(key) {
   _selected.has(key)?_selected.delete(key):_selected.add(key);
@@ -268,12 +293,18 @@ function _buildShell() {
   <div style="padding:1rem">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <div class="section-title" style="margin-bottom:0">📊 Statistik</div>
-      <button onclick="STATISTIK.forceRefresh()"
-        style="padding:7px 12px;font-size:12px;border:1px solid var(--border);
-          border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);
-          cursor:pointer;font-family:inherit">↺ Aktualisieren</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button onclick="STATISTIK.forceRefresh()"
+          style="padding:7px 12px;font-size:12px;border:1px solid var(--border);
+            border-radius:var(--radius-sm);background:var(--bg2);color:var(--sub);
+            cursor:pointer;font-family:inherit">↺ Aktualisieren</button>
+        <button onclick="EXPORT.showExportDialog(parseInt(document.getElementById('stat-hund')?.value)||1)"
+          style="padding:7px 12px;font-size:12px;border:1px solid var(--c2);
+            border-radius:var(--radius-sm);background:var(--c4);color:var(--c2);
+            cursor:pointer;font-family:inherit;font-weight:700">📄 Tierarzt-Export</button>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:8px">
+    <div style="display:flex;gap:8px;margin-bottom:4px">
       <select id="stat-hund" onchange="STATISTIK.refresh()"
         style="flex:1;padding:10px 12px;font-size:14px;border:1px solid var(--border);
           border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit">
@@ -286,6 +317,14 @@ function _buildShell() {
         <option value="180">6 Monate</option>
         <option value="365">1 Jahr</option>
         <option value="0">Alles</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:11px;color:var(--sub);white-space:nowrap">↕ Vergleich mit:</span>
+      <select id="stat-hund2" onchange="STATISTIK.onHund2Changed()"
+        style="flex:1;padding:8px 10px;font-size:13px;border:1px solid var(--border);
+          border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:inherit">
+        <option value="">– kein Vergleich –</option>
       </select>
     </div>
     <div id="stat-cache-status"
@@ -383,6 +422,19 @@ async function _buildChart(data) {
         tension:0.1,fill:'origin',
         yAxisID:p.yAxis,spanGaps:false,
       });
+      // Zweiter Hund: blaues Flächenband falls Vergleich aktiv
+      if(data.sym2?.length && p.key==='symptome'){
+        const h2name = document.getElementById('stat-hund2')?.selectedOptions[0]?.text||'Hund 2';
+        const sym2Map=_byDate(data.sym2,1,r=>parseInt(g(r,4))||0,Math.max);
+        datasets.push({
+          label:`🔵 ${h2name} (Schweregrad)`,data:null,_map:sym2Map,type:'line',
+          borderColor:'rgba(59,130,246,0.8)',backgroundColor:'rgba(59,130,246,0.20)',
+          borderWidth:1.5,pointRadius:2,pointHoverRadius:4,
+          pointBackgroundColor:'rgba(59,130,246,0.8)',
+          tension:0.1,fill:'origin',
+          yAxisID:p.yAxis,spanGaps:false,
+        });
+      }
     } else if(p.chartType==='bar_param'){
       const map=p.extract(data);
       datasets.push({
@@ -586,6 +638,69 @@ function _renderReaktionsscore(fut, sym) {
   };
   window._STAT_reaktionAlle  = () => { _reaktionFilter = new Set(allScores.map(s => s.name)); _renderReaktionsscore(fut, sym); document.getElementById('st-reak-body').style.display='block'; document.getElementById('st-reak-arrow').textContent='▼'; };
   window._STAT_reaktionKeine = () => { _reaktionFilter = new Set(); _renderReaktionsscore(fut, sym); document.getElementById('st-reak-body').style.display='block'; document.getElementById('st-reak-arrow').textContent='▼'; };
+}
+
+
+// ── Phasen-Timeline (Statistik) ──────────────────────────────────
+async function _renderPhasenTimeline(hundId) {
+  const el = document.getElementById('st-phasen');
+  if (!el) return;
+
+  const { getSheet } = await import('./cache.js');
+  let raw;
+  try { raw = await getSheet('Ausschluss_Phasen','tagebuch',false); }
+  catch(e) { el.innerHTML=''; return; }
+
+  const phasen = _parseRows(raw,2)
+    .filter(r=>g(r,9).toUpperCase()!=='TRUE')
+    .filter(r=>g(r,1)===String(hundId))
+    .map(r=>({
+      id:      g(r,0), typ: g(r,2), zutat: g(r,3),
+      start:   g(r,4), end: g(r,5),
+      ergebnis:g(r,6)||'offen', notizen:g(r,7),
+    }))
+    .reverse();
+
+  if (!phasen.length) { el.innerHTML=''; return; }
+
+  const TYPBADGE={
+    elimination:`<span style="background:var(--c2);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">Elimination</span>`,
+    provokation:`<span style="background:#f59e0b;color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">Provokation</span>`,
+    ergebnis:   `<span style="background:var(--bar-ok);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">Ergebnis</span>`,
+  };
+  const ERGBADGE={
+    offen:       `<span class="badge badge-warn">offen</span>`,
+    verträglich: `<span class="badge badge-ok">✅ verträglich</span>`,
+    reaktion:    `<span class="badge badge-bad">❌ Reaktion</span>`,
+  };
+
+  const rows = phasen.map(p=>`
+    <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start">
+      <div style="flex-shrink:0;margin-top:2px">${TYPBADGE[p.typ]||esc(p.typ)}</div>
+      <div style="flex:1;min-width:0">
+        ${p.zutat?`<div style="font-size:13px;font-weight:600;margin-bottom:2px">${esc(p.zutat)}</div>`:''}
+        <div style="font-size:11px;color:var(--sub)">${esc(p.start)} → ${esc(p.end)}</div>
+        ${p.notizen?`<div style="font-size:11px;color:var(--sub);margin-top:2px">📝 ${esc(p.notizen)}</div>`:''}
+      </div>
+      <div style="flex-shrink:0">${ERGBADGE[p.ergebnis]||esc(p.ergebnis)}</div>
+    </div>`).join('');
+
+  el.innerHTML=`
+    <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem">
+      <div id="st-phas-header"
+        style="display:flex;justify-content:space-between;align-items:center;
+          padding:12px 14px;cursor:pointer;background:var(--bg2);user-select:none"
+        onclick="const b=document.getElementById('st-phas-body');
+                 const open=b.style.display!=='none';
+                 b.style.display=open?'none':'block';
+                 document.getElementById('st-phas-arrow').textContent=open?'▶':'▼'">
+        <div style="font-size:14px;font-weight:700">📅 Phasen-Timeline (${phasen.length})</div>
+        <span id="st-phas-arrow" style="font-size:11px;color:var(--sub)">▶</span>
+      </div>
+      <div id="st-phas-body" style="display:none;padding:0 14px 14px">
+        ${rows}
+      </div>
+    </div>`;
 }
 
 

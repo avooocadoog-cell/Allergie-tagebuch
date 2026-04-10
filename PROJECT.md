@@ -1,7 +1,7 @@
-# Hund Manager – Projektbeschreibung (v1.4.0)
+# Hund Manager – Projektbeschreibung (v1.8.0)
 
 > **Dieses Dokument als Kontext in jeden Prompt einfügen, wenn nur einzelne Module geteilt werden.**
-> Letzte Aktualisierung: 2026-04-09 · Status: v1.4.0 – Bugfixes Dezimal/Rezept-Mix/Doppelspeichern + Reaktionsscore
+> Letzte Aktualisierung: 2026-04-10 · Status: v1.8.0 – Mehrere Hunde Statistik-Vergleich
 
 > **Coding-Konvention:** Module werden gezielt angepasst – kein komplettes Neuschreiben ganzer Dateien.
 > Änderungen immer als minimale, chirurgische Eingriffe in die relevanten Funktionen.
@@ -55,11 +55,13 @@
 ├── form.js                 ← Toggle-Button-Zustand für alle Tagebuch-Formulare
 ├── wetter.js               ← Wetter & Pollen + Pollen_Log schreiben + Skala 0–5 + erweiterbare Custom-Pollen (localStorage)
 ├── rechner.js              ← Futterrechner + Rezept-Mix + recommended_pct Marker
-├── tagebuch.js             ← Submit-Handler 7 Typen + Multi-Futter mit Kcal-Berechnung
+├── tagebuch.js             ← Submit-Handler 7 Typen + Multi-Futter mit Kcal-Berechnung + Phasentracker (submitPhase, deletePhase, undoDeletePhase, renderPhasenBanner, loadPhasenListe)
 ├── ansicht.js              ← Entry-Cards + Soft-Delete + Edit-Modal + Undo-Banner
 ├── stammdaten.js           ← CRUD Hunde/Zutaten/Toleranzen + Kcal-Bedarf + Gewicht + Nährwerte im Zutat-Modal + USDA/OFF paralleler Import mit Vergleichsvorschau
 ├── statistik.js            ← Konfigurierbarer Chart: Temp-Band, Symptome-Flächenband (rot), Pollen-Popup-Dialog, Symptom-Muster-Heatmap, Korrelationsanalyse
-└── i18n.js                 ← Mehrsprachigkeit: t(), setLang(), applyAll(), loadDefaults()
+├── i18n.js                 ← Mehrsprachigkeit: t(), setLang(), applyAll(), loadDefaults()
+├── export.js               ← Tierarzt-Export: showExportDialog(), exportTierarztPDF() via window.print()
+└── (rechner.js)            ← Vergleich: calcVergleich(), initVergleich(), _calcTotals(), _fmt()
 ```
 
 ---
@@ -81,7 +83,8 @@ tagebuch.js     → sheets.js, config.js, ui.js, form.js, store.js
 ansicht.js      → cache.js, config.js, ui.js, sheets.js
 stammdaten.js   → sheets.js, config.js, ui.js, store.js
 statistik.js    → cache.js, store.js, ui.js
-main.js         → alle Module inkl. i18n.js
+export.js       → store.js, cache.js, config.js
+main.js         → alle Module inkl. i18n.js, export.js
 ```
 
 ---
@@ -406,6 +409,22 @@ category_haut    | en | skin
 | E | notizen    | string| Freitext                                |
 | F | created_at | datetime| ISO 8601                              |
 
+#### `Ausschluss_Phasen`
+
+| # | Spalte      | Typ      | Beschreibung                                      |
+|---|-------------|----------|---------------------------------------------------|
+| A | entry_id    | int      | Primary Key / Auto-increment                      |
+| B | hund_id     | int      | Foreign Key → Hunde                               |
+| C | phase_typ   | enum     | `elimination` / `provokation` / `ergebnis`        |
+| D | zutat       | string   | Getestete Zutat (leer bei Elimination/Ergebnis)   |
+| E | start_datum | date     | DD.MM.YYYY                                        |
+| F | end_datum   | date     | DD.MM.YYYY (geplant)                              |
+| G | ergebnis    | enum     | `offen` / `verträglich` / `reaktion`              |
+| H | notizen     | string   | Freitext                                          |
+| I | created_at  | datetime | ISO 8601                                          |
+| J | deleted     | boolean  | TRUE / FALSE                                      |
+| K | deleted_at  | datetime | ISO 8601                                          |
+
 #### `Pollen_Log` *(NEU – separate Pollenarten pro Tag)*
 
 | # | Spalte     | Typ   | Beschreibung                            |
@@ -493,14 +512,15 @@ Top-Navigation: [Rechner] [Tagebuch] [Statistik] [Stammdaten] [Einstellungen]
 
 Rechner-Panel:
   └── Rezeptliste → Rezept-Editor (Akkordeon: Zutaten / Nährstoffe / Verhältnisse / Rezept-Mix)
+             → ⚖️ Vergleich-Panel (Rezept A vs. B, alle 39 Nährstoffe, Ampel + Delta)
 
 Tagebuch-Panel:
   ├── [Eingabe] / [Ansicht] Toggle
-  ├── Eingabe: 7 Tabs (Umwelt / Symptom / Futter / Ausschluss / Allergen / Tierarzt / Medikament)
-  └── Ansicht: 7 Tabs (gleiche Struktur, Entry-Cards aus Cache)
+  ├── Eingabe: 8 Tabs (Umwelt / Symptom / Futter / Ausschluss / 📅 Phasen / Allergen / Tierarzt / Medikament)
+  └── Ansicht: 8 Tabs (gleiche Struktur, Entry-Cards aus Cache; Phasen-Tab = Banner + Phasenliste)
 
 Statistik-Panel:
-  ├── Hund-Select + Zeitraum-Select
+  ├── Hund-Select + „↕ Vergleich mit:" Hund-2-Select + Zeitraum-Select + 📄 Tierarzt-Export-Button (oben rechts)
   ├── KPI-Kacheln (Symptomtage, Ø Schweregrad, Pollentage)
   ├── Parameter-Auswahl (Toggle-Buttons): Temp-Band, Temp innen, Feuchte außen/innen,
   │   Schweregrad Symptome, Gewicht
@@ -594,6 +614,46 @@ Z Bugfixes
 - **FEATURE.md + FAQ.md** erstellt: Vollständige Feature-Dokumentation und FAQ als eigenständige Dateien im Repo.
 - **Dokumentations-Fixes:** `verdacht`-Skala korrigiert (0–3), styles.css-Duplikat entfernt, Kochverlust präzisiert (nur B-Vitamine), EPA+DHA-Namenskonvention dokumentiert, VALIDATION.md um T-RECHN-06 erweitert.
 
+
+**v1.8.0:**
+- **Mehrere Hunde – Statistik-Vergleich** (statistik.js): Zweites Hund-Dropdown „↕ Vergleich mit:" direkt unter dem Haupt-Hund-Select.
+  - Auswahl: alle aktiven Hunde außer dem aktuell gewählten Hund 1 (der bereits gewählte Hund wird in der Liste ausgeblendet).
+  - Wird ein zweiter Hund gewählt: Symptomtagebuch für Hund 2 wird geladen (kein separater Cache-Miss – nutzt denselben `getSheet()`-Call).
+  - Zweites Dataset im Chart: blaues Flächenband (`rgba(59,130,246,0.20)`) mit `fill:'origin'`, erscheint nur wenn Parameter „Schweregrad Symptome" aktiv ist.
+  - Legende im Chart aktualisiert sich automatisch mit Hund-2-Name.
+  - Kein zweiter Hund gewählt (Standard „– kein Vergleich –") → kein zweites Dataset, Chart unverändert.
+  - KPI-Kacheln bleiben auf Hund 1.
+  - `onHund2Changed()` als neuer Export: leert Cache, blendet Hund-1 in der Hund-2-Liste aus, ruft `refresh()` auf.
+
+**v1.7.0:**
+- **Rezept-Nährstoffvergleich A vs. B** (rechner.js, index.html): Neuer „⚖️ Vergleich"-Button in der Rezeptliste öffnet ein eigenes Panel.
+  - Auswahl: 2 Dropdowns (Rezept A blau, Rezept B gelb), optionale Gramm-Eingabe pro Rezept, Gewichtsfeld (übernimmt Wert aus Hauptrechner).
+  - Kennzahlen-Header: Gesamtmenge, Kcal Ist/Bedarf, Ca:P-Verhältnis (Badge), Omega 6:3 (Badge) für beide Rezepte.
+  - Nährstofftabelle: Alle 39 NRC-Nährstoffe nach Gruppen, je Rezept Ist-Wert + Mini-Balken + %-Deckung in Ampelfarbe.
+  - Delta-Spalte: Differenz A–B als % des Tagesbedarfs; grau < 10%, gelb < 30%, rot ≥ 30%.
+  - Berechnung via `resolveRezept()` → vollständige Rezept-Auflösung inkl. Unter-Rezepte und Kochverlust-Korrekturfaktor.
+  - Neue Funktionen: `initVergleich()`, `calcVergleich()`, `_calcTotals()`, `_fmt()`, `_cls()`.
+
+**v1.6.0:**
+- **Tierarzt-Export als PDF** (export.js, main.js, statistik.js): Neues Modul `export.js` mit `showExportDialog(hundId)` und `exportTierarztPDF(hundId, zeitraumTage)`.
+  - Dialog: Zeitraum wählbar (30 / 60 / 90 / 180 Tage) via Grid-Buttons.
+  - Bericht öffnet in neuem Tab via `window.open()` + `window.print()` – kein Backend, keine externe Bibliothek.
+  - Inhalt: Deckblatt (Hund-Stammdaten, letztes Gewicht), Symptomverlauf mit Schweregradbalken, Bekannte Allergene, Ausschlussdiät-Status + Phasen-Timeline, Medikamente, letzte 10 Futtereinträge.
+  - Schwarz-Weiß druckoptimiert: eigenes Inline-CSS, kein Abhängigkeit von App-CSS-Variablen.
+  - Disclaimer und Footer mit Exportdatum.
+  - Export-Button (📄 Tierarzt-Export) im Statistik-Panel oben rechts neben Aktualisieren-Button.
+  - `window.EXPORT` in `main.js` registriert.
+
+**v1.5.0:**
+- **Ausschlussdiät-Phasentracker** (tagebuch.js, index.html, config.js, statistik.js): Neuer Tab „📅 Phasen" im Tagebuch → Eingabe- und Ansicht-Bereich.
+  - Phasentypen: Elimination (6 Wo Standard), Provokation (2 Wo), Ergebnis (1 Wo) – Enddatum per Vorschlag + manuell überschreibbar.
+  - Zutat-Feld erscheint nur bei Phasentyp Provokation.
+  - Aktiver-Phase-Banner: Farbiger Banner mit Fortschrittsbalken (Tage verbraucht/gesamt/verbleibend) + letzter abgeschlossener Phasenstatus.
+  - Phasenliste: Alle Phasen mit Typ-Badge, Ergebnis-Badge, Datum, Notizen + Löschen-Button.
+  - Soft-Delete + Undo-Banner (8 Sek., max. 5 Einträge im Stack).
+  - Neues Sheet `Ausschluss_Phasen` im Tagebuch-Spreadsheet (11 Spalten) – über Einstellungen → „Neue Sheets anlegen" erstellen.
+  - `setupAllSheets()` um `Ausschluss_Phasen` erweitert.
+  - Statistik: neue einklappbare Sektion „📅 Phasen-Timeline" mit chronologischer Übersicht aller Phasen + Ergebnis-Badges.
 
 **v1.4.0:**
 - **Bugfix Dezimal-Nachkommastellen** (store.js): `wert_pro_100g` nutzte `parseFloat()` statt `_float()` – Nährwerte mit Komma als Dezimaltrenner (z.B. Google-Sheets-Export „0,5") wurden als 0 eingelesen. Fix: `_float()` für korrektes Komma→Punkt-Handling.
@@ -700,6 +760,12 @@ Bei Umstrukturierung der hinterlegten Spreadsheets bitte informieren.
 - `stammdaten.js` importiert `getNaehrstoffe` und `addZutatNutr` aus `store.js`
 - `wetter.js` exportiert zusätzlich: `showPollenManager`, `_addCustomPollen`, `_removeCustomPollen`
 - `statistik.js` exportiert zusätzlich: `showPollenPopup`
+- `_renderPhasenTimeline(hundId)` – lädt Ausschluss_Phasen aus Cache und rendert Timeline in `#st-phasen`
+- `statistik.js` exportiert zusätzlich: `onHund2Changed()` – lädt Hund-2-Symptoms, blendet Hund-1 in Select aus, refresht Chart
+- `rechner.js` Vergleich: `initVergleich()` füllt Dropdowns; `calcVergleich()` berechnet+rendert; `_calcTotals(rezeptId, gramm, hundId)` → `{totals, totalGrams, kcal, kcalBedarf, mkg, caP, omRatio}`
+- `export.js`: `showExportDialog(hundId)` öffnet Zeitraum-Modal; `exportTierarztPDF(hundId, tage)` baut HTML-Bericht und ruft window.print() auf; kein CSS-Framework, inline styles
+- `tagebuch.js` Phasentracker: `submitPhase`, `deletePhase(id,label)`, `undoDeletePhase`, `renderPhasenBanner`, `loadPhasenListe`, `onPhasTypChanged`, `onPhasStartChanged`
+- PHASEN_DEFAULTS: `{ elimination:42, provokation:14, ergebnis:7 }` Tage
 - `_renderReaktionsscore(fut, sym)` – rendert Zutaten-Reaktionsscore mit Chip-Filter; `_reaktionFilter` (Set<string>|null) hält Auswahl; `window._STAT_toggleReak`, `window._STAT_reaktionAlle`, `window._STAT_reaktionKeine` als globale Callbacks
 - Custom-Pollen werden in `localStorage['hundapp_custom_pollen']` als JSON-Array gespeichert
 - `statistik.js` lädt `Ausschlussdiät`- und `Bekannte Allergene`-Sheets **nicht mehr** (seit v1.1.0)

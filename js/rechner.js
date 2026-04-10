@@ -799,3 +799,246 @@ function _showToast(msg) {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 4000);
 }
+
+// ════════════════════════════════════════════════════════════════
+//  REZEPT-VERGLEICH A vs. B  (v1.7.0)
+// ════════════════════════════════════════════════════════════════
+
+/** Zahlenformat-Helfer (identisch zu renderNutrTable) */
+const _fmt = v => {
+  if (!v || v === 0) return '0';
+  if (v < 0.01)  return v.toExponential(1);
+  if (v < 1)     return v.toFixed(3);
+  if (v < 100)   return v.toFixed(1);
+  return Math.round(v).toLocaleString('de');
+};
+
+/** Nährstoffsummen für ein Rezept (aufgelöste Zutaten) berechnen */
+function _calcTotals(rezeptId, gramm, hundId) {
+  const kg        = parseFloat(document.getElementById('fr-cmp-weight')?.value) || 27;
+  const mkg       = calcMkg(kg);
+  const params    = getParameter();
+  const cookFactor = 1 - (params['kochverlust_b_vitamine'] || 0.30);
+  const resolved  = resolveRezept(rezeptId, gramm > 0 ? gramm : null);
+
+  const totals = {};
+  let totalGrams = 0;
+  resolved.forEach(ing => {
+    totalGrams += ing.grams;
+    const nutrMap = getNutrMap(ing.zutaten_id, ing.name);
+    Object.entries(nutrMap).forEach(([name, val100g]) => {
+      let val = val100g * ing.grams / 100;
+      if (ing.cooked && COOKING_LOSS_NUTR.has(name)) val *= cookFactor;
+      totals[name] = (totals[name] || 0) + val;
+    });
+  });
+
+  // Kalorien
+  const kcal = (totals['Energie'] > 0)
+    ? totals['Energie']
+    : (totals['Rohprotein'] || 0) * (params['kcal_faktor_protein'] || 3.5)
+    + (totals['Fett']       || 0) * (params['kcal_faktor_fett']    || 8.5);
+
+  const kp         = getKalorienParam(hundId);
+  const kcalBedarf = (kp.kcalManual > 0) ? kp.kcalManual
+    : kp.rerFaktor70 * Math.pow(kg, kp.rerExponent) * kp.rerFaktor;
+
+  const ca = totals['Calcium']  || totals['Kalzium'] || 0;
+  const ph = totals['Phosphor'] || 0;
+  const om6 = totals['Linolsäure'] || 0;
+  const om3 = (totals['α-Linolensäure'] || 0) + (totals['EPA + DHA'] || 0);
+
+  return { totals, totalGrams, kcal, kcalBedarf, mkg, caP: ph > 0 ? ca/ph : 0, omRatio: om3 > 0 ? om6/om3 : 0 };
+}
+
+/** Ampelklasse anhand Toleranz */
+function _cls(pct, tol) {
+  if (pct === 0) return 'zero';
+  if (pct >= tol.min && pct <= tol.max) return 'ok';
+  if (pct < tol.min) return 'low';
+  return 'over';
+}
+
+/** Vergleichs-Dropdowns mit Rezepten des aktuellen Hundes füllen */
+export function initVergleich() {
+  const hundId  = parseInt(document.getElementById('fr-hund-select')?.value) || 1;
+  const rezepte = getRezepte(hundId);
+  ['fr-cmp-a', 'fr-cmp-b'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Rezept wählen —</option>';
+    rezepte.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value       = r.rezept_id;
+      opt.textContent = r.name;
+      sel.appendChild(opt);
+    });
+  });
+  // Gewicht aus Hauptrechner übernehmen
+  const wMain = document.getElementById('fr-dog-weight')?.value;
+  const wCmp  = document.getElementById('fr-cmp-weight');
+  if (wMain && wCmp && !wCmp.value) wCmp.value = wMain;
+}
+
+/** Vergleich berechnen und rendern */
+export function calcVergleich() {
+  const idA   = parseInt(document.getElementById('fr-cmp-a')?.value);
+  const idB   = parseInt(document.getElementById('fr-cmp-b')?.value);
+  const grA   = parseFloat(document.getElementById('fr-cmp-g-a')?.value) || 0;
+  const grB   = parseFloat(document.getElementById('fr-cmp-g-b')?.value) || 0;
+  const hundId= parseInt(document.getElementById('fr-hund-select')?.value) || 1;
+  const out   = document.getElementById('fr-cmp-result');
+
+  if (!idA || !idB) { if (out) out.innerHTML = '<p style="color:var(--sub);font-size:13px;padding:8px">Bitte zwei Rezepte wählen.</p>'; return; }
+  if (idA === idB)  { if (out) out.innerHTML = '<p style="color:var(--sub);font-size:13px;padding:8px">Bitte zwei <em>verschiedene</em> Rezepte wählen.</p>'; return; }
+
+  const rezA = getRezepte(hundId).find(r => r.rezept_id === idA);
+  const rezB = getRezepte(hundId).find(r => r.rezept_id === idB);
+  const nameA = rezA?.name || `Rezept ${idA}`;
+  const nameB = rezB?.name || `Rezept ${idB}`;
+
+  const A = _calcTotals(idA, grA, hundId);
+  const B = _calcTotals(idB, grB, hundId);
+
+  const bedarf  = getBedarf();
+  const safeMkg = (A.mkg > 0 && isFinite(A.mkg)) ? A.mkg : Math.pow(27, 0.75);
+
+  const BAR_COLORS = {
+    ok:   'var(--bar-ok)',
+    low:  'var(--bar-low)',
+    over: 'var(--bar-high)',
+    zero: 'var(--bar-zero)',
+  };
+
+  // ── Kennzahlen-Header ────────────────────────────────────────
+  const kpiRow = (label, valA, valB) => `
+    <tr>
+      <td style="font-weight:600;font-size:12px">${label}</td>
+      <td style="text-align:right;font-size:12px">${valA}</td>
+      <td style="text-align:right;font-size:12px">${valB}</td>
+      <td></td>
+    </tr>`;
+
+  const params = getParameter();
+  const capMin = params['cap_verhaeltnis_min'] || 1.2;
+  const capMax = params['cap_verhaeltnis_max'] || 1.5;
+  const omMax  = params['omega6_3_ziel_max']   || 6;
+
+  const capClsA = (A.caP >= capMin && A.caP <= capMax) ? 'ok' : 'warn';
+  const capClsB = (B.caP >= capMin && B.caP <= capMax) ? 'ok' : 'warn';
+  const omClsA  = (A.omRatio > 0 && A.omRatio <= omMax) ? 'ok' : 'warn';
+  const omClsB  = (B.omRatio > 0 && B.omRatio <= omMax) ? 'ok' : 'warn';
+
+  // ── Nährstoff-Tabelle ────────────────────────────────────────
+  const groups = {};
+  bedarf.forEach(b => { (groups[b.gruppe || 'Sonstiges'] = groups[b.gruppe || 'Sonstiges'] || []).push(b); });
+
+  let nutrHtml = '';
+  Object.entries(groups).forEach(([gruppe, items]) => {
+    nutrHtml += `<tr><td colspan="4" style="background:var(--bg2);font-size:10px;font-weight:700;
+      text-transform:uppercase;letter-spacing:.05em;color:var(--c2);padding:6px 8px">${esc(gruppe)}</td></tr>`;
+
+    items.forEach(b => {
+      const tagesB = (isFinite(b.bedarf_pro_mkg * safeMkg) && b.bedarf_pro_mkg * safeMkg >= 0)
+        ? b.bedarf_pro_mkg * safeMkg : 0;
+      const tol    = getTolerance(hundId, b.name);
+
+      const istA = A.totals[b.name] || 0;
+      const istB = B.totals[b.name] || 0;
+      const pctA = tagesB > 0 ? istA / tagesB * 100 : 0;
+      const pctB = tagesB > 0 ? istB / tagesB * 100 : 0;
+      const clsA = tagesB > 0 ? _cls(pctA, tol) : 'ok';
+      const clsB = tagesB > 0 ? _cls(pctB, tol) : 'ok';
+
+      // Delta: Differenz A–B als % des Bedarfs
+      const deltaPct = tagesB > 0 ? ((istA - istB) / tagesB * 100) : 0;
+      const deltaStr = tagesB > 0
+        ? (deltaPct >= 0 ? '+' : '') + deltaPct.toFixed(0) + '%'
+        : '–';
+      const deltaColor = Math.abs(deltaPct) < 10 ? 'var(--sub)'
+        : Math.abs(deltaPct) < 30 ? 'var(--bar-low)' : 'var(--danger-text)';
+
+      // Mini-Balken
+      const barA = `<div style="height:5px;width:${Math.min(pctA/tol.max*100,100).toFixed(0)}%;
+        background:${BAR_COLORS[clsA]};border-radius:2px;margin-top:2px"></div>`;
+      const barB = `<div style="height:5px;width:${Math.min(pctB/tol.max*100,100).toFixed(0)}%;
+        background:${BAR_COLORS[clsB]};border-radius:2px;margin-top:2px"></div>`;
+
+      nutrHtml += `<tr style="border-bottom:1px solid var(--border)">
+        <td style="font-size:11px;padding:4px 6px;min-width:90px">${esc(b.name)}<br>
+          <span style="font-size:9px;color:var(--sub)">${tagesB > 0 ? _fmt(tagesB)+' '+b.einheit : 'kein Bedarf'}</span>
+        </td>
+        <td style="padding:4px 6px;min-width:70px">
+          <span style="font-size:11px;font-weight:600;color:${BAR_COLORS[clsA]}">${_fmt(istA)}</span>
+          <span style="font-size:9px;color:var(--sub)"> ${b.einheit}</span>
+          ${barA}
+          <span style="font-size:9px;color:${BAR_COLORS[clsA]}">${tagesB>0?pctA.toFixed(0)+'%':''}</span>
+        </td>
+        <td style="padding:4px 6px;min-width:70px">
+          <span style="font-size:11px;font-weight:600;color:${BAR_COLORS[clsB]}">${_fmt(istB)}</span>
+          <span style="font-size:9px;color:var(--sub)"> ${b.einheit}</span>
+          ${barB}
+          <span style="font-size:9px;color:${BAR_COLORS[clsB]}">${tagesB>0?pctB.toFixed(0)+'%':''}</span>
+        </td>
+        <td style="padding:4px 6px;text-align:center;font-size:11px;font-weight:600;
+          color:${deltaColor};white-space:nowrap">${deltaStr}</td>
+      </tr>`;
+    });
+  });
+
+  if (!out) return;
+  out.innerHTML = `
+    <!-- Kennzahlen -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:6px 6px;font-size:10px;color:var(--sub)">Kennzahl</th>
+          <th style="text-align:right;padding:6px 6px;font-size:11px;color:var(--c2)">${esc(nameA)}</th>
+          <th style="text-align:right;padding:6px 6px;font-size:11px;color:#f59e0b">${esc(nameB)}</th>
+          <th style="text-align:center;padding:6px 6px;font-size:10px;color:var(--sub)">A–B</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${kpiRow('Gesamtmenge (g)', Math.round(A.totalGrams)+' g', Math.round(B.totalGrams)+' g')}
+        ${kpiRow('Kcal (Ist)', Math.round(A.kcal)+' kcal', Math.round(B.kcal)+' kcal')}
+        ${kpiRow('Kcal-Bedarf', Math.round(A.kcalBedarf)+' kcal', Math.round(B.kcalBedarf)+' kcal')}
+        <tr>
+          <td style="font-weight:600;font-size:12px">Ca:P-Verhältnis</td>
+          <td style="text-align:right;font-size:12px">
+            <span class="badge badge-${capClsA}" style="font-size:10px">${A.caP > 0 ? A.caP.toFixed(2)+':1' : '–'}</span>
+          </td>
+          <td style="text-align:right;font-size:12px">
+            <span class="badge badge-${capClsB}" style="font-size:10px">${B.caP > 0 ? B.caP.toFixed(2)+':1' : '–'}</span>
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;font-size:12px">Omega 6:3</td>
+          <td style="text-align:right;font-size:12px">
+            <span class="badge badge-${omClsA}" style="font-size:10px">${A.omRatio > 0 ? A.omRatio.toFixed(1)+':1' : '–'}</span>
+          </td>
+          <td style="text-align:right;font-size:12px">
+            <span class="badge badge-${omClsB}" style="font-size:10px">${B.omRatio > 0 ? B.omRatio.toFixed(1)+':1' : '–'}</span>
+          </td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Nährstoff-Tabelle -->
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:5px 6px;font-size:10px;color:var(--sub)">Nährstoff<br><span style="font-weight:400">/ Tagesbedarf</span></th>
+          <th style="text-align:left;padding:5px 6px;font-size:11px;color:var(--c2)">${esc(nameA)}</th>
+          <th style="text-align:left;padding:5px 6px;font-size:11px;color:#f59e0b">${esc(nameB)}</th>
+          <th style="text-align:center;padding:5px 6px;font-size:10px;color:var(--sub)">Δ A–B</th>
+        </tr>
+      </thead>
+      <tbody>${nutrHtml}</tbody>
+    </table>
+    <div style="font-size:10px;color:var(--sub);margin-top:8px;padding:6px;
+      background:var(--bg2);border-radius:var(--radius-sm)">
+      Δ = Differenz A–B als % des Tagesbedarfs · Grün = im Toleranzbereich · Gelb = zu niedrig · Orange = zu hoch
+    </div>`;
+}
