@@ -1,7 +1,7 @@
 # Hund Manager – Feature-Ideen & Implementierungsprompts (v1.3.1)
 
-> Letzte Aktualisierung: 2026-04-04
-> Status: Ideen – noch nicht implementiert
+> Letzte Aktualisierung: 2026-04-10
+> Status: Ideen – Idee 5 implementiert in v1.4.0; Ideen 6–9 offen
 > Jede Idee ist als eigenständiger Prompt formuliert und kann einzeln beauftragt werden.
 > Vor jeder Implementierung: PROJECT.md als Kontext einfügen + das betreffende Modul mitliefern.
 
@@ -208,7 +208,7 @@ Melde Sheet-Änderungen explizit (erwartet: keine).
 
 ---
 
-## Idee 5 – Reaktions-Score pro Zutat
+## ✅ Idee 5 – Reaktions-Score pro Zutat (implementiert in v1.4.0)
 
 bugfixes
 Berechnung der Zutaten mit kommastellen sicherstellen. Sicherstellung das Kommastellen richtig gespeichert und angezeigt werden
@@ -496,7 +496,7 @@ Sheet-Änderungen: keine.
 | ~~2~~ | ~~USDA-Import~~ | ✅ umgesetzt in v1.1.0 | stammdaten.js, config.js, index.html | Nein |
 | ~~3~~ | ~~Symptom-Muster~~ | ✅ umgesetzt in v1.2.0 | statistik.js | Nein |
 | ~~4~~ | ~~Korrelationsanalyse~~ | ✅ umgesetzt in v1.3.0 | statistik.js | Nein |
-| 5 | Reaktions-Score | Mittel | statistik.js, store.js | Nein |
+| ~~5~~ | ~~Reaktions-Score~~ | ✅ umgesetzt in v1.4.0 | statistik.js, store.js, rechner.js, index.html | Nein |
 | 6 | Phasentracker | Hoch | tagebuch.js, ansicht.js, statistik.js, index.html | Ja – Ausschluss_Phasen |
 | 7 | Tierarzt-PDF | Mittel | Neues export.js, statistik.js, main.js, styles.css | Nein |
 | 8 | Rezept-Vergleich | Mittel | rechner.js, index.html, styles.css | Nein |

@@ -651,7 +651,12 @@ Bei Umstrukturierung der hinterlegten Spreadsheets bitte informieren.
 
 ### ✅ Pflicht nach jeder Änderung
 
-1. **PROJECT.md aktualisieren:**
+1. **App-Info in `index.html` aktualisieren:**
+   - Versionsnummer im HTML-Header-Kommentar (Zeile ~5: `Version X.Y.Z | ES Modules | …`)
+   - Versionsnummer + Feature-Zeilen in der `ℹ️ App-Info`-Box im Einstellungen-Panel
+   - Neue Hauptfeatures knapp in der App-Info-Box ergänzen (max. 5 Zeilen)
+
+2. **PROJECT.md aktualisieren:**
    - Versionsnummer erhöhen 
    - Project.md immer aktualisieren
    - Datum auf aktuelles Datum setzen
