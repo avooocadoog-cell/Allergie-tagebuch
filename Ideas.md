@@ -1,7 +1,7 @@
 # Hund Manager – Feature-Ideen & Implementierungsprompts (v1.3.1)
 
-> Letzte Aktualisierung: 2026-04-10
-> Status: Ideen – Idee 5 implementiert in v1.4.0; Ideen 6–9 offen
+> Letzte Aktualisierung: 2026-04-10 (v1.5.0)
+> Status: Ideen – Alle Ideen 1–9 implementiert ✅
 > Jede Idee ist als eigenständiger Prompt formuliert und kann einzeln beauftragt werden.
 > Vor jeder Implementierung: PROJECT.md als Kontext einfügen + das betreffende Modul mitliefern.
 
@@ -267,7 +267,7 @@ Sheet-Änderungen: keine.
 
 ---
 
-## Idee 6 – Ausschlussdiät-Zeitplan / Phasentracker
+## ✅ Idee 6 – Ausschlussdiät-Zeitplan / Phasentracker (implementiert in v1.5.0)
 
 ### Beschreibung
 Strukturierter Ablauf für die klassische Ausschlussdiät: Eliminationsphase (typisch 6–8 Wochen mit einer einzigen Proteinquelle) → Provokationsphase (je Zutat 2 Wochen, systematisch testen) → Ergebnis-Auswertung. Ein Fortschrittsbalken zeigt wo man steht, und das geplante Enddatum der aktuellen Phase wird berechnet.
@@ -331,7 +331,7 @@ Sheet-Änderung melden: neues Sheet Ausschluss_Phasen im Tagebuch-Spreadsheet er
 
 ---
 
-## Idee 7 – Tierarzt-Export als PDF
+## ✅ Idee 7 – Tierarzt-Export als PDF (implementiert in v1.6.0)
 
 ### Beschreibung
 Kompakten, druckbaren Bericht als PDF direkt im Browser generieren – ohne Backend, ohne externe API. Enthält: Deckblatt mit Hund-Stammdaten, Symptomverlauf der letzten 90 Tage, aktuelle Medikamente, bekannte Allergene, Ausschlussdiät-Status. Alle Daten liegen bereits vor.
@@ -387,7 +387,7 @@ Sheet-Änderungen: keine.
 
 ---
 
-## Idee 8 – Rezept-Nährstoffvergleich (A vs. B)
+## ✅ Idee 8 – Rezept-Nährstoffvergleich (A vs. B) (implementiert in v1.7.0)
 
 ### Beschreibung
 Zwei Rezepte direkt nebeneinander vergleichen. Der Nutzer wählt zwei Rezepte aus, gibt jeweils ein Gewicht ein, und sieht alle 39 Nährstoffe mit Ist-Wert, Bedarf und Ampelfarbe in einer zweispaltigen Tabelle. Hilfreich um Optimierungen am Rezept zu bewerten.
@@ -437,7 +437,7 @@ Sheet-Änderungen: keine.
 
 ---
 
-## Idee 9 – Mehrere Hunde – Statistik-Vergleich
+## ✅ Idee 9 – Mehrere Hunde – Statistik-Vergleich (implementiert in v1.8.0)
 
 ### Beschreibung
 Die Datenbankstruktur unterstützt bereits mehrere Hunde via `hund_id`. Die Statistik filtert auch bereits nach Hund. Was fehlt: Ein Side-by-Side-Vergleich zweier Hunde im selben Chart – z.B. für Geschwisterhunde mit ähnlicher Diät oder um festzustellen ob Symptome hundeindividuell oder umweltbedingt sind.
@@ -497,7 +497,7 @@ Sheet-Änderungen: keine.
 | ~~3~~ | ~~Symptom-Muster~~ | ✅ umgesetzt in v1.2.0 | statistik.js | Nein |
 | ~~4~~ | ~~Korrelationsanalyse~~ | ✅ umgesetzt in v1.3.0 | statistik.js | Nein |
 | ~~5~~ | ~~Reaktions-Score~~ | ✅ umgesetzt in v1.4.0 | statistik.js, store.js, rechner.js, index.html | Nein |
-| 6 | Phasentracker | Hoch | tagebuch.js, ansicht.js, statistik.js, index.html | Ja – Ausschluss_Phasen |
-| 7 | Tierarzt-PDF | Mittel | Neues export.js, statistik.js, main.js, styles.css | Nein |
-| 8 | Rezept-Vergleich | Mittel | rechner.js, index.html, styles.css | Nein |
-| 9 | Mehrere Hunde | Mittel | statistik.js, index.html | Nein |
+| ~~6~~ | ~~Phasentracker~~ | ✅ umgesetzt in v1.5.0 | tagebuch.js, statistik.js, index.html, config.js | Ja – Ausschluss_Phasen |
+| ~~7~~ | ~~Tierarzt-PDF~~ | ✅ umgesetzt in v1.6.0 | export.js (neu), statistik.js, main.js | Nein |
+| ~~8~~ | ~~Rezept-Vergleich~~ | ✅ umgesetzt in v1.7.0 | rechner.js, index.html | Nein |
+| ~~9~~ | ~~Mehrere Hunde~~ | ✅ umgesetzt in v1.8.0 | statistik.js | Nein |

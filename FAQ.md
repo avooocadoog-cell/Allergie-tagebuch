@@ -199,3 +199,45 @@ Beim Speichern wurden immer alle Zutaten neu angehängt, auch wenn das Rezept be
 ### Was ist der Zutaten-Reaktionsscore?
 Der Score zeigt statistisch, wie oft nach einem Futtereintrag innerhalb von 48h Symptome mit Schweregrad > 2 aufgetreten sind. Er ist ein Hinweis – kein medizinischer Befund. Zutaten mit weniger als 3 Beobachtungen werden nicht angezeigt. Die Namen stammen aus dem Freitextfeld „Futter" im Futtertagebuch (Komma-getrennt).
 
+
+### Was ist der Phasentracker?
+Der Phasentracker (Tagebuch → Tab „📅 Phasen") hilft, Ausschlussdiät-Phasen strukturiert zu dokumentieren. Du kannst Eliminations-, Provokations- und Ergebnisphasen anlegen, den Fortschritt verfolgen und das Ergebnis (verträglich / Reaktion) festhalten.
+
+### Wie lege ich das Sheet „Ausschluss_Phasen" an?
+Gehe zu Einstellungen → „⚙️ Neue Sheets anlegen". Das Sheet wird automatisch mit den korrekten Headern im Tagebuch-Spreadsheet erstellt.
+
+### Warum wird kein Banner angezeigt, obwohl ich eine Phase eingetragen habe?
+Der Banner erscheint nur für Phasen mit Ergebnis = „offen" und Enddatum in der Zukunft. Wenn das Enddatum bereits verstrichen ist oder das Ergebnis gesetzt wurde, erscheint kein aktiver Banner.
+
+### Kann ich eine Phase nachträglich bearbeiten?
+Aktuell nicht direkt in der App – lösche die Phase (Undo verfügbar) und lege sie neu an, oder bearbeite den Eintrag direkt im Google Sheet `Ausschluss_Phasen`.
+
+### Wie erstelle ich einen Tierarzt-Bericht?
+Gehe zu Statistik → tippe oben rechts auf „📄 Tierarzt-Export". Wähle den gewünschten Zeitraum (30–180 Tage) und tippe „Bericht erstellen & drucken". Ein neuer Tab öffnet sich – dort kannst du drucken oder als PDF speichern (im Browser-Druckdialog „Als PDF speichern" wählen).
+
+### Der Export-Tab öffnet sich nicht?
+Der Browser blockiert vermutlich Popups. Erlaube Popups für diese Seite (Hinweis in der Adresszeile) und versuche es erneut. In Safari: Einstellungen → Websites → Popups.
+
+### Kann ich den Bericht farbig drucken?
+Der Bericht ist bewusst schwarz-weiß gestaltet für bessere Druckkompatibilität. Schweregradbalken und Status-Badges sind als Text mit Umrandung erkennbar.
+
+### Welche Daten werden NICHT im Export angezeigt?
+Umweltdaten (Wetter, Pollen), Nährstoffauswertung und Rezepte sind nicht im Export enthalten – der Bericht fokussiert auf klinisch relevante Informationen für den Tierarztbesuch.
+
+### Wie vergleiche ich zwei Rezepte?
+Gehe zu Futterrechner → Rezeptliste → tippe „⚖️ Vergleich". Wähle Rezept A und B aus den Dropdowns, gib optional die Gramm-Menge ein und tippe „Vergleichen". Du siehst alle 39 Nährstoffe nebeneinander mit Ampelfarben und einer Delta-Spalte.
+
+### Was bedeutet die Delta-Spalte im Vergleich?
+Die Delta-Spalte (Δ A–B) zeigt die Differenz von Rezept A minus Rezept B als Prozent des Tagesbedarfs. Grau = kaum Unterschied (< 10%), Gelb = merkliche Abweichung (< 30%), Rot = große Abweichung (≥ 30%).
+
+### Warum sind manche Nährstoffe im Vergleich 0?
+Für diese Zutat wurden noch keine Nährstoffwerte in der Datenbank hinterlegt. Nährstoffe können in Stammdaten → Zutaten bearbeiten → Nährwert-Abschnitt eingetragen oder via USDA/Open Food Facts importiert werden.
+
+### Wie vergleiche ich zwei Hunde in der Statistik?
+Gehe zu Statistik → wähle Hund 1 im oberen Dropdown → wähle Hund 2 im „↕ Vergleich mit:"-Dropdown darunter. Das blaue Flächenband erscheint sobald der Parameter „Schweregrad Symptome" aktiv ist.
+
+### Warum ist mein Hund im Vergleichs-Dropdown nicht sichtbar?
+Der aktuell als Hund 1 gewählte Hund wird in der Vergleichsliste automatisch ausgeblendet, um Selbstvergleiche zu verhindern.
+
+### Warum erscheint kein blaues Band für Hund 2?
+Das Band erscheint nur wenn der Parameter „Schweregrad Symptome" im Statistik-Panel aktiviert ist (blauer Toggle-Button oben). Außerdem braucht Hund 2 mindestens einen Symptomeintrag im gewählten Zeitraum.
