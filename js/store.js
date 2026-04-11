@@ -323,6 +323,19 @@ export function getRezeptZutaten(rezeptId) {
 }
 
 /**
+ * Setzt (ersetzt) die gecachten Rezept-Zutaten für ein bestimmtes Rezept.
+ * Wird nach saveRecipe aufgerufen damit resolveRezept() sofort aktuelle Daten nutzt.
+ * @param {number} rezeptId
+ * @param {{ rezept_id, zutaten_id, zutat_name, gramm, gekocht }[]} rows
+ */
+export function setRezeptZutaten(rezeptId, rows) {
+  // Alte Einträge für dieses Rezept entfernen
+  rezeptZutaten = rezeptZutaten.filter(r => r.rezept_id !== rezeptId);
+  // Neue Einträge hinzufügen
+  rezeptZutaten.push(...rows);
+}
+
+/**
  * Rezept-Komponenten für Rezept-Mixing.
  * Gibt alle Komponenten eines Rezepts zurück.
  * @param {number} rezeptId

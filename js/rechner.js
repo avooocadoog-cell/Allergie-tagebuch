@@ -24,7 +24,7 @@ import { getZutaten, getBedarf, getParameter, getKalorienParam,
          getNaehrstoffInfo, getBedarfByName,
          addZutat, addZutatNutr,
          getRezeptKomponenten, hasRezeptKomponenten,
-         addRezeptKomp }           from './store.js';
+         addRezeptKomp, setRezeptZutaten }           from './store.js';
 import { esc, showNutrPopup }               from './ui.js';
 
 // ── Zustand ──────────────────────────────────────────────────────
@@ -196,6 +196,16 @@ export async function openRecipe(rezeptId, name) {
 
     currentRecipe   = { rezept_id: rezeptId, hund_id: currentHundId, name, ingredients: zutaten };
     baseIngredients = zutaten.map(i => ({ ...i }));
+
+    // Store-Cache mit frisch geladenen Daten überschreiben (API ist immer aktueller als Cache)
+    setRezeptZutaten(rezeptId, zutaten.map(ing => ({
+      rezept_id:  rezeptId,
+      zutaten_id: ing.zutaten_id,
+      zutat_name: ing.name,
+      gramm:      ing.grams,
+      gekocht:    ing.cooked,
+    })));
+
     renderIngredients();
     recalc();
     statusEl.style.display = 'none';
@@ -476,6 +486,16 @@ export async function saveRecipe() {
     }
 
     currentRecipe.name   = name;
+
+    // Store-Cache sofort aktualisieren damit resolveRezept() korrekte Werte liefert
+    setRezeptZutaten(rezeptId, currentRecipe.ingredients.map(ing => ({
+      rezept_id:  rezeptId,
+      zutaten_id: ing.zutaten_id,
+      zutat_name: ing.name,
+      gramm:      ing.grams,
+      gekocht:    ing.cooked,
+    })));
+
     statusEl.className   = 'fr-save-status ok';
     statusEl.textContent = `✓ Rezept "${name}" gespeichert!`;
     setTimeout(() => { statusEl.style.display = 'none'; }, 4_000);
