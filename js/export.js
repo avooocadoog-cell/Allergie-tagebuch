@@ -248,7 +248,17 @@ export async function exportTierarztPDF(hundId) {
       const symByDate={};
       sym.forEach(r=>{ const iso=_toISO(g(r,1)); if(!iso) return; const sw=parseInt(g(r,4))||0; if(!symByDate[iso]||sw>symByDate[iso]) symByDate[iso]=sw; });
       function _parseFNamen(text) {
-        return text.split(/[,;]+/).map(t=>t.replace(/^(futter|rezept|zutat|komponente|mahlzeit)\s*\d*\s*:/gi,'').replace(/\b\d+([.,]\d+)?\s*(g|kg|ml|l|gr)\b/gi,'').replace(/\b\d+\s*%/g,'').replace(/\(.*?\)/g,'').trim()).filter(t=>t.length>=2&&!/^\d+$/.test(t));
+        const SKIP=/^(gesamt|freitext|futter\s*\d*)$/i;
+        const names=new Set();
+        function _cl(tok){return tok.replace(/:\s*\d+([.,]\d+)?\s*(g|kg|ml|l|gr|kcal)\b/gi,'').replace(/\b\d+([.,]\d+)?\s*(g|kg|ml|l|gr|kcal)\b/gi,'').replace(/\b\d+([.,]\d+)?\s*kcal\b/gi,'').replace(/\b\d+\s*%/g,'').replace(/\(.*?\)/g,'').replace(/[|]/g,'').replace(/:\s*$/,'').replace(/\s{2,}/g,' ').trim();}
+        text.split(/[\n]+/).forEach(rawLine=>{
+          const line=rawLine.trim(); if(!line) return;
+          if(/^gesamt:/i.test(line)) return;
+          const fm=line.match(/^futter\s*\d+:\s*(.+?)(?:\s*\(|\s*\||$)/i);
+          if(fm){const rn=_cl(fm[1]);if(rn.length>=2&&!SKIP.test(rn))names.add(rn);const pi=line.indexOf(' | ');if(pi>=0)line.slice(pi+3).split(',').forEach(t=>{const c=_cl(t);if(c.length>=2&&!SKIP.test(c)&&!/^\d+$/.test(c))names.add(c);});return;}
+          line.split(/[,;]+/).forEach(tok=>{const c=_cl(tok);if(c.length>=2&&!SKIP.test(c)&&!/^\d+$/.test(c))names.add(c);});
+        });
+        return [...names];
       }
       const futEntries=fut.map(r=>({iso:_toISO(g(r,1)),namen:_parseFNamen(g(r,2))})).filter(e=>e.iso&&e.namen.length);
       const scoreMap={};

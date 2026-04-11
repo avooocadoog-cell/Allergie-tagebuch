@@ -523,19 +523,68 @@ function _renderReaktionsscore(fut, sym) {
   });
 
   // Futtereinträge: alle Zutaten-Namen extrahieren (split by comma)
-  // Futter-Text bereinigen: Präfixe wie "Futter 1:", "Rezept:" und
-  // Gewichtsangaben wie "100g", "1,5kg" herausfiltern
+  /**
+   * Parst den gespeicherten Futter-Text (Mehrzeilen-Format von _buildFutterText)
+   * und extrahiert saubere Zutatennamen.
+   *
+   * Format einer Zeile:
+   *   "Gesamt: 468g, 760 kcal"               → überspringen
+   *   "Futter 1: Känguru (350g, 500 kcal) | Känguru: 350g, Optimix: 9g"
+   *   "Futter 2: Gemüse Mix (118g, 260 kcal) | Zucchini: 50g, Süßkartoffel: 50g"
+   *   "Freitext Zutat"                        → direkt parsen
+   */
   function _parseFutterNamen(text) {
-    return text
-      .split(/[,;]+/)
-      .map(t => t
-        .replace(/^(futter|rezept|zutat|komponente|mahlzeit)\s*\d*\s*:/gi, '') // Präfix entfernen
-        .replace(/\b\d+([.,]\d+)?\s*(g|kg|ml|l|gr)\b/gi, '')               // Gewichtsangaben
-        .replace(/\b\d+\s*%/g, '')                                            // Prozentangaben
-        .replace(/\(.*?\)/g, '')                                               // Klammer-Inhalte
-        .trim()
-      )
-      .filter(t => t.length >= 2 && !/^\d+$/.test(t));                        // min 2 Zeichen, keine reinen Zahlen
+    const SKIP    = /^(gesamt|freitext|futter\s*\d*)$/i;
+    const names   = new Set();
+
+    // Bereinigt einen Token zu einem Zutaten-Namen
+    function _clean(token) {
+      return token
+        .replace(/:\s*\d+([.,]\d+)?\s*(g|kg|ml|l|gr|kcal)\b/gi, '') // "Zutat: 350g" → "Zutat"
+        .replace(/\b\d+([.,]\d+)?\s*(g|kg|ml|l|gr|kcal)\b/gi, '')   // "350g" standalone
+        .replace(/\b\d+([.,]\d+)?\s*kcal\b/gi, '')                   // "760 kcal"
+        .replace(/\b\d+\s*%/g, '')                                      // "15%"
+        .replace(/\(.*?\)/g, '')                                         // "(350g, 500 kcal)"
+        .replace(/[|]/g, '')                                               // Pipe-Zeichen
+        .replace(/:\s*$/, '')                                             // Trailing-Doppelpunkt
+        .replace(/\s{2,}/g, ' ')                                          // Mehrfach-Leerzeichen
+        .trim();
+    }
+
+    // Zeilenweise verarbeiten – _buildFutterText trennt mit \n
+    const lines = text.split(/[\n]+/);
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      // "Gesamt: ..." komplett überspringen
+      if (/^gesamt:/i.test(line)) continue;
+
+      // "Futter N: Rezeptname (...) | Zutat: Ng, Zutat: Ng"
+      const futterMatch = line.match(/^futter\s*\d+:\s*(.+?)(?:\s*\(|\s*\||$)/i);
+      if (futterMatch) {
+        const rezeptName = _clean(futterMatch[1]);
+        if (rezeptName.length >= 2 && !SKIP.test(rezeptName)) names.add(rezeptName);
+
+        // Komponenten nach dem " | " extrahieren
+        const pipeIdx = line.indexOf(' | ');
+        if (pipeIdx >= 0) {
+          line.slice(pipeIdx + 3).split(',').forEach(tok => {
+            const c = _clean(tok);
+            if (c.length >= 2 && !SKIP.test(c) && !/^\d+$/.test(c)) names.add(c);
+          });
+        }
+        continue;
+      }
+
+      // Freie Zeilen: split nach Komma/Semikolon
+      line.split(/[,;]+/).forEach(tok => {
+        const c = _clean(tok);
+        if (c.length >= 2 && !SKIP.test(c) && !/^\d+$/.test(c)) names.add(c);
+      });
+    }
+
+    return [...names];
   }
 
   const futEntries = fut.map(r => ({
