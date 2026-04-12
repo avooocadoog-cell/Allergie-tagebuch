@@ -24,7 +24,8 @@ import { getZutaten, getBedarf, getParameter, getKalorienParam,
          getNaehrstoffInfo, getBedarfByName,
          addZutat, addZutatNutr,
          getRezeptKomponenten, hasRezeptKomponenten,
-         addRezeptKomp, setRezeptZutaten }           from './store.js';
+         addRezeptKomp, setRezeptZutaten,
+         getNutrMapById }           from './store.js';
 import { esc, showNutrPopup }               from './ui.js';
 
 // ── Zustand ──────────────────────────────────────────────────────
@@ -662,10 +663,24 @@ export function recalc() {
 
   // Nährstoffsummen
   const totals    = {};
+  const totalsById = {};  // ID-basiert für zuverlässiges Lookup
   let totalGrams  = 0;
 
   currentRecipe.ingredients.forEach(ing => {
     totalGrams += ing.grams;
+    // ID-basiert (primär, unabhängig von Namenskonventionen)
+    const nutrById = getNutrMapById(ing.zutaten_id, ing.name);
+    Object.entries(nutrById).forEach(([nutrId, val100g]) => {
+      const id = parseInt(nutrId);
+      let val = val100g * ing.grams / 100;
+      // Kochverlust via ID: Nährstoffname aus Bedarf/Naehrstoffe nachschlagen
+      if (ing.cooked) {
+        const nutrInfo = getBedarf().find(b => b.naehrstoff_id === id);
+        if (nutrInfo && COOKING_LOSS_NUTR.has(nutrInfo.name)) val *= cookFactor;
+      }
+      totalsById[id] = (totalsById[id] || 0) + val;
+    });
+    // Name-basiert (Fallback + für Ca:P, Omega-Berechnungen)
     const nutrMap = getNutrMap(ing.zutaten_id, ing.name);
     Object.entries(nutrMap).forEach(([nutrName, val100g]) => {
       let val = val100g * ing.grams / 100;
@@ -722,10 +737,10 @@ export function recalc() {
   _setText('fr-omega-target', `Ziel: max. ${omMax} : 1`);
   if (omCard) omCard.className = 'fr-ratio-card ' + (om3 > 0 && omRatio <= omMax ? 'ok' : 'warn');
 
-  renderNutrTable(totals, mkg);
+  renderNutrTable(totals, totalsById, mkg);
 }
 
-function renderNutrTable(totals, mkg) {
+function renderNutrTable(totals, totalsById, mkg) {
   const rowsEl = document.getElementById('fr-nutr-rows');
   const bedarf = getBedarf();
   if (!bedarf?.length) {
@@ -747,7 +762,8 @@ function renderNutrTable(totals, mkg) {
     html += `<div class="fr-nutr-group">${esc(gruppe)}</div>`;
     items.forEach(b => {
       const _normName = n => n.replace(/\s*\(.*?\)\s*/g,'').trim();
-      const ist          = totals[b.name] ?? totals[_normName(b.name)] ?? 0;
+      // ID-basiert (primär) → name-basiert → normalisiert (Fallbacks)
+      const ist = totalsById[b.naehrstoff_id] ?? totals[b.name] ?? totals[_normName(b.name)] ?? 0;
       const tagesBedarf  = b.bedarf_pro_mkg * safeMkg;
       const safeTagesB   = (isFinite(tagesBedarf) && tagesBedarf >= 0) ? tagesBedarf : 0;
       const tol          = getTolerance(currentHundId, b.name);
@@ -846,16 +862,35 @@ function _calcTotals(rezeptId, gramm, hundId) {
   const cookFactor = 1 - (params['kochverlust_b_vitamine'] || 0.30);
   const resolved  = resolveRezept(rezeptId, gramm > 0 ? gramm : null);
 
-  const totals = {};
+  const totals   = {};
+  const _totById = {};
   let totalGrams = 0;
   resolved.forEach(ing => {
     totalGrams += ing.grams;
+    // ID-basiert (primär)
+    const nutrById = getNutrMapById(ing.zutaten_id, ing.name);
+    Object.entries(nutrById).forEach(([nutrId, val100g]) => {
+      const id = parseInt(nutrId);
+      let val = val100g * ing.grams / 100;
+      if (ing.cooked) {
+        const ni = getBedarf().find(b => b.naehrstoff_id === id);
+        if (ni && COOKING_LOSS_NUTR.has(ni.name)) val *= cookFactor;
+      }
+      _totById[id] = (_totById[id] || 0) + val;
+    });
+    // Name-basiert (Fallback)
     const nutrMap = getNutrMap(ing.zutaten_id, ing.name);
     Object.entries(nutrMap).forEach(([name, val100g]) => {
       let val = val100g * ing.grams / 100;
       if (ing.cooked && COOKING_LOSS_NUTR.has(name)) val *= cookFactor;
       totals[name] = (totals[name] || 0) + val;
     });
+  });
+  // totals mit ID-Werten anreichern (überschreibt name-basierte mit präzisen Werten)
+  getBedarf().forEach(b => {
+    if (_totById[b.naehrstoff_id] !== undefined) {
+      totals[b.name] = _totById[b.naehrstoff_id];
+    }
   });
 
   // Kalorien

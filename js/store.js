@@ -230,6 +230,23 @@ function parseRows(rawRows, cols, skipRows) {
  * @param {string} zutatName - Fallback-Suche per Name
  * @returns {Object}
  */
+/**
+ * Gibt { naehrstoff_id: wert_pro_100g } zurück – ID-basiert, 100% zuverlässig.
+ * Primär-Lookup für recalc(), unabhängig von Namenskonventionen.
+ */
+export function getNutrMapById(zutatId, zutatName) {
+  let entries = zutatNutr.filter(r => r.zutaten_id === zutatId);
+  if (!entries.length && zutatName) {
+    const z = zutaten.find(z => z.name === zutatName);
+    if (z?.zutaten_id) entries = zutatNutr.filter(r => r.zutaten_id === z.zutaten_id);
+  }
+  const map = {};
+  entries.forEach(r => {
+    if (r.naehrstoff_id) map[r.naehrstoff_id] = r.wert_pro_100g;
+  });
+  return map;
+}
+
 export function getNutrMap(zutatId, zutatName) {
   let entries = zutatNutr.filter(r => r.zutaten_id === zutatId);
 
