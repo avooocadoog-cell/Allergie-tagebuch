@@ -230,6 +230,23 @@ function parseRows(rawRows, cols, skipRows) {
  * @param {string} zutatName - Fallback-Suche per Name
  * @returns {Object}
  */
+/**
+ * Gibt { naehrstoff_id: wert_pro_100g } zurück – ID-basiert, 100% zuverlässig.
+ * Primär-Lookup für recalc(), unabhängig von Namenskonventionen.
+ */
+export function getNutrMapById(zutatId, zutatName) {
+  let entries = zutatNutr.filter(r => r.zutaten_id === zutatId);
+  if (!entries.length && zutatName) {
+    const z = zutaten.find(z => z.name === zutatName);
+    if (z?.zutaten_id) entries = zutatNutr.filter(r => r.zutaten_id === z.zutaten_id);
+  }
+  const map = {};
+  entries.forEach(r => {
+    if (r.naehrstoff_id) map[r.naehrstoff_id] = r.wert_pro_100g;
+  });
+  return map;
+}
+
 export function getNutrMap(zutatId, zutatName) {
   let entries = zutatNutr.filter(r => r.zutaten_id === zutatId);
 
@@ -245,10 +262,25 @@ export function getNutrMap(zutatId, zutatName) {
   entries.forEach(r => {
     const orig = r.naehrstoff_name;
     const wert = r.wert_pro_100g;
+    // Original-Name eintragen
     map[orig] = wert;
-    // Normalisierter Name ohne Klammer, z.B. "Vitamin B1 (Thiamin)" → "Vitamin B1"
-    const norm = orig.replace(/\s*\(.*?\)\s*/g, '').trim();
-    if (norm && norm !== orig) map[norm] = wert;
+    // Kurzname ohne Klammer: "Vitamin B1 (Thiamin)" → "Vitamin B1"
+    const short = orig.replace(/\s*\(.*?\)\s*/g, '').trim();
+    if (short && short !== orig) map[short] = wert;
+    // Langname-Varianten: falls kurz gespeichert, Aliases für bekannte Langformen
+    const ALIASES = {
+      'Vitamin B1': 'Vitamin B1 (Thiamin)',
+      'Vitamin B2': 'Vitamin B2 (Riboflavin)',
+      'Vitamin B3': 'Vitamin B3 (Niacin)',
+      'Vitamin B5': 'Vitamin B5 (Pantothensäure)',
+      'Vitamin B6': 'Vitamin B6 (Pyridoxin)',
+      'Vitamin B9': 'Vitamin B9 (Folsäure)',
+      'Vitamin B12': 'Vitamin B12 (Cobalamin)',
+      'Vitamin E':  'Vitamin E (a-Tocopherol)',
+      'Vitamin C':  'Vitamin C (Ascorbinsäure)',
+    };
+    if (ALIASES[orig]) map[ALIASES[orig]] = wert;
+    if (ALIASES[short]) map[ALIASES[short]] = wert;
   });
   return map;
 }

@@ -746,7 +746,8 @@ function renderNutrTable(totals, mkg) {
   Object.entries(groups).forEach(([gruppe, items]) => {
     html += `<div class="fr-nutr-group">${esc(gruppe)}</div>`;
     items.forEach(b => {
-      const ist          = totals[b.name] || 0;
+      const _normName = n => n.replace(/\s*\(.*?\)\s*/g,'').trim();
+      const ist          = totals[b.name] ?? totals[_normName(b.name)] ?? 0;
       const tagesBedarf  = b.bedarf_pro_mkg * safeMkg;
       const safeTagesB   = (isFinite(tagesBedarf) && tagesBedarf >= 0) ? tagesBedarf : 0;
       const tol          = getTolerance(currentHundId, b.name);
@@ -967,8 +968,9 @@ export function calcVergleich() {
         ? b.bedarf_pro_mkg * safeMkg : 0;
       const tol    = getTolerance(hundId, b.name);
 
-      const istA = A.totals[b.name] || 0;
-      const istB = B.totals[b.name] || 0;
+      const _nn = n => n.replace(/\s*\(.*?\)\s*/g,'').trim();
+      const istA = A.totals[b.name] ?? A.totals[_nn(b.name)] ?? 0;
+      const istB = B.totals[b.name] ?? B.totals[_nn(b.name)] ?? 0;
       const pctA = tagesB > 0 ? istA / tagesB * 100 : 0;
       const pctB = tagesB > 0 ? istB / tagesB * 100 : 0;
       const clsA = tagesB > 0 ? _cls(pctA, tol) : 'ok';
