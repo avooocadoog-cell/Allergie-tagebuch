@@ -354,7 +354,7 @@ export function showZutatModal(zutatId) {
                   id="nutr-${n.naehrstoff_id}"
                   data-nutr-id="${n.naehrstoff_id}"
                   data-nutr-name="${esc(n.name)}"
-                  data-target-unit="${esc(targetUnit)}"
+                  data-target-unit="${esc(targetUnit.replace('\u03bc','\u00b5').replace('\u03bcg','\u00b5g'))}"
                   placeholder="–"
                   style="width:100%;padding:5px 7px;font-size:12px;border:1px solid var(--border);
                     border-radius:4px;background:var(--bg);color:var(--text);
@@ -487,7 +487,8 @@ export function showZutatModal(zutatId) {
             // Unit und Per auf Standard (Zieleinheit, /100g) setzen
             const unitSel = document.getElementById(`nutr-unit-${n.naehrstoff_id}`);
             const perSel  = document.getElementById(`nutr-per-${n.naehrstoff_id}`);
-            if (unitSel) unitSel.value = n.einheit || 'g';
+            const normEinheit = (n.einheit || 'g').replace(/μ/g, 'µ');
+            if (unitSel) unitSel.value = normEinheit;
             if (perSel)  perSel.value  = '1';
             _updateNutrConverted(n.naehrstoff_id);
           }

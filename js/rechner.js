@@ -668,9 +668,10 @@ export function recalc() {
     totalGrams += ing.grams;
     const nutrMap = getNutrMap(ing.zutaten_id, ing.name);
     Object.entries(nutrMap).forEach(([nutrName, val100g]) => {
+      if (val100g == null || isNaN(val100g)) return;  // NaN-Guard
       let val = val100g * ing.grams / 100;
       if (ing.cooked && COOKING_LOSS_NUTR.has(nutrName)) val *= cookFactor;
-      totals[nutrName] = (totals[nutrName] || 0) + val;
+      if (!isNaN(val)) totals[nutrName] = (totals[nutrName] || 0) + val;
     });
   });
 
@@ -747,7 +748,8 @@ function renderNutrTable(totals, mkg) {
     html += `<div class="fr-nutr-group">${esc(gruppe)}</div>`;
     items.forEach(b => {
       const _normName = n => n.replace(/\s*\(.*?\)\s*/g,'').trim();
-      const ist          = totals[b.name] ?? totals[_normName(b.name)] ?? 0;
+      const _istRaw = totals[b.name] ?? totals[_normName(b.name)];
+      const ist = (_istRaw == null || isNaN(_istRaw)) ? 0 : _istRaw;
       const tagesBedarf  = b.bedarf_pro_mkg * safeMkg;
       const safeTagesB   = (isFinite(tagesBedarf) && tagesBedarf >= 0) ? tagesBedarf : 0;
       const istOK        = safeTagesB <= 0 || ist / safeTagesB <= 50;

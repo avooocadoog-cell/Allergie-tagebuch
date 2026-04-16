@@ -97,7 +97,7 @@ export async function loadAll() {
      'beschreibung','funktion','mangel_symptome','quellen','obergrenze_info',
      // v2-Spalten J–N (leer wenn Sheet noch nicht migriert):
      'nrc_min_per_mkg','aafco_min_pct_dm','fediaf_min','upper_safe_limit','quelle_ref'], 2)
-    .map(r => ({ ...r, naehrstoff_id: parseInt(r.naehrstoff_id) || 0 }))
+    .map(r => ({ ...r, naehrstoff_id: parseInt(r.naehrstoff_id)||0, einheit:(r.einheit||'').replace(/μ/g,'µ') }))
     .filter(r => r.name);
 
   // ── Toleranzen ────────────────────────────────────────────────
@@ -121,7 +121,7 @@ export async function loadAll() {
       const nutrInfo = naehrstoffe.find(n => n.naehrstoff_id === (parseInt(r.naehrstoff_id) || 0));
       return {
         naehrstoff_id:  parseInt(r.naehrstoff_id) || 0,
-        name:           r.naehrstoff_name,
+        name:           (r.naehrstoff_name||'').replace(/μ/g,'µ'),
         einheit:        r.einheit,
         bedarf_pro_mkg: _float(r.bedarf_pro_mkg),
         quelle:         r.quelle,
@@ -144,6 +144,7 @@ export async function loadAll() {
       naehrstoff_id:   parseInt(r.naehrstoff_id)   || 0,
       naehrstoff_name: r.naehrstoff_name,
       wert_pro_100g:   _float(r.wert_pro_100g),
+      naehrstoff_name: (r.naehrstoff_name||'').replace(/μ/g,'µ'),
     }))
     .filter(r => r.zutaten_id && r.naehrstoff_id);
 
