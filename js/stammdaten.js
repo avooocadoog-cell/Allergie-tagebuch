@@ -19,6 +19,56 @@ import { openModal, closeModal, setStatus,
 import { getHunde, getZutaten, addHund,
          updateHund, addZutat, getNaehrstoffe, addZutatNutr } from './store.js';
 
+
+// ── Einheiten-Konvertierung ──────────────────────────────────────
+// App-Standard: immer pro 100g, in der Einheit des Bedarf-Sheets
+
+/** Alle wählbaren Einheiten */
+const UNIT_OPTIONS = ['g','mg','µg','IE','kcal'];
+
+/** Alle wählbaren Bezugsmengen */
+const PER_OPTIONS  = [
+  { label:'/ 100g', factor: 1      },
+  { label:'/ 1kg',  factor: 0.1    },  // ÷10 = pro 100g
+  { label:'/ 1g',   factor: 100    },  // ×100 = pro 100g
+  { label:'/ 1000g',factor: 0.1    },  // gleiches wie /kg
+];
+
+/**
+ * Konvertiert einen eingegebenen Wert in die App-Standardeinheit pro 100g.
+ * @param {number} wert - Eingegebener Wert
+ * @param {string} inputUnit  - Eingegebene Einheit (z.B. "mg")
+ * @param {string} targetUnit - App-Zieleinheit (z.B. "µg")
+ * @param {number} perFactor  - Faktor aus PER_OPTIONS (z.B. 0.1 für /kg)
+ * @returns {number} Konvertierter Wert pro 100g in targetUnit
+ */
+function _convertNutr(wert, inputUnit, targetUnit, perFactor) {
+  if (!wert || isNaN(wert)) return 0;
+
+  // Schritt 1: Bezugsmenge auf 100g normieren
+  let val = wert * perFactor;
+
+  // Schritt 2: Einheit konvertieren (zu Basiseinheit g)
+  const toBase = { 'g': 1, 'mg': 1e-3, 'µg': 1e-6, 'IE': 1, 'kcal': 1 };
+  const fromBase = { 'g': 1, 'mg': 1e3, 'µg': 1e6, 'IE': 1, 'kcal': 1 };
+
+  const fromFactor = toBase[inputUnit]  ?? 1;
+  const toFactor   = fromBase[targetUnit] ?? 1;
+
+  // IE → IE und kcal → kcal direkt (keine echte Konvertierung möglich)
+  if (inputUnit === 'IE' || targetUnit === 'IE') return val;
+  if (inputUnit === 'kcal' || targetUnit === 'kcal') return val;
+
+  return val * fromFactor * toFactor;
+}
+
+/** Formatiert einen Wert für die Anzeige im Eingabefeld (max. 6 Dezimalen) */
+function _fmtNutr(v) {
+  if (!v) return '';
+  const s = parseFloat(v.toPrecision(6));
+  return String(s);
+}
+
 // ── Aktuell geöffneter Tab ───────────────────────────────────────
 let currentTab = 'hunde';
 
@@ -279,26 +329,56 @@ export function showZutatModal(zutatId) {
       <div style="margin-bottom:10px">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
           color:var(--c2);margin:8px 0 6px;padding-top:6px;border-top:1px solid var(--border)">${esc(grp)}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          ${items.map(n => `
-            <div>
-              <label style="font-size:10px;color:var(--sub);display:block;margin-bottom:2px">
-                ${esc(n.name)}<span style="opacity:.6"> (${esc(n.einheit || 'g')})</span>
-              </label>
+        ${items.map(n => {
+          const targetUnit = n.einheit || 'g';
+          const unitOpts = UNIT_OPTIONS.map(u =>
+            `<option value="${u}" ${u===targetUnit?'selected':''}>${u}</option>`
+          ).join('');
+          const perOpts = PER_OPTIONS.map(p =>
+            `<option value="${p.factor}" ${p.factor===1?'selected':''}>${p.label}</option>`
+          ).join('');
+          return `
+            <div style="margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">
+                <label style="font-size:10px;color:var(--sub)">
+                  ${esc(n.name)}
+                  <span style="opacity:.5;font-size:9px"> → ${esc(targetUnit)}/100g</span>
+                </label>
+              </div>
               <div id="nutr-preview-${n.naehrstoff_id}"
                 style="display:none;font-size:9px;padding:2px 5px;margin-bottom:3px;
                   background:var(--bg2);border:1px solid var(--border);border-radius:3px;
                   line-height:1.6;word-break:break-all"></div>
-              <input type="number" step="any" min="0"
-                id="nutr-${n.naehrstoff_id}"
-                data-nutr-id="${n.naehrstoff_id}"
-                data-nutr-name="${esc(n.name)}"
-                placeholder="–"
-                style="width:100%;padding:5px 7px;font-size:12px;border:1px solid var(--border);
-                  border-radius:4px;background:var(--bg);color:var(--text);
-                  font-family:inherit;text-align:right;box-sizing:border-box">
-            </div>`).join('')}
-        </div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px;align-items:center">
+                <input type="number" step="any" min="0"
+                  id="nutr-${n.naehrstoff_id}"
+                  data-nutr-id="${n.naehrstoff_id}"
+                  data-nutr-name="${esc(n.name)}"
+                  data-target-unit="${esc(targetUnit.replace('\u03bc','\u00b5').replace('\u03bcg','\u00b5g'))}"
+                  placeholder="–"
+                  style="width:100%;padding:5px 7px;font-size:12px;border:1px solid var(--border);
+                    border-radius:4px;background:var(--bg);color:var(--text);
+                    font-family:inherit;text-align:right;box-sizing:border-box"
+                  oninput="STAMMDATEN._updateNutrConverted(${n.naehrstoff_id})">
+                <select id="nutr-unit-${n.naehrstoff_id}"
+                  data-nutr-id="${n.naehrstoff_id}"
+                  style="padding:5px 4px;font-size:11px;border:1px solid var(--border);
+                    border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit"
+                  onchange="STAMMDATEN._updateNutrConverted(${n.naehrstoff_id})">
+                  ${unitOpts}
+                </select>
+                <select id="nutr-per-${n.naehrstoff_id}"
+                  data-nutr-id="${n.naehrstoff_id}"
+                  style="padding:5px 4px;font-size:11px;border:1px solid var(--border);
+                    border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit"
+                  onchange="STAMMDATEN._updateNutrConverted(${n.naehrstoff_id})">
+                  ${perOpts}
+                </select>
+              </div>
+              <div id="nutr-converted-${n.naehrstoff_id}"
+                style="font-size:9px;color:var(--sub);margin-top:2px;min-height:12px"></div>
+            </div>`;
+        }).join('')}
       </div>`;
   }).join('');
 
@@ -397,31 +477,23 @@ export function showZutatModal(zutatId) {
   if (isEdit) {
     import('./store.js').then(({ getNutrMap }) => {
       const map = getNutrMap(zutatId, z.name) || {};
-      let warnings = [];
       Object.entries(map).forEach(([nutrName, wert]) => {
         const n = naehr.find(n => n.name === nutrName);
         if (n) {
           const inp = document.getElementById(`nutr-${n.naehrstoff_id}`);
           if (inp && wert != null && wert !== '') {
-            inp.value = wert;
-            // Plausibilitätsprüfung: g-Felder sollten < 100 sein
-            const einheit = (n.einheit || '').toLowerCase();
-            if (einheit === 'g' && parseFloat(wert) > 100) {
-              inp.style.borderColor = '#f59e0b';
-              inp.title = `⚠️ Wert ${wert}g/100g ist unrealistisch hoch. Einheitenverwechslung (mg statt g)?`;
-              warnings.push(`${nutrName}: ${wert}g`);
-            }
+            // Wert ist bereits in App-Standardeinheit pro 100g gespeichert
+            inp.value = _fmtNutr(parseFloat(wert));
+            // Unit und Per auf Standard (Zieleinheit, /100g) setzen
+            const unitSel = document.getElementById(`nutr-unit-${n.naehrstoff_id}`);
+            const perSel  = document.getElementById(`nutr-per-${n.naehrstoff_id}`);
+            const normEinheit = (n.einheit || 'g').replace(/μ/g, 'µ');
+            if (unitSel) unitSel.value = normEinheit;
+            if (perSel)  perSel.value  = '1';
+            _updateNutrConverted(n.naehrstoff_id);
           }
         }
       });
-      if (warnings.length) {
-        const warnEl = document.getElementById('status-zutat');
-        if (warnEl) {
-          warnEl.style.display = 'block';
-          warnEl.className = 'status warn';
-          warnEl.textContent = `⚠️ Mögliche Einheitenfehler: ${warnings.join(', ')} – g-Felder sollten Werte < 100 haben.`;
-        }
-      }
     });
   }
 }
@@ -585,16 +657,21 @@ async function _searchUSDA(query) {
     const naehrstoffe = {};
     // EPA + DHA zusammenführen
     let epa = 0, dha = 0;
+    const units = {};  // NRC-Name → Original-Einheit aus USDA
     (food.foodNutrients || []).forEach(fn => {
       const nrcName = USDA_MAP[fn.nutrientName];
       if (nrcName && fn.value != null) {
         naehrstoffe[nrcName] = fn.value;
+        units[nrcName] = fn.unitName || '';  // z.B. "MG", "UG", "G"
       }
       if (fn.nutrientName === '20:5 n-3 (EPA)') epa = fn.value || 0;
       if (fn.nutrientName === '22:6 n-3 (DHA)') dha = fn.value || 0;
     });
-    if (epa + dha > 0) naehrstoffe['EPA + DHA'] = parseFloat((epa + dha).toFixed(4));
-    return { name: food.description, naehrstoffe };
+    if (epa + dha > 0) {
+      naehrstoffe['EPA + DHA'] = parseFloat((epa + dha).toFixed(4));
+      units['EPA + DHA'] = 'G';
+    }
+    return { name: food.description, naehrstoffe, units };
   });
 }
 
@@ -641,15 +718,17 @@ function _renderSourceCol(results, errMsg, src) {
   window[`_importList_${src}`] = results;
 
   col.innerHTML = results.map((r, i) => {
-    const cnt = Object.keys(r.naehrstoffe).length;
+    const cnt   = Object.keys(r.naehrstoffe).length;
     const short = r.name.length > 42 ? r.name.slice(0, 40) + '…' : r.name;
+    // Einheiten-Hinweis: welche Einheiten liefert diese Quelle?
+    const unitSample = r.units ? [...new Set(Object.values(r.units).map(u => u.toLowerCase()).filter(Boolean))].slice(0,3).join(', ') : '';
     return `<div id="imp-item-${src}-${i}"
       style="padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);
         margin-bottom:4px;cursor:pointer;background:var(--bg2);font-size:11px;line-height:1.4"
       onclick="STAMMDATEN.selectImportResult(${i},'${src}')"
       onmouseover="this.style.background='var(--c4)'" onmouseout="if(!this.dataset.sel)this.style.background='var(--bg2)'">
       <div style="font-weight:600;margin-bottom:1px">${esc(short)}</div>
-      <div style="color:var(--sub);font-size:10px">${cnt} Nährstoffe</div>
+      <div style="color:var(--sub);font-size:10px">${cnt} Nährstoffe${unitSample ? ' · Einheiten: '+esc(unitSample) : ''}</div>
     </div>`;
   }).join('');
 }
@@ -660,8 +739,13 @@ export function selectImportResult(idx, src) {
   if (!list?.[idx]) return;
 
   // Auswahl-State setzen
-  if (src === 'usda') window._importUSDA = list[idx].naehrstoffe;
-  else                window._importOFF  = list[idx].naehrstoffe;
+  if (src === 'usda') {
+    window._importUSDA      = list[idx].naehrstoffe;
+    window._importUSDAUnits = list[idx].units || {};
+  } else {
+    window._importOFF      = list[idx].naehrstoffe;
+    window._importOFFUnits = list[idx].units || {};
+  }
 
   // Visuelle Markierung: ausgewähltes Item hervorheben, andere zurücksetzen
   const accentColor = src === 'usda' ? 'var(--c2)' : '#22c55e';
@@ -691,12 +775,14 @@ function _refreshImportPreviews() {
   naehr.forEach(n => {
     const preEl = document.getElementById(`nutr-preview-${n.naehrstoff_id}`);
     if (!preEl) return;
-    const uVal = window._importUSDA?.[n.name];
-    const oVal = window._importOFF?.[n.name];
+    const uVal  = window._importUSDA?.[n.name];
+    const oVal  = window._importOFF?.[n.name];
+    const uUnit = window._importUSDAUnits?.[n.name];
+    const oUnit = window._importOFFUnits?.[n.name];
     if (uVal == null && oVal == null) { preEl.style.display = 'none'; return; }
     const parts = [];
-    if (uVal != null) parts.push(`<span style="color:var(--c2);font-weight:700">USDA: ${uVal}</span>`);
-    if (oVal != null) parts.push(`<span style="color:#22c55e;font-weight:700">OFF: ${oVal}</span>`);
+    if (uVal != null) parts.push(`<span style="color:var(--c2);font-weight:700">USDA: ${uVal}${uUnit?' '+uUnit.toLowerCase():''}</span>`);
+    if (oVal != null) parts.push(`<span style="color:#22c55e;font-weight:700">OFF: ${oVal}${oUnit?' '+oUnit.toLowerCase():''}</span>`);
     preEl.innerHTML = parts.join('<span style="color:var(--sub)"> | </span>');
     preEl.style.display = '';
   });
@@ -712,7 +798,19 @@ export function applyImportToFields() {
     if (!inp || inp.value.trim() !== '') return; // vorhandene Werte NICHT überschreiben
     // Bevorzuge USDA, Fallback OFF
     const val = window._importUSDA?.[n.name] ?? window._importOFF?.[n.name];
-    if (val != null && val > 0) { inp.value = val; filled++; }
+    if (val != null && val > 0) {
+      inp.value = val; filled++;
+      // Einheit aus USDA/OFF übernehmen und Selector setzen
+      const importUnit = (window._importUSDAUnits?.[n.name] || window._importOFFUnits?.[n.name] || '').toLowerCase();
+      const unitMap = { 'mg':'mg','ug':'µg','µg':'µg','g':'g','kcal':'kcal','ie':'IE','iu':'IE' };
+      const mappedUnit = unitMap[importUnit] || n.einheit || 'g';
+      const unitSel = document.getElementById(`nutr-unit-${n.naehrstoff_id}`);
+      if (unitSel) unitSel.value = mappedUnit;
+      // Bezugsmenge auf /100g (API liefert immer pro 100g)
+      const perSel = document.getElementById(`nutr-per-${n.naehrstoff_id}`);
+      if (perSel) perSel.value = '1';
+      _updateNutrConverted(n.naehrstoff_id);
+    }
   });
 
   // Nährstoff-Abschnitt aufklappen
@@ -771,6 +869,37 @@ export async function saveZutat(existingId) {
   } catch (e) { setStatus('status-zutat', 'err', 'Fehler: ' + e.message); }
 }
 
+
+/**
+ * Zeigt unter dem Eingabefeld den konvertierten Wert in App-Standardeinheit.
+ * Wird bei jeder Änderung aufgerufen.
+ */
+export function _updateNutrConverted(nutrId) {
+  const inp       = document.getElementById(`nutr-${nutrId}`);
+  const unitSel   = document.getElementById(`nutr-unit-${nutrId}`);
+  const perSel    = document.getElementById(`nutr-per-${nutrId}`);
+  const convEl    = document.getElementById(`nutr-converted-${nutrId}`);
+  if (!inp || !unitSel || !perSel || !convEl) return;
+
+  const raw        = parseFloat(String(inp.value).replace(',','.'));
+  const inputUnit  = unitSel.value;
+  const perFactor  = parseFloat(perSel.value);
+  const targetUnit = inp.dataset.targetUnit || 'g';
+
+  if (!raw || isNaN(raw)) { convEl.textContent = ''; return; }
+
+  const converted  = _convertNutr(raw, inputUnit, targetUnit, perFactor);
+  const fmtConv    = _fmtNutr(converted);
+
+  if (inputUnit === targetUnit && perFactor === 1) {
+    convEl.textContent = `= ${fmtConv} ${targetUnit}/100g (keine Konvertierung nötig)`;
+    convEl.style.color = 'var(--sub)';
+  } else {
+    convEl.textContent = `→ ${fmtConv} ${targetUnit}/100g`;
+    convEl.style.color = 'var(--c2)';
+  }
+}
+
 /**
  * Liest alle ausgefüllten Nährstoff-Inputs aus dem Modal und schreibt
  * sie in Zutaten_Naehrstoffe. Bestehende Zeilen werden überschrieben,
@@ -785,10 +914,16 @@ async function _saveZutatNaehrstoffe(zutatId, sid) {
   for (const inp of inputs) {
     const raw = inp.value.trim();
     if (raw === '' || raw === null) continue;
-    const wert        = parseFloat(raw.replace(',', '.'));
-    if (isNaN(wert))  continue;
-    const nutrId      = parseInt(inp.dataset.nutrId);
-    const nutrName    = inp.dataset.nutrName || '';
+    const rawVal = parseFloat(raw.replace(',', '.'));
+    if (isNaN(rawVal)) continue;
+    const nutrId     = parseInt(inp.dataset.nutrId);
+    const nutrName   = inp.dataset.nutrName || '';
+    const targetUnit = inp.dataset.targetUnit || 'g';
+    const inputUnit  = document.getElementById(`nutr-unit-${nutrId}`)?.value || targetUnit;
+    const perFactor  = parseFloat(document.getElementById(`nutr-per-${nutrId}`)?.value || '1');
+    // Konvertieren in App-Standardeinheit pro 100g
+    const wert       = _convertNutr(rawVal, inputUnit, targetUnit, perFactor);
+    if (isNaN(wert) || wert < 0) continue;
 
     // Vorhandene Zeile suchen (zutaten_id + naehrstoff_id)
     const idx = rows.findIndex(r =>
@@ -814,7 +949,12 @@ async function _saveZutatNaehrstoffe(zutatId, sid) {
   inputs.forEach(inp => {
     const raw = inp.value.trim();
     if (!raw) return;
-    const wert = parseFloat(raw.replace(',', '.'));
+    const rawV2 = parseFloat(raw.replace(',', '.'));
+    if (isNaN(rawV2)) return;
+    const tgtU   = inp.dataset.targetUnit || 'g';
+    const inpU   = document.getElementById(`nutr-unit-${inp.dataset.nutrId}`)?.value || tgtU;
+    const perF   = parseFloat(document.getElementById(`nutr-per-${inp.dataset.nutrId}`)?.value || '1');
+    const wert   = _convertNutr(rawV2, inpU, tgtU, perF);
     if (isNaN(wert)) return;
     newEntries.push({
       zutaten_id:   zutatId,
