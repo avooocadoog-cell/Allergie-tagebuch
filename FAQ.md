@@ -250,3 +250,9 @@ Der Reaktionsscore parst den Freitext des Futter-Felds. Damit er korrekt funktio
 
 ### Warum sind in der Statistik keine Parameter mehr vorausgewählt?
 Ab v2.0.0 ist die Standardauswahl bewusst leer – so sieht man nur das, was man aktiv auswählt. Tippe einfach die gewünschten Parameter an (z.B. „Schweregrad Symptome").
+
+### Wie vergleiche ich zwei Zutaten auf ihre Nährstoffe?
+Gehe zu Stammdaten → Zutaten → tippe bei einer Zutat auf ⚖️. Ein Banner erscheint mit „A ausgewählt". Tippe dann bei einer zweiten Zutat auf ⚖️. Das Vergleichs-Modal öffnet sich automatisch mit allen Nährstoffen nebeneinander.
+
+### Was bedeuten ▲ und ▼ im Zutaten-Vergleich?
+▲ (grün) = Zutat B hat mehr von diesem Nährstoff als A. ▼ (rot) = Zutat B hat weniger. Der Prozentwert zeigt die relative Abweichung von A zu B. Fehlende Werte (keine Daten hinterlegt) werden als „–" angezeigt.
